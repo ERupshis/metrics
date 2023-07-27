@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"errors"
-	"github.com/ERupshis/macollection/internal/memstorage"
+	"github.com/ERupshis/metrics/internal/memstorage"
 	"net/http"
 	"strconv"
 	"strings"

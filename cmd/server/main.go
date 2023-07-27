@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ERupshis/macollection/internal/handlers"
+	"github.com/ERupshis/metrics/internal/handlers"
 	"net/http"
 )
 
