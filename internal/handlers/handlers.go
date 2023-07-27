@@ -19,7 +19,6 @@ func splitRequest(req string) ([]string, error) {
 
 func Invalid(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	return
 }
 
 func Counter(w http.ResponseWriter, r *http.Request) {
