@@ -38,11 +38,11 @@ func (a *Agent) UpdateStats() {
 
 func (a *Agent) PostStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postStat(createGaugeUrl(name, valueGetter(&a.stats)))
+		a.postStat(createGaugeURL(name, valueGetter(&a.stats)))
 	}
 
-	a.postStat(createGaugeUrl("RandomValue", rand.Float64()))
-	a.postStat(createCounterUrl("PollCount", a.pollCount))
+	a.postStat(createGaugeURL("RandomValue", rand.Float64()))
+	a.postStat(createCounterURL("PollCount", a.pollCount))
 }
 
 func (a *Agent) postStat(url string) {
@@ -60,10 +60,10 @@ func (a *Agent) postStat(url string) {
 	defer resp.Body.Close()
 }
 
-func createGaugeUrl(name string, value float64) string {
+func createGaugeURL(name string, value float64) string {
 	return ServerName + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
 }
 
-func createCounterUrl(name string, value int64) string {
+func createCounterURL(name string, value int64) string {
 	return ServerName + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
 }

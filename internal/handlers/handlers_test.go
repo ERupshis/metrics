@@ -82,14 +82,14 @@ func TestInvalid(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		reqUrl string
+		reqURL string
 		want   want
 	}{
 		{"test common invalid case", "/status", want{http.StatusBadRequest, "", ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, tt.reqUrl, nil)
+			request := httptest.NewRequest(http.MethodGet, tt.reqURL, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			Invalid(w, request)

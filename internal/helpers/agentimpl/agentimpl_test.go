@@ -83,7 +83,7 @@ func Test_createGaugeUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, createGaugeUrl(tt.args.name, tt.args.value), "createGaugeUrl(%v, %v)", tt.args.name, tt.args.value)
+			assert.Equalf(t, tt.want, createGaugeURL(tt.args.name, tt.args.value), "createGaugeURL(%v, %v)", tt.args.name, tt.args.value)
 		})
 	}
 }
@@ -103,7 +103,7 @@ func Test_createCounterUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, createCounterUrl(tt.args.name, tt.args.value), "createCounterUrl(%v, %v)", tt.args.name, tt.args.value)
+			assert.Equalf(t, tt.want, createCounterURL(tt.args.name, tt.args.value), "createCounterURL(%v, %v)", tt.args.name, tt.args.value)
 		})
 	}
 }
