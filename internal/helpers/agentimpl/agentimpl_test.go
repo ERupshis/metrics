@@ -61,7 +61,7 @@ func TestAgent_UpdateStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := CreateAgent()
 			agent.UpdateStats()
-			var pollCountOld int64 = agent.pollCount
+			pollCountOld := agent.pollCount
 			agent.UpdateStats()
 			assert.NotEqual(t, pollCountOld, agent.pollCount)
 		})
