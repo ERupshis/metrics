@@ -8,16 +8,18 @@ import (
 	"strings"
 )
 
-func splitRequest(req string) ([]string, error) {
+var storage = memstorage.CreateStorage()
+
+func splitCounterAndGaugeRequest(req string) ([]string, error) {
 	request := strings.Split(req, "/")
-	if len(request) != 5 {
+	if len(request) != 5 || request[4] == "" {
 		return []string{}, errors.New("incorrect request size")
 	}
 
 	return request, nil
 }
 
-func Invalid(w http.ResponseWriter, r *http.Request) {
+func Invalid(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
@@ -27,14 +29,14 @@ func Counter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := splitRequest(r.RequestURI)
+	request, err := splitCounterAndGaugeRequest(r.RequestURI)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if val, err := strconv.ParseInt(request[4], 10, 64); err == nil {
-		memstorage.Storage.AddCounter(request[3], val)
+		storage.AddCounter(request[3], val)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -50,14 +52,14 @@ func Gauge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := splitRequest(r.RequestURI)
+	request, err := splitCounterAndGaugeRequest(r.RequestURI)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if val, err := strconv.ParseFloat(request[4], 64); err == nil {
-		memstorage.Storage.AddGauge(request[3], val)
+		storage.AddGauge(request[3], val)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 		return
