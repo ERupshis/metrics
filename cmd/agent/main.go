@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	agent := DefaultAgent()
+	agent := CreateAgent()
 
 	var secondsFromStart int64
 	secondsFromStart = 0

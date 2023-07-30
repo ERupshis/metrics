@@ -19,7 +19,7 @@ type Agent struct {
 	pollCount      int64
 }
 
-func DefaultAgent() *Agent {
+func CreateAgent() *Agent {
 	return &Agent{client: http.Client{}, reportInterval: 10, pollInterval: 2}
 }
 
