@@ -139,12 +139,12 @@ func TestRouter(t *testing.T) {
 		{
 			"gauge get valid case",
 			req{http.MethodGet, "/value/gauge/someMetrics"},
-			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case",
 			req{http.MethodGet, "/value/gauge/someMetrics/"},
-			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case(missing value)",
@@ -159,7 +159,7 @@ func TestRouter(t *testing.T) {
 		{
 			"gauge get valid case(rewrite value)",
 			req{http.MethodGet, "/value/gauge/someMetrics"},
-			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
 		},
 		// List
 		{
