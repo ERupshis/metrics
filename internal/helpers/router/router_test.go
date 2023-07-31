@@ -167,11 +167,10 @@ func TestRouter(t *testing.T) {
 			require.NoError(t, errReq)
 
 			req.Header.Add("Content-Type", "text/plain")
+
 			resp, errResp := ts.Client().Do(req)
+			assert.NoError(t, errResp)
 			defer resp.Body.Close()
-			if errResp == io.EOF {
-				panic(errReq)
-			}
 
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
