@@ -60,6 +60,11 @@ func TestRouter(t *testing.T) {
 			want{http.StatusBadRequest, "", ""},
 		},
 		{
+			"counter post invalid case(missing name)",
+			req{http.MethodPost, "/update/counter/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
 			"counter post invalid case(wrong method type)",
 			req{http.MethodGet, "/update/counter/someMetrics/345"},
 			want{http.StatusMethodNotAllowed, "", ""},
@@ -125,6 +130,11 @@ func TestRouter(t *testing.T) {
 			"gauge post invalid case(missing value)",
 			req{http.MethodPost, "/update/gauge/someMetrics/"},
 			want{http.StatusMethodNotAllowed, "", ""},
+		},
+		{
+			"gauge post invalid case(missing name)",
+			req{http.MethodPost, "/update/gauge/"},
+			want{http.StatusNotFound, "", ""},
 		},
 		{
 			"gauge get valid case",
