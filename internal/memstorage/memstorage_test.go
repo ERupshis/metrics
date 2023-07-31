@@ -63,10 +63,53 @@ func TestMemStorage_AddGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetCounter(t *testing.T) {
-	//TODO: need to implement.
+	storage := CreateStorage()
+	storage.AddCounter("metric1", 1)
+
+	tests := []struct {
+		name    string
+		req     string
+		want    int64
+		wantErr bool
+	}{
+		{"valid name", "metric1", 1, false},
+		{"invalid name", "metric2", -1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := storage.GetCounter(tt.req)
+			if err != nil && !tt.wantErr {
+				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
+				return
+			}
+
+			assert.Equalf(t, tt.want, got, "GetCounter(%v)", tt.req)
+		})
+	}
 }
 
 func TestMemStorage_GetGauge(t *testing.T) {
+	storage := CreateStorage()
+	storage.AddGauge("metric1", 1.2)
 
-	//TODO: need to implement.
+	tests := []struct {
+		name    string
+		req     string
+		want    float64
+		wantErr bool
+	}{
+		{"valid name", "metric1", 1.2, false},
+		{"invalid name", "metric2", -1.0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := storage.GetGauge(tt.req)
+			if err != nil && !tt.wantErr {
+				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
+				return
+			}
+
+			assert.Equalf(t, tt.want, got, "GetCounter(%v)", tt.req)
+		})
+	}
 }

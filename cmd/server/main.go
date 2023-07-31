@@ -1,20 +1,12 @@
 package main
 
 import (
-	"github.com/ERupshis/metrics/internal/handlers"
+	"github.com/ERupshis/metrics/internal/helpers/router"
 	"net/http"
 )
 
-func run() error {
-	customMux := http.NewServeMux()
-	customMux.HandleFunc("/update/counter/", handlers.Counter)
-	customMux.HandleFunc("/update/gauge/", handlers.Gauge)
-	customMux.HandleFunc("/", handlers.Invalid)
-	return http.ListenAndServe(`:8080`, customMux)
-}
-
 func main() {
-	if err := run(); err != nil {
+	if err := http.ListenAndServe(`:8080`, router.Create()); err != nil {
 		panic(err)
 	}
 }

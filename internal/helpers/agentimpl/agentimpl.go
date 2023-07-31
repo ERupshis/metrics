@@ -3,8 +3,8 @@ package agentimpl
 import (
 	"fmt"
 	"github.com/ERupshis/metrics/internal/helpers/metricsgetter"
+	"github.com/go-resty/resty/v2"
 	"math/rand"
-	"net/http"
 	"runtime"
 )
 
@@ -12,15 +12,15 @@ var ServerName = "http://localhost:8080"
 
 type Agent struct {
 	stats  runtime.MemStats
-	client http.Client
+	client *resty.Client
 
 	reportInterval int64
 	pollInterval   int64
 	pollCount      int64
 }
 
-func CreateAgent() *Agent {
-	return &Agent{client: http.Client{}, reportInterval: 10, pollInterval: 2}
+func Create() *Agent {
+	return &Agent{client: resty.New(), reportInterval: 10, pollInterval: 2}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -46,18 +46,13 @@ func (a *Agent) PostStats() {
 }
 
 func (a *Agent) postStat(url string) {
-	req, errReq := http.NewRequest(http.MethodPost, url, nil)
-	if errReq != nil {
-		panic(errReq)
-	}
+	_, err := a.client.R().
+		SetHeader("Content-Type", "text/plain").
+		Post(url)
 
-	req.Header.Add("Content-Type", "text/plain")
-	resp, errResp := a.client.Do(req)
-	if errResp != nil {
-		panic(errResp)
+	if err != nil {
+		panic(err)
 	}
-
-	defer resp.Body.Close()
 }
 
 func createGaugeURL(name string, value float64) string {
