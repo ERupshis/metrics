@@ -77,21 +77,21 @@ func TestRouter(t *testing.T) {
 		{
 			"counter post invalid case(missing value)",
 			req{http.MethodPost, "/update/counter/someMetrics/"},
-			want{http.StatusMethodNotAllowed, "", ""},
+			want{http.StatusBadRequest, "", ""},
 		},
 		{
 			"counter get valid case",
-			req{http.MethodGet, "/update/counter/someMetrics"},
+			req{http.MethodGet, "/value/counter/someMetrics"},
 			want{http.StatusOK, "345", "text/plain; charset=utf-8"},
 		},
 		{
 			"counter get valid case",
-			req{http.MethodGet, "/update/counter/someMetrics/"},
+			req{http.MethodGet, "/value/counter/someMetrics/"},
 			want{http.StatusOK, "345", "text/plain; charset=utf-8"},
 		},
 		{
 			"counter get valid case(missing value)",
-			req{http.MethodGet, "/update/counter/missingMetrics/"},
+			req{http.MethodGet, "/value/counter/missingMetrics/"},
 			want{http.StatusNotFound, "", ""},
 		},
 		{
@@ -101,7 +101,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			"counter get valid case(increase value)",
-			req{http.MethodGet, "/update/counter/someMetrics"},
+			req{http.MethodGet, "/value/counter/someMetrics"},
 			want{http.StatusOK, "690", "text/plain; charset=utf-8"},
 		},
 		//Gauge
@@ -138,18 +138,18 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			"gauge get valid case",
-			req{http.MethodGet, "/update/gauge/someMetrics"},
+			req{http.MethodGet, "/value/gauge/someMetrics"},
 			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case",
-			req{http.MethodGet, "/update/gauge/someMetrics/"},
+			req{http.MethodGet, "/value/gauge/someMetrics/"},
 			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case(missing value)",
-			req{http.MethodGet, "/update/gauge/missingMetrics/"},
-			want{http.StatusNotFound, "", ""},
+			req{http.MethodGet, "/value/gauge/missingMetrics/"},
+			want{http.StatusMethodNotAllowed, "", ""},
 		},
 		{
 			"gauge post valid case",
@@ -158,7 +158,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			"gauge get valid case(rewrite value)",
-			req{http.MethodGet, "/update/gauge/someMetrics"},
+			req{http.MethodGet, "/value/gauge/someMetrics"},
 			want{http.StatusOK, "345.000000", "text/plain; charset=utf-8"},
 		},
 		// List
