@@ -15,6 +15,10 @@ func Invalid(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
+func MissingName(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+}
+
 func ListHandler(w http.ResponseWriter, _ *http.Request) {
 	if _, err := io.WriteString(w, "<html><body>"); err != nil {
 		panic(err)
