@@ -16,20 +16,34 @@ func Invalid(w http.ResponseWriter, _ *http.Request) {
 }
 
 func ListHandler(w http.ResponseWriter, _ *http.Request) {
-	io.WriteString(w, "<html><body>")
+	if _, err := io.WriteString(w, "<html><body>"); err != nil {
+		panic(err)
+	}
 
-	io.WriteString(w, "<caption>GAUGES</caption><table border = 2>")
+	if _, err := io.WriteString(w, "<caption>GAUGES</caption><table border = 2>"); err != nil {
+		panic(err)
+	}
 	for name, value := range storage.GetAllGauges() {
-		io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%f</td></tr>", name, value))
+		if _, err := io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%f</td></tr>", name, value)); err != nil {
+			panic(err)
+		}
 	}
-	io.WriteString(w, "</table>")
+	if _, err := io.WriteString(w, "</table>"); err != nil {
+		panic(err)
+	}
 
-	io.WriteString(w, "<caption>COUNTERS</caption><table border = 2>")
+	if _, err := io.WriteString(w, "<caption>COUNTERS</caption><table border = 2>"); err != nil {
+		panic(err)
+	}
 	for name, value := range storage.GetAllCounters() {
-		io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", name, value))
+		if _, err := io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", name, value)); err != nil {
+			panic(err)
+		}
 	}
 
-	io.WriteString(w, "</body></html>")
+	if _, err := io.WriteString(w, "</body></html>"); err != nil {
+		panic(err)
+	}
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 }
@@ -82,7 +96,9 @@ func GetCounter(w http.ResponseWriter, r *http.Request) {
 
 	if value, err := storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-		io.WriteString(w, fmt.Sprintf("%d", value))
+		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
+			panic(err)
+		}
 		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
@@ -99,7 +115,9 @@ func GetGauge(w http.ResponseWriter, r *http.Request) {
 
 	if value, err := storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-		io.WriteString(w, fmt.Sprintf("%f", value))
+		if _, err := io.WriteString(w, fmt.Sprintf("%f", value)); err != nil {
+			panic(err)
+		}
 		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
