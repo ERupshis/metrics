@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	agent := agentimpl.CreateAgent()
+	agent := agentimpl.Create()
 
 	var secondsFromStart int64
 	secondsFromStart = 0

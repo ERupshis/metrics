@@ -14,7 +14,7 @@ func TestCreateAgent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NotNil(t, CreateAgent())
+			require.NotNil(t, Create())
 		})
 	}
 }
@@ -28,7 +28,7 @@ func TestAgent_GetPollInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateAgent()
+		agent := Create()
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetPollInterval(), tt.want)
 		})
@@ -44,7 +44,7 @@ func TestAgent_GetReportInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateAgent()
+		agent := Create()
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetReportInterval(), tt.want)
 		})
@@ -59,7 +59,7 @@ func TestAgent_UpdateStats(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := CreateAgent()
+			agent := Create()
 			agent.UpdateStats()
 			pollCountOld := agent.pollCount
 			agent.UpdateStats()
