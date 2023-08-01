@@ -12,7 +12,7 @@ import (
 var opts = agentimpl.Options{}
 
 func parseFlags() {
-	flag.StringVar(&opts.Host, "a", "localhost:8080", "server endpoint")
+	flag.StringVar(&opts.Host, "a", "http://localhost:8080", "server endpoint")
 	flag.Int64Var(&opts.ReportInterval, "r", 10, "report interval val (sec)")
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()

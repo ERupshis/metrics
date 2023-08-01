@@ -78,7 +78,7 @@ func Test_createGaugeUrl(t *testing.T) {
 		args args
 		want string
 	}{
-		{"generation gauge post request URL", args{"testGauge", 123.456}, "localhost:8080/update/gauge/testGauge/123.456000"},
+		{"generation gauge post request URL", args{"testGauge", 123.456}, "http://localhost:8080/update/gauge/testGauge/123.456000"},
 	}
 
 	agent := CreateDefault()
@@ -99,7 +99,7 @@ func Test_createCounterUrl(t *testing.T) {
 		args args
 		want string
 	}{
-		{"generation counter post request URL", args{"testCounter", 123}, "localhost:8080/update/counter/testCounter/123"},
+		{"generation counter post request URL", args{"testCounter", 123}, "http://localhost:8080/update/counter/testCounter/123"},
 	}
 
 	agent := CreateDefault()
