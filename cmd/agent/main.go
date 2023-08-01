@@ -2,10 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/ERupshis/metrics/internal/helpers/agentimpl"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -17,17 +14,9 @@ func parseFlags() {
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()
 
-	if len(opts.Host) == 0 {
-		fmt.Println("empty arg a")
-		os.Exit(1)
-	} else if !strings.Contains(opts.Host, ":") {
-		fmt.Println("missing port definition")
-		os.Exit(1)
-	}
-
-	if !strings.Contains(opts.Host, "http://") {
-		opts.Host = "http://" + opts.Host
-	}
+	//if !strings.Contains(opts.Host, "http://") {
+	//	opts.Host = "http://" + opts.Host
+	//}
 }
 
 func main() {
