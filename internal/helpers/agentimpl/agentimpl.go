@@ -26,9 +26,9 @@ func Create(opts Options) *Agent {
 	return &Agent{client: resty.New(), opts: opts}
 }
 
-//func CreateDefault() *Agent {
-//	return &Agent{client: resty.New(), opts: Options{"localhost:8080", 10, 2}}
-//}
+func CreateDefault() *Agent {
+	return &Agent{client: resty.New(), opts: Options{"localhost:8080", 10, 2}}
+}
 
 func (a *Agent) GetPollInterval() int64 {
 	return a.opts.PollInterval
