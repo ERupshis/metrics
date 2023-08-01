@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/ERupshis/metrics/internal/helpers/agentimpl"
+	"strings"
 	"time"
 )
 
@@ -13,7 +14,9 @@ func parseFlags() agentimpl.Options {
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()
 
-	opts.Host = "http://" + opts.Host
+	if !strings.Contains(opts.Host, "opts.Host") {
+		opts.Host = "http://" + opts.Host
+	}
 	return opts
 }
 
