@@ -10,17 +10,16 @@ type options struct {
 	host string
 }
 
-var opt = options{}
-
-func parseFlags() {
-	flag.StringVar(&opt.host, "a", "localhost:8080", "server endpoint")
+func parseFlags() options {
+	var opts = options{}
+	flag.StringVar(&opts.host, "a", "localhost:8080", "server endpoint")
 	flag.Parse()
+
+	return opts
 }
 
 func main() {
-	parseFlags()
-
-	if err := http.ListenAndServe(opt.host, router.Create()); err != nil {
+	if err := http.ListenAndServe(parseFlags().host, router.Create()); err != nil {
 		panic(err)
 	}
 }

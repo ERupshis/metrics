@@ -6,23 +6,20 @@ import (
 	"time"
 )
 
-var opts = agentimpl.Options{}
-
-func parseFlags() {
+func parseFlags() agentimpl.Options {
+	var opts = agentimpl.Options{}
 	flag.StringVar(&opts.Host, "a", "http://localhost:8080", "server endpoint")
 	flag.Int64Var(&opts.ReportInterval, "r", 10, "report interval val (sec)")
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()
 
-	//if !strings.Contains(opts.Host, "http://") {
-	//	opts.Host = "http://" + opts.Host
-	//}
+	opts.Host = "http://" + opts.Host
+	return opts
 }
 
 func main() {
-	parseFlags()
 
-	agent := agentimpl.Create(opts)
+	agent := agentimpl.Create(parseFlags())
 
 	var secondsFromStart int64
 	secondsFromStart = 0
