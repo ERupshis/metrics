@@ -24,6 +24,10 @@ func parseFlags() {
 		fmt.Println("missing port definition")
 		os.Exit(1)
 	}
+
+	if !strings.Contains(opts.Host, "http://") {
+		opts.Host = "http://" + opts.Host
+	}
 }
 
 func main() {
