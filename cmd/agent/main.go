@@ -14,7 +14,7 @@ func parseFlags() agentimpl.Options {
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()
 
-	if !strings.Contains(opts.Host, "opts.Host") {
+	if !strings.Contains(opts.Host, "http://") {
 		opts.Host = "http://" + opts.Host
 	}
 	return opts
