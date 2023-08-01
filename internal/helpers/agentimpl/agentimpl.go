@@ -8,27 +8,34 @@ import (
 	"runtime"
 )
 
-var ServerName = "http://localhost:8080"
+type Options struct {
+	Host           string
+	ReportInterval int64
+	PollInterval   int64
+}
 
 type Agent struct {
 	stats  runtime.MemStats
 	client *resty.Client
 
-	reportInterval int64
-	pollInterval   int64
-	pollCount      int64
+	opts      Options
+	pollCount int64
 }
 
-func Create() *Agent {
-	return &Agent{client: resty.New(), reportInterval: 10, pollInterval: 2}
+func Create(opts Options) *Agent {
+	return &Agent{client: resty.New(), opts: opts}
+}
+
+func CreateDefault() *Agent {
+	return &Agent{client: resty.New(), opts: Options{"http://localhost:8080", 10, 2}}
 }
 
 func (a *Agent) GetPollInterval() int64 {
-	return a.pollInterval
+	return a.opts.PollInterval
 }
 
 func (a *Agent) GetReportInterval() int64 {
-	return a.reportInterval
+	return a.opts.ReportInterval
 }
 
 func (a *Agent) UpdateStats() {
@@ -38,11 +45,11 @@ func (a *Agent) UpdateStats() {
 
 func (a *Agent) PostStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postStat(createGaugeURL(name, valueGetter(&a.stats)))
+		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
 	}
 
-	a.postStat(createGaugeURL("RandomValue", rand.Float64()))
-	a.postStat(createCounterURL("PollCount", a.pollCount))
+	a.postStat(a.createGaugeURL("RandomValue", rand.Float64()))
+	a.postStat(a.createCounterURL("PollCount", a.pollCount))
 }
 
 func (a *Agent) postStat(url string) {
@@ -55,10 +62,10 @@ func (a *Agent) postStat(url string) {
 	}
 }
 
-func createGaugeURL(name string, value float64) string {
-	return ServerName + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
+func (a *Agent) createGaugeURL(name string, value float64) string {
+	return a.opts.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
 }
 
-func createCounterURL(name string, value int64) string {
-	return ServerName + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+func (a *Agent) createCounterURL(name string, value int64) string {
+	return a.opts.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
 }
