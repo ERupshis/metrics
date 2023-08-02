@@ -119,7 +119,7 @@ func GetGauge(w http.ResponseWriter, r *http.Request) {
 
 	if value, err := storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-		if _, err := io.WriteString(w, fmt.Sprintf("%.3f", value)); err != nil {
+		if _, err := io.WriteString(w, fmt.Sprintf("%.2f", value)); err != nil {
 			panic(err)
 		}
 		w.WriteHeader(http.StatusOK)
