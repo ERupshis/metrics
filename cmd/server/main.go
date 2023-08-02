@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/ERupshis/metrics/internal/helpers/router"
 	"net/http"
+	"os"
 )
 
 type options struct {
@@ -14,6 +15,10 @@ func parseFlags() options {
 	var opts = options{}
 	flag.StringVar(&opts.host, "a", "localhost:8080", "server endpoint")
 	flag.Parse()
+
+	if envHost := os.Getenv("ADDRESS"); envHost != "" {
+		opts.host = envHost
+	}
 
 	return opts
 }

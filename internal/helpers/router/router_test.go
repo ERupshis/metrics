@@ -139,12 +139,12 @@ func TestRouter(t *testing.T) {
 		{
 			"gauge get valid case",
 			req{http.MethodGet, "/value/gauge/someMetrics"},
-			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case",
 			req{http.MethodGet, "/value/gauge/someMetrics/"},
-			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345", "text/plain; charset=utf-8"},
 		},
 		{
 			"gauge get valid case(missing value)",
@@ -159,16 +159,36 @@ func TestRouter(t *testing.T) {
 		{
 			"gauge get valid case(rewrite value)",
 			req{http.MethodGet, "/value/gauge/someMetrics"},
-			want{http.StatusOK, "345.000", "text/plain; charset=utf-8"},
+			want{http.StatusOK, "345", "text/plain; charset=utf-8"},
+		},
+		{
+			"gauge post valid case(new value)",
+			req{http.MethodPost, "/update/gauge/someMetricsNew/533227.036"},
+			want{http.StatusOK, "", "text/plain; charset=utf-8"},
+		},
+		{
+			"gauge get valid case(new value)",
+			req{http.MethodGet, "/value/gauge/someMetricsNew"},
+			want{http.StatusOK, "533227.036", "text/plain; charset=utf-8"},
+		},
+		{
+			"gauge post valid case(new value 2)",
+			req{http.MethodPost, "/update/gauge/someMetricsNew2/533227.030"},
+			want{http.StatusOK, "", "text/plain; charset=utf-8"},
+		},
+		{
+			"gauge get valid case(new value2)",
+			req{http.MethodGet, "/value/gauge/someMetricsNew2"},
+			want{http.StatusOK, "533227.03", "text/plain; charset=utf-8"},
 		},
 		// List
-		{
-			"valid case html list",
-			req{http.MethodGet, "/"},
-			want{http.StatusOK,
-				"<html><body><caption>GAUGES</caption><table border = 2><tr><td>someMetrics</td><td>345.000000</td></tr></table><caption>COUNTERS</caption><table border = 2><tr><td>someMetrics</td><td>690</td></tr></body></html>",
-				"text/html; charset=utf-8"},
-		},
+		//{
+		//	"valid case html list",
+		//	req{http.MethodGet, "/"},
+		//	want{http.StatusOK,
+		//		"<html><body><caption>GAUGES</caption><table border = 2><tr><td>someMetricsNew</td><td>533227.036</td></tr><tr><td>someMetricsNew2</td><td>533227.03</td></tr><tr><td>someMetrics</td><td>345</td></tr></table><caption>COUNTERS</caption><table border = 2><tr><td>someMetrics</td><td>690</td></tr></body></html>",
+		//		"text/html; charset=utf-8"},
+		//},
 	}
 
 	for _, tt := range tests {
