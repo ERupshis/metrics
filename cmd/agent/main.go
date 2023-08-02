@@ -3,9 +3,18 @@ package main
 import (
 	"flag"
 	"github.com/ERupshis/metrics/internal/helpers/agentimpl"
+	"github.com/caarlos0/env"
+	"log"
+	"strconv"
 	"strings"
 	"time"
 )
+
+type EnvConfig struct {
+	Host           string `env:"ADDRESS"`
+	ReportInterval string `env:"REPORT_INTERVAL"`
+	PollInterval   string `env:"POLL_INTERVAL"`
+}
 
 func parseFlags() agentimpl.Options {
 	var opts = agentimpl.Options{}
@@ -17,6 +26,29 @@ func parseFlags() agentimpl.Options {
 	if !strings.Contains(opts.Host, "http://") {
 		opts.Host = "http://" + opts.Host
 	}
+
+	var envCfg EnvConfig
+	err := env.Parse(&envCfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if envCfg.Host != "" {
+		opts.Host = envCfg.Host
+	}
+
+	if envCfg.ReportInterval != "" {
+		if envVal, err := strconv.ParseInt(envCfg.ReportInterval, 10, 64); err == nil {
+			opts.ReportInterval = envVal
+		}
+	}
+
+	if envCfg.PollInterval != "" {
+		if envVal, err := strconv.ParseInt(envCfg.PollInterval, 10, 64); err == nil {
+			opts.PollInterval = envVal
+		}
+	}
+
 	return opts
 }
 
