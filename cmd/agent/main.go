@@ -23,10 +23,6 @@ func parseFlags() agentimpl.Options {
 	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
 	flag.Parse()
 
-	if !strings.Contains(opts.Host, "http://") {
-		opts.Host = "http://" + opts.Host
-	}
-
 	var envCfg EnvConfig
 	err := env.Parse(&envCfg)
 	if err != nil {
@@ -47,6 +43,10 @@ func parseFlags() agentimpl.Options {
 		if envVal, err := strconv.ParseInt(envCfg.PollInterval, 10, 64); err == nil {
 			opts.PollInterval = envVal
 		}
+	}
+
+	if !strings.Contains(opts.Host, "http://") {
+		opts.Host = "http://" + opts.Host
 	}
 
 	return opts
