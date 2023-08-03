@@ -28,7 +28,7 @@ func ParseOptions() Options {
 	var opts = Options{}
 	checkFlags(&opts)
 	checkEnvironments(&opts)
-	opts.Host = addHttpPrefixIfNeed(opts.Host)
+	opts.Host = addHTTPPrefixIfNeed(opts.Host)
 	return opts
 }
 
@@ -73,7 +73,7 @@ func atoi64(value string) (int64, error) {
 }
 
 //goland:noinspection HttpUrlsUsage
-func addHttpPrefixIfNeed(value string) string {
+func addHTTPPrefixIfNeed(value string) string {
 	if !strings.Contains(value, "http://") {
 		return "http://" + value
 	}
