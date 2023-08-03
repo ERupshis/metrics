@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/ERupshis/metrics/internal/helpers/agentimpl"
+	"github.com/ERupshis/metrics/internal/agent/agentimpl"
 	"github.com/caarlos0/env"
 	"log"
 	"strconv"

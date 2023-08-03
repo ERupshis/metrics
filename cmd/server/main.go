@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/ERupshis/metrics/internal/helpers/router"
+	"github.com/ERupshis/metrics/internal/server/router"
 	"net/http"
 	"os"
 )

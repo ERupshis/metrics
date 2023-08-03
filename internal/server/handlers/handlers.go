@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/ERupshis/metrics/internal/memstorage"
+	"github.com/ERupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
