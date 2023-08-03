@@ -22,12 +22,7 @@ func Create(opts options.Options) *Agent {
 }
 
 func CreateDefault() *Agent {
-	opts := options.Options{
-		Host:           "http://localhost:8080",
-		ReportInterval: 10,
-		PollInterval:   2,
-	}
-	return &Agent{client: resty.New(), opts: opts}
+	return &Agent{client: resty.New(), opts: options.CreateDefault()}
 }
 
 func (a *Agent) GetPollInterval() int64 {

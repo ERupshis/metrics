@@ -14,14 +14,12 @@ type Options struct {
 	PollInterval   int64
 }
 
-var flagAddress = "a"
-var flagReportInterval = "r"
-var flagPollInterval = "p"
-
-type envConfig struct {
-	Host           string `env:"ADDRESS"`
-	ReportInterval string `env:"REPORT_INTERVAL"`
-	PollInterval   string `env:"POLL_INTERVAL"`
+func CreateDefault() Options {
+	return Options{
+		Host:           "http://localhost:8080",
+		ReportInterval: 10,
+		PollInterval:   2,
+	}
 }
 
 func ParseOptions() Options {
@@ -32,11 +30,23 @@ func ParseOptions() Options {
 	return opts
 }
 
+// FLAGS PARSING.
+var flagAddress = "a"
+var flagReportInterval = "r"
+var flagPollInterval = "p"
+
 func checkFlags(opts *Options) {
 	flag.StringVar(&opts.Host, flagAddress, "http://localhost:8080", "server endpoint")
 	flag.Int64Var(&opts.ReportInterval, flagReportInterval, 10, "report interval val (sec)")
 	flag.Int64Var(&opts.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
 	flag.Parse()
+}
+
+// ENVIRONMENT PARSING
+type envConfig struct {
+	Host           string `env:"ADDRESS"`
+	ReportInterval string `env:"REPORT_INTERVAL"`
+	PollInterval   string `env:"POLL_INTERVAL"`
 }
 
 func checkEnvironments(opts *Options) {
@@ -67,7 +77,7 @@ func checkEnvironments(opts *Options) {
 	}
 }
 
-// /SUPPORT FUNCTIONS.
+// SUPPORT FUNCTIONS.
 func atoi64(value string) (int64, error) {
 	return strconv.ParseInt(value, 10, 64)
 }
