@@ -1,60 +1,13 @@
 package main
 
 import (
-	"flag"
 	"github.com/ERupshis/metrics/internal/agent/agentimpl"
-	"github.com/caarlos0/env"
-	"log"
-	"strconv"
-	"strings"
+	"github.com/ERupshis/metrics/internal/agent/options"
 	"time"
 )
 
-type EnvConfig struct {
-	Host           string `env:"ADDRESS"`
-	ReportInterval string `env:"REPORT_INTERVAL"`
-	PollInterval   string `env:"POLL_INTERVAL"`
-}
-
-func parseFlags() agentimpl.Options {
-	var opts = agentimpl.Options{}
-	flag.StringVar(&opts.Host, "a", "http://localhost:8080", "server endpoint")
-	flag.Int64Var(&opts.ReportInterval, "r", 10, "report interval val (sec)")
-	flag.Int64Var(&opts.PollInterval, "p", 2, "poll interval val (sec)")
-	flag.Parse()
-
-	var envCfg EnvConfig
-	err := env.Parse(&envCfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if envCfg.Host != "" {
-		opts.Host = envCfg.Host
-	}
-
-	if envCfg.ReportInterval != "" {
-		if envVal, err := strconv.ParseInt(envCfg.ReportInterval, 10, 64); err == nil {
-			opts.ReportInterval = envVal
-		}
-	}
-
-	if envCfg.PollInterval != "" {
-		if envVal, err := strconv.ParseInt(envCfg.PollInterval, 10, 64); err == nil {
-			opts.PollInterval = envVal
-		}
-	}
-
-	if !strings.Contains(opts.Host, "http://") {
-		opts.Host = "http://" + opts.Host
-	}
-
-	return opts
-}
-
 func main() {
-
-	agent := agentimpl.Create(parseFlags())
+	agent := agentimpl.Create(options.ParseOptions())
 
 	var secondsFromStart int64
 	secondsFromStart = 0

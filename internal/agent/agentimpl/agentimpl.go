@@ -3,31 +3,31 @@ package agentimpl
 import (
 	"fmt"
 	"github.com/ERupshis/metrics/internal/agent/metricsgetter"
+	"github.com/ERupshis/metrics/internal/agent/options"
 	"github.com/go-resty/resty/v2"
 	"math/rand"
 	"runtime"
 )
 
-type Options struct {
-	Host           string
-	ReportInterval int64
-	PollInterval   int64
-}
-
 type Agent struct {
 	stats  runtime.MemStats
 	client *resty.Client
 
-	opts      Options
+	opts      options.Options
 	pollCount int64
 }
 
-func Create(opts Options) *Agent {
+func Create(opts options.Options) *Agent {
 	return &Agent{client: resty.New(), opts: opts}
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: resty.New(), opts: Options{"http://localhost:8080", 10, 2}}
+	opts := options.Options{
+		Host:           "http://localhost:8080",
+		ReportInterval: 10,
+		PollInterval:   2,
+	}
+	return &Agent{client: resty.New(), opts: opts}
 }
 
 func (a *Agent) GetPollInterval() int64 {
