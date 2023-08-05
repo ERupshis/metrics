@@ -12,7 +12,7 @@ type Options struct {
 	Host string
 }
 
-func ParseOptions() Options {
+func Parse() Options {
 	var opts = Options{}
 	checkFlags(&opts)
 	checkEnvironments(&opts)

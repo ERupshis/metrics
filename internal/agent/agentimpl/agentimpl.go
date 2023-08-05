@@ -22,7 +22,7 @@ func Create(opts options.Options) *Agent {
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: resty.New(), opts: options.CreateDefault()}
+	return &Agent{client: resty.New(), opts: options.Default()}
 }
 
 func (a *Agent) GetPollInterval() int64 {

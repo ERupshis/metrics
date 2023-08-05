@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	if err := http.ListenAndServe(options.ParseOptions().Host, router.Create()); err != nil {
+	if err := http.ListenAndServe(options.Parse().Host, router.Create()); err != nil {
 		panic(err)
 	}
 }

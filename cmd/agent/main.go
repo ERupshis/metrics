@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	agent := agentimpl.Create(options.ParseOptions())
+	agent := agentimpl.Create(options.Parse())
 
 	var secondsFromStart int64
 	secondsFromStart = 0

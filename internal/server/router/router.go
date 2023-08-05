@@ -25,6 +25,7 @@ func Create() chi.Router {
 			})
 		})
 	})
+
 	r.Route("/value", func(r chi.Router) {
 		r.Route("/counter", func(r chi.Router) {
 			r.Get("/", handlers.MissingName)

@@ -14,7 +14,7 @@ type Options struct {
 	PollInterval   int64
 }
 
-func CreateDefault() Options {
+func Default() Options {
 	return Options{
 		Host:           "http://localhost:8080",
 		ReportInterval: 10,
@@ -22,7 +22,7 @@ func CreateDefault() Options {
 	}
 }
 
-func ParseOptions() Options {
+func Parse() Options {
 	var opts = Options{}
 	checkFlags(&opts)
 	checkEnvironments(&opts)
