@@ -86,7 +86,7 @@ func atoi64(value string) (int64, error) {
 
 //goland:noinspection HttpUrlsUsage
 func addHTTPPrefixIfNeed(value string) string {
-	if !strings.Contains(value, "http://") {
+	if !strings.HasPrefix(value, "http://") {
 		return "http://" + value
 	}
 
