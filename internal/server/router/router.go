@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Create() chi.Router {
+func Create(handlers *handlers.Handler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", handlers.ListHandler)
 	r.Route("/update", func(r chi.Router) {

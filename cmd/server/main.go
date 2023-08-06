@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/ERupshis/metrics/internal/server/options"
-	"github.com/ERupshis/metrics/internal/server/router"
+	"github.com/ERupshis/metrics/internal/server/controller"
 	"net/http"
 )
 
 func main() {
-	if err := http.ListenAndServe(options.Parse().Host, router.Create()); err != nil {
+	serverController := controller.Create()
+	if err := http.ListenAndServe(serverController.GetOptions().Host, serverController.CreateRoutes()); err != nil {
 		panic(err)
 	}
 }

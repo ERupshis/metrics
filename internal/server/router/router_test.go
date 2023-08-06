@@ -1,6 +1,8 @@
 package router
 
 import (
+	"github.com/ERupshis/metrics/internal/server/handlers"
+	"github.com/ERupshis/metrics/internal/server/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -10,9 +12,6 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	ts := httptest.NewServer(Create())
-	defer ts.Close()
-
 	type req struct {
 		method string
 		url    string
@@ -190,6 +189,9 @@ func TestRouter(t *testing.T) {
 		//		"text/html; charset=utf-8"},
 		//},
 	}
+
+	ts := httptest.NewServer(Create(handlers.Create(memstorage.Create())))
+	defer ts.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

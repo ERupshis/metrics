@@ -5,8 +5,10 @@ import (
 	"os"
 )
 
-var envAddress = "ADDRESS"
-var flagAddress = "a"
+const (
+	envAddress  = "ADDRESS"
+	flagAddress = "a"
+)
 
 type Options struct {
 	Host string

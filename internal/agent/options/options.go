@@ -31,9 +31,11 @@ func Parse() Options {
 }
 
 // FLAGS PARSING.
-var flagAddress = "a"
-var flagReportInterval = "r"
-var flagPollInterval = "p"
+const (
+	flagAddress        = "a"
+	flagReportInterval = "r"
+	flagPollInterval   = "p"
+)
 
 func checkFlags(opts *Options) {
 	flag.StringVar(&opts.Host, flagAddress, "http://localhost:8080", "server endpoint")

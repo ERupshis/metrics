@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateStorage(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 
 	require.NotNil(t, storage)
 	require.NotNil(t, storage.counterMetrics)
@@ -15,7 +15,7 @@ func TestCreateStorage(t *testing.T) {
 }
 
 func TestMemStorage_AddCounter(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	type args struct {
 		name  string
 		value int64
@@ -39,7 +39,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 }
 
 func TestMemStorage_AddGauge(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	type args struct {
 		name  string
 		value float64
@@ -63,7 +63,7 @@ func TestMemStorage_AddGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetCounter(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	storage.AddCounter("metric1", 1)
 
 	tests := []struct {
@@ -89,7 +89,7 @@ func TestMemStorage_GetCounter(t *testing.T) {
 }
 
 func TestMemStorage_GetGauge(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	storage.AddGauge("metric1", 1.2)
 
 	tests := []struct {
