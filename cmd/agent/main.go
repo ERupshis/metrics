@@ -5,22 +5,20 @@ import (
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/agent/ticker"
 )
 
 func main() {
 	agent := agentimpl.Create(config.Parse())
 
-	var secondsFromStart int64
-	secondsFromStart = 0
-	for {
-		time.Sleep(time.Second * 2)
-		secondsFromStart += 2
-		if secondsFromStart%agent.GetPollInterval() == 0 {
-			agent.UpdateStats()
-		}
+	pollTicker := ticker.CreateWithSecondsInterval(agent.GetPollInterval())
+	repeatTicker := ticker.CreateWithSecondsInterval(agent.GetReportInterval())
 
-		if secondsFromStart%agent.GetReportInterval() == 0 {
-			agent.PostStats()
-		}
-	}
+	defer pollTicker.Stop()
+	defer repeatTicker.Stop()
+
+	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
+	go ticker.Run(repeatTicker, func() { agent.PostStats() })
+
+	time.Sleep(time.Minute)
 }
