@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"text/template"
 
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
@@ -24,39 +25,6 @@ func (h *Handler) Invalid(w http.ResponseWriter, _ *http.Request) {
 
 func (h *Handler) MissingName(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-}
-
-func (h *Handler) ListHandler(w http.ResponseWriter, _ *http.Request) {
-	if _, err := io.WriteString(w, "<html><body>"); err != nil {
-		panic(err)
-	}
-
-	if _, err := io.WriteString(w, "<caption>GAUGES</caption><table border = 2>"); err != nil {
-		panic(err)
-	}
-	for name, value := range h.storage.GetAllGauges() {
-		if _, err := io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%s</td></tr>", name, strconv.FormatFloat(value, 'f', -1, 64))); err != nil {
-			panic(err)
-		}
-	}
-	if _, err := io.WriteString(w, "</table>"); err != nil {
-		panic(err)
-	}
-
-	if _, err := io.WriteString(w, "<caption>COUNTERS</caption><table border = 2>"); err != nil {
-		panic(err)
-	}
-	for name, value := range h.storage.GetAllCounters() {
-		if _, err := io.WriteString(w, fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", name, value)); err != nil {
-			panic(err)
-		}
-	}
-
-	if _, err := io.WriteString(w, "</body></html>"); err != nil {
-		panic(err)
-	}
-	w.Header().Add("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) PostCounter(w http.ResponseWriter, r *http.Request) {
@@ -123,4 +91,45 @@ func (h *Handler) GetGauge(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
+}
+
+// HTML METRICS LIST PROCESSING.
+
+const tmplMap = `
+<html><body>
+<caption>GAUGES</caption>
+<table border = 2>
+{{- range $key, $value := .Gauges}}
+<tr><td>{{ $key }}</td><td>{{ $value }}</td></tr>
+{{- end}}
+</table>
+
+<caption>COUNTERS</caption>
+<table border = 2>
+{{- range $key, $value := .Counters}}
+<tr><td>{{ $key }}</td><td>{{ $value }}</td></tr>
+{{- end}}
+</table>
+</body></html>
+`
+
+type tmplData struct {
+	Gauges   map[string]float64
+	Counters map[string]int64
+}
+
+func (h *Handler) ListHandler(w http.ResponseWriter, _ *http.Request) {
+	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
+	if err != nil {
+		fmt.Println("Error parsing gauge template:", err)
+		return
+	}
+
+	gaugesMap := h.storage.GetAllGauges()
+	countersMap := h.storage.GetAllCounters()
+	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
+		panic(err)
+	}
+
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 }
