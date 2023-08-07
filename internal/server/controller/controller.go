@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"github.com/ERupshis/metrics/internal/server/handlers"
-	"github.com/ERupshis/metrics/internal/server/memstorage"
-	"github.com/ERupshis/metrics/internal/server/options"
-	"github.com/ERupshis/metrics/internal/server/router"
+	"github.com/erupshis/metrics/internal/server/handlers"
+	"github.com/erupshis/metrics/internal/server/memstorage"
+	"github.com/erupshis/metrics/internal/server/options"
+	"github.com/erupshis/metrics/internal/server/router"
 	"github.com/go-chi/chi/v5"
 )
 

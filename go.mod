@@ -1,4 +1,4 @@
-module github.com/ERupshis/metrics
+module github.com/erupshis/metrics
 
 go 1.20
 

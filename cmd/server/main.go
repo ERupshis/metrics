@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/ERupshis/metrics/internal/server/controller"
 	"net/http"
+
+	"github.com/erupshis/metrics/internal/server/controller"
 )
 
 func main() {

@@ -1,14 +1,15 @@
 package router
 
 import (
-	"github.com/ERupshis/metrics/internal/server/handlers"
-	"github.com/ERupshis/metrics/internal/server/memstorage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/erupshis/metrics/internal/server/handlers"
+	"github.com/erupshis/metrics/internal/server/memstorage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRouter(t *testing.T) {

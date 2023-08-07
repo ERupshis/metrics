@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/ERupshis/metrics/internal/agent/agentimpl"
-	"github.com/ERupshis/metrics/internal/agent/options"
 	"time"
+
+	"github.com/erupshis/metrics/internal/agent/agentimpl"
+	"github.com/erupshis/metrics/internal/agent/options"
 )
 
 func main() {

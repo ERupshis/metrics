@@ -2,10 +2,11 @@ package options
 
 import (
 	"flag"
-	"github.com/caarlos0/env"
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/caarlos0/env"
 )
 
 type Options struct {

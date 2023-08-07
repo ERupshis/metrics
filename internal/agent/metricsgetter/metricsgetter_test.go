@@ -1,9 +1,10 @@
 package metricsgetter
 
 import (
-	"github.com/stretchr/testify/assert"
 	"runtime"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMetricsGetter(t *testing.T) {

@@ -2,11 +2,12 @@ package agentimpl
 
 import (
 	"fmt"
-	"github.com/ERupshis/metrics/internal/agent/metricsgetter"
-	"github.com/ERupshis/metrics/internal/agent/options"
-	"github.com/go-resty/resty/v2"
 	"math/rand"
 	"runtime"
+
+	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/agent/options"
+	"github.com/go-resty/resty/v2"
 )
 
 type Agent struct {

@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/ERupshis/metrics/internal/server/memstorage"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/erupshis/metrics/internal/server/memstorage"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
