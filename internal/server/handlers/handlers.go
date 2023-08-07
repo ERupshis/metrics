@@ -56,11 +56,6 @@ func (h *Handler) PostGauge(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetCounter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		//TODO: still actual?
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	name := chi.URLParam(r, "name")
 
 	if value, err := h.storage.GetCounter(name); err == nil {
@@ -75,11 +70,6 @@ func (h *Handler) GetCounter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetGauge(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		//TODO: still actual?
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	name := chi.URLParam(r, "name")
 
 	if value, err := h.storage.GetGauge(name); err == nil {
