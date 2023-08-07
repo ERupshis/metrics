@@ -11,10 +11,7 @@ func createInterval(interval time.Duration) *time.Ticker {
 }
 
 func Run(ticker *time.Ticker, callback func()) {
-	for {
-		select {
-		case <-ticker.C:
-			callback()
-		}
+	for range ticker.C {
+		callback()
 	}
 }
