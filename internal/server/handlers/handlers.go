@@ -60,11 +60,6 @@ func (h *Handler) ListHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handler) PostCounter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		//TODO: still actual?
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
@@ -79,11 +74,6 @@ func (h *Handler) PostCounter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) PostGauge(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		//TODO: still actual?
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
