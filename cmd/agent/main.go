@@ -4,11 +4,11 @@ import (
 	"time"
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
-	"github.com/erupshis/metrics/internal/agent/options"
+	"github.com/erupshis/metrics/internal/agent/config"
 )
 
 func main() {
-	agent := agentimpl.Create(options.Parse())
+	agent := agentimpl.Create(config.Parse())
 
 	var secondsFromStart int64
 	secondsFromStart = 0

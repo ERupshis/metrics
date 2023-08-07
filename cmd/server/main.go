@@ -8,7 +8,7 @@ import (
 
 func main() {
 	serverController := controller.Create()
-	if err := http.ListenAndServe(serverController.GetOptions().Host, serverController.CreateRoutes()); err != nil {
+	if err := http.ListenAndServe(serverController.GetConfig().Host, serverController.CreateRoutes()); err != nil {
 		panic(err)
 	}
 }

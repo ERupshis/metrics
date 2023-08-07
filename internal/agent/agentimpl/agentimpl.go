@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"runtime"
 
+	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
-	"github.com/erupshis/metrics/internal/agent/options"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -14,24 +14,24 @@ type Agent struct {
 	stats  runtime.MemStats
 	client *resty.Client
 
-	opts      options.Options
+	config    config.Config
 	pollCount int64
 }
 
-func Create(opts options.Options) *Agent {
-	return &Agent{client: resty.New(), opts: opts}
+func Create(config config.Config) *Agent {
+	return &Agent{client: resty.New(), config: config}
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: resty.New(), opts: options.Default()}
+	return &Agent{client: resty.New(), config: config.Default()}
 }
 
 func (a *Agent) GetPollInterval() int64 {
-	return a.opts.PollInterval
+	return a.config.PollInterval
 }
 
 func (a *Agent) GetReportInterval() int64 {
-	return a.opts.ReportInterval
+	return a.config.ReportInterval
 }
 
 func (a *Agent) UpdateStats() {
@@ -59,9 +59,9 @@ func (a *Agent) postStat(url string) {
 }
 
 func (a *Agent) createGaugeURL(name string, value float64) string {
-	return a.opts.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
+	return a.config.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
 }
 
 func (a *Agent) createCounterURL(name string, value int64) string {
-	return a.opts.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
 }
