@@ -14,7 +14,7 @@ import (
 
 type BaseController struct {
 	config  config.Config
-	storage *memstorage.MemStorage
+	storage memstorage.MemStorage
 }
 
 func CreateBase() *BaseController {
@@ -29,21 +29,21 @@ func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", c.ListHandler)
 	r.Route("/{request}/{type}", func(r chi.Router) {
-		r.HandleFunc("/", c.MissingNameHandler)
+		r.HandleFunc("/", c.missingNameHandler)
 		r.Route("/{name}", func(r chi.Router) {
-			r.Get("/", c.GetHandler)
-			r.Post("/{value}", c.PostHandler)
+			r.Get("/", c.getHandler)
+			r.Post("/{value}", c.postHandler)
 		})
 	})
-	r.NotFound(c.BadRequestHandler)
+	r.NotFound(c.badRequestHandler)
 	return r
 }
 
-func (c *BaseController) BadRequestHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (c *BaseController) MissingNameHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -55,9 +55,8 @@ const (
 	counterType = "counter"
 )
 
-// POST HTTP REQUEST.
-
-func (c *BaseController) PostHandler(w http.ResponseWriter, r *http.Request) {
+// postHandler POST HTTP REQUEST HANDLING.
+func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
@@ -67,17 +66,17 @@ func (c *BaseController) PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if valueType == gaugeType {
-		c.PostGaugeHandler(w, r)
+		c.postGaugeHandler(w, r)
 		return
 	} else if valueType == counterType {
-		c.PostCounterHandler(w, r)
+		c.postCounterHandler(w, r)
 		return
 	}
 
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (c *BaseController) PostCounterHandler(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
@@ -91,7 +90,7 @@ func (c *BaseController) PostCounterHandler(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *BaseController) PostGaugeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
@@ -105,9 +104,8 @@ func (c *BaseController) PostGaugeHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-//GET HTTP REQUEST.
-
-func (c *BaseController) GetHandler(w http.ResponseWriter, r *http.Request) {
+// getHandler GET HTTP REQUEST HANDLING.
+func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
@@ -117,17 +115,17 @@ func (c *BaseController) GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if valueType == gaugeType {
-		c.GetGaugeHandler(w, r)
+		c.getGaugeHandler(w, r)
 		return
 	} else if valueType == counterType {
-		c.GetCounterHandler(w, r)
+		c.getCounterHandler(w, r)
 		return
 	}
 
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (c *BaseController) GetCounterHandler(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if value, err := c.storage.GetCounter(name); err == nil {
@@ -141,7 +139,7 @@ func (c *BaseController) GetCounterHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (c *BaseController) GetGaugeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if value, err := c.storage.GetGauge(name); err == nil {

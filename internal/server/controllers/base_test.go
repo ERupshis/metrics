@@ -1,39 +1,61 @@
 package controllers
 
-/*
-package router
-
 import (
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/erupshis/metrics/internal/server/handlers"
-	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRouter(t *testing.T) {
-	type req struct {
-		method string
-		url    string
+type req struct {
+	method string
+	url    string
+}
+type want struct {
+	code        int
+	response    string
+	contentType string
+}
+type test struct {
+	name string
+	req  req
+	want want
+}
+
+func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
+	for _, tt := range *tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
+			require.NoError(t, errReq)
+
+			req.Header.Add("Content-Type", "text/plain")
+
+			resp, errResp := ts.Client().Do(req)
+			assert.NoError(t, errResp)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want.response, string(respBody))
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+		})
 	}
-	type want struct {
-		code        int
-		response    string
-		contentType string
-	}
-	tests := []struct {
-		name string
-		req  req
-		want want
-	}{
-		//BadRequestHandler
+}
+
+func TestBaseController(t *testing.T) {
+	ts := httptest.NewServer(CreateBase().Route())
+	defer ts.Close()
+
+	badRequestTests := []test{
+		//badRequestHandler
 		{
 			"post invalid path",
-			req{http.MethodPost, "/update/count"},
+			req{http.MethodPost, "/update/count/fg/dfgdfg/dfg"},
 			want{http.StatusBadRequest, "", ""},
 		},
 		{
@@ -43,7 +65,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			"get invalid path",
-			req{http.MethodGet, "/update/count"},
+			req{http.MethodGet, "/update/count/sdfgdf/dfgdfg/gg"},
 			want{http.StatusBadRequest, "", ""},
 		},
 		{
@@ -51,7 +73,69 @@ func TestRouter(t *testing.T) {
 			req{http.MethodGet, "/sdf"},
 			want{http.StatusBadRequest, "", ""},
 		},
-		//Counter
+		//{
+		//	"post invalid path",
+		//	req{http.MethodPost, "/sdf/sfdg/"},
+		//	want{http.StatusBadRequest, "", ""},
+		//},
+		//{
+		//	"get invalid path",
+		//	req{http.MethodGet, "/sdf/dfsg"},
+		//	want{http.StatusBadRequest, "", ""},
+		//},
+		//{
+		//	"get invalid path",
+		//	req{http.MethodGet, "/update/dfsg"},
+		//	want{http.StatusBadRequest, "", ""},
+		//},
+	}
+	runTests(t, &badRequestTests, ts)
+
+	missingNameTests := []test{
+		{
+			"post update counter valid path",
+			req{http.MethodPost, "/update/count/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"get update counter valid path",
+			req{http.MethodGet, "/update/count/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"post value counter valid path",
+			req{http.MethodPost, "/value/count/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"get value counter valid path",
+			req{http.MethodGet, "/value/count/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"post update gauge valid path",
+			req{http.MethodPost, "/update/gauge/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"get update gauge valid path",
+			req{http.MethodGet, "/update/gauge/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"post value gauge valid path",
+			req{http.MethodPost, "/value/gauge/"},
+			want{http.StatusNotFound, "", ""},
+		},
+		{
+			"get value gauge valid path",
+			req{http.MethodGet, "/value/gauge/"},
+			want{http.StatusNotFound, "", ""},
+		},
+	}
+	runTests(t, &missingNameTests, ts)
+
+	counterTests := []test{
 		{
 			"counter post valid case",
 			req{http.MethodPost, "/update/counter/someMetrics/345"},
@@ -80,7 +164,7 @@ func TestRouter(t *testing.T) {
 		{
 			"counter post invalid case(missing value)",
 			req{http.MethodPost, "/update/counter/someMetrics/"},
-			want{http.StatusBadRequest, "", ""},
+			want{http.StatusMethodNotAllowed, "", ""},
 		},
 		{
 			"counter get valid case",
@@ -107,7 +191,10 @@ func TestRouter(t *testing.T) {
 			req{http.MethodGet, "/value/counter/someMetrics"},
 			want{http.StatusOK, "690", "text/plain; charset=utf-8"},
 		},
-		//Gauge
+	}
+	runTests(t, &counterTests, ts)
+
+	gaugeTests := []test{
 		{
 			"gauge post valid case",
 			req{http.MethodPost, "/update/gauge/someMetrics/345.1"},
@@ -132,7 +219,7 @@ func TestRouter(t *testing.T) {
 		{
 			"gauge post invalid case(missing value)",
 			req{http.MethodPost, "/update/gauge/someMetrics/"},
-			want{http.StatusBadRequest, "", ""},
+			want{http.StatusMethodNotAllowed, "", ""},
 		},
 		{
 			"gauge post invalid case(missing name)",
@@ -184,38 +271,6 @@ func TestRouter(t *testing.T) {
 			req{http.MethodGet, "/value/gauge/someMetricsNew2"},
 			want{http.StatusOK, "533227.03", "text/plain; charset=utf-8"},
 		},
-		// List
-		//{
-		//	"valid case html list",
-		//	req{http.MethodGet, "/"},
-		//	want{http.StatusOK,
-		//		"<html><body><caption>GAUGES</caption><table border = 2><tr><td>someMetricsNew</td><td>533227.036</td></tr><tr><td>someMetricsNew2</td><td>533227.03</td></tr><tr><td>someMetrics</td><td>345</td></tr></table><caption>COUNTERS</caption><table border = 2><tr><td>someMetrics</td><td>690</td></tr></body></html>",
-		//		"text/html; charset=utf-8"},
-		//},
 	}
-
-	ts := httptest.NewServer(Create(handlers.Create(memstorage.Create())))
-	defer ts.Close()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
-			require.NoError(t, errReq)
-
-			req.Header.Add("Content-Type", "text/plain")
-
-			resp, errResp := ts.Client().Do(req)
-			assert.NoError(t, errResp)
-			defer resp.Body.Close()
-
-			respBody, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.response, string(respBody))
-			assert.Equal(t, tt.want.code, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.GetHandler("Content-Type"))
-		})
-	}
+	runTests(t, &gaugeTests, ts)
 }
-
-*/

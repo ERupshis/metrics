@@ -13,8 +13,8 @@ type MemStorage struct {
 	counterMetrics map[string]counter
 }
 
-func Create() *MemStorage {
-	return &MemStorage{make(map[string]gauge), make(map[string]counter)}
+func Create() MemStorage {
+	return MemStorage{make(map[string]gauge), make(map[string]counter)}
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {
