@@ -28,9 +28,13 @@ func (c *BaseController) GetConfig() *config.Config {
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", c.ListHandler)
-	r.HandleFunc("/{request}/{type}", c.MissingNameHandler)
-	r.Get("/{request}/{type}/{name}", c.GetHandler)
-	r.Post("/{request}/{type}/{name}/{value}", c.PostHandler)
+	r.Route("/{request}/{type}", func(r chi.Router) {
+		r.HandleFunc("/", c.MissingNameHandler)
+		r.Route("/{name}", func(r chi.Router) {
+			r.Get("/", c.GetHandler)
+			r.Post("/{value}", c.PostHandler)
+		})
+	})
 	r.NotFound(c.BadRequestHandler)
 	return r
 }
