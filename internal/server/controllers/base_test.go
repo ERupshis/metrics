@@ -30,7 +30,7 @@ func TestRouter(t *testing.T) {
 		req  req
 		want want
 	}{
-		//Invalid
+		//BadRequestHandler
 		{
 			"post invalid path",
 			req{http.MethodPost, "/update/count"},
@@ -213,7 +213,7 @@ func TestRouter(t *testing.T) {
 
 			assert.Equal(t, tt.want.response, string(respBody))
 			assert.Equal(t, tt.want.code, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.contentType, resp.Header.GetHandler("Content-Type"))
 		})
 	}
 }

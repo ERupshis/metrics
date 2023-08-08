@@ -80,11 +80,11 @@ func TestMemStorage_GetCounter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := storage.GetCounter(tt.req)
 			if err != nil && !tt.wantErr {
-				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
+				assert.NoError(t, err, "GetCounterHandler(%v) missing name", tt.req)
 				return
 			}
 
-			assert.Equalf(t, tt.want, got, "GetCounter(%v)", tt.req)
+			assert.Equalf(t, tt.want, got, "GetCounterHandler(%v)", tt.req)
 		})
 	}
 }
@@ -106,11 +106,11 @@ func TestMemStorage_GetGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := storage.GetGauge(tt.req)
 			if err != nil && !tt.wantErr {
-				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
+				assert.NoError(t, err, "GetCounterHandler(%v) missing name", tt.req)
 				return
 			}
 
-			assert.Equalf(t, tt.want, got, "GetCounter(%v)", tt.req)
+			assert.Equalf(t, tt.want, got, "GetCounterHandler(%v)", tt.req)
 		})
 	}
 }

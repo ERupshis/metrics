@@ -24,44 +24,11 @@ func CreateBase() *BaseController {
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", c.ListHandler)
-	r.Route("/update", func(r chi.Router) {
-		r.Route("/counter", func(r chi.Router) {
-			r.Get("/", c.MissingName)
-			r.Post("/", c.MissingName)
-			r.Route("/{name}", func(r chi.Router) {
-				r.Post("/{value}", c.PostCounter)
-			})
+	r.Get("/{request}/{type}/{name}/{value}", c.GetHandler)
+	r.Post("/{request}/{type}/{name}/{value}", c.PostHandler)
+	r.HandleFunc("/{request}/{type}/", c.MissingNameHandler)
 
-		})
-		r.Route("/gauge", func(r chi.Router) {
-			r.Get("/", c.MissingName)
-			r.Post("/", c.MissingName)
-			r.Route("/{name}", func(r chi.Router) {
-				r.Post("/{value}", c.PostGauge)
-			})
-		})
-	})
-
-	r.Route("/value", func(r chi.Router) {
-		r.Route("/counter", func(r chi.Router) {
-			r.Get("/", c.MissingName)
-			r.Post("/", c.MissingName)
-			r.Route("/{name}", func(r chi.Router) {
-				r.Get("/", c.GetCounter)
-			})
-
-		})
-		r.Route("/gauge", func(r chi.Router) {
-			r.Get("/", c.MissingName)
-			r.Post("/", c.MissingName)
-			r.Route("/{name}", func(r chi.Router) {
-				r.Get("/", c.GetGauge)
-			})
-		})
-	})
-
-	r.NotFound(c.Invalid)
-
+	r.NotFound(c.BadRequestHandler)
 	return r
 }
 
@@ -69,15 +36,41 @@ func (c *BaseController) GetConfig() *config.Config {
 	return &c.config
 }
 
-func (c *BaseController) Invalid(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) BadRequestHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (c *BaseController) MissingName(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) MissingNameHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (c *BaseController) PostCounter(w http.ResponseWriter, r *http.Request) {
+// POST HTTP REQUEST.
+const postRequest = "update"
+const getRequest = "value"
+const gaugeType = "gauge"
+const counterType = "counter"
+
+func (c *BaseController) PostHandler(w http.ResponseWriter, r *http.Request) {
+	request := chi.URLParam(r, "request")
+	valueType := chi.URLParam(r, "type")
+
+	if request != postRequest {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if valueType == gaugeType {
+		c.PostGaugeHandler(w, r)
+		return
+	} else if valueType == counterType {
+		c.PostCounterHandler(w, r)
+		return
+	}
+
+	w.WriteHeader(http.StatusBadRequest)
+}
+
+func (c *BaseController) PostCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
@@ -91,7 +84,7 @@ func (c *BaseController) PostCounter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *BaseController) PostGauge(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) PostGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
@@ -105,7 +98,29 @@ func (c *BaseController) PostGauge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *BaseController) GetCounter(w http.ResponseWriter, r *http.Request) {
+//GET HTTP REQUEST.
+
+func (c *BaseController) GetHandler(w http.ResponseWriter, r *http.Request) {
+	request := chi.URLParam(r, "request")
+	valueType := chi.URLParam(r, "type")
+
+	if request != getRequest {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if valueType == gaugeType {
+		c.GetGaugeHandler(w, r)
+		return
+	} else if valueType == counterType {
+		c.GetCounterHandler(w, r)
+		return
+	}
+
+	w.WriteHeader(http.StatusBadRequest)
+}
+
+func (c *BaseController) GetCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if value, err := c.storage.GetCounter(name); err == nil {
@@ -119,7 +134,7 @@ func (c *BaseController) GetCounter(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *BaseController) GetGauge(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) GetGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if value, err := c.storage.GetGauge(name); err == nil {
