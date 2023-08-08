@@ -21,19 +21,18 @@ func CreateBase() *BaseController {
 	return &BaseController{config.Parse(), memstorage.Create()}
 }
 
+func (c *BaseController) GetConfig() *config.Config {
+	return &c.config
+}
+
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/", c.ListHandler)
-	r.Get("/{request}/{type}/{name}/{value}", c.GetHandler)
+	r.HandleFunc("/{request}/{type}", c.MissingNameHandler)
+	r.Get("/{request}/{type}/{name}", c.GetHandler)
 	r.Post("/{request}/{type}/{name}/{value}", c.PostHandler)
-	r.HandleFunc("/{request}/{type}/", c.MissingNameHandler)
-
 	r.NotFound(c.BadRequestHandler)
 	return r
-}
-
-func (c *BaseController) GetConfig() *config.Config {
-	return &c.config
 }
 
 func (c *BaseController) BadRequestHandler(w http.ResponseWriter, _ *http.Request) {
@@ -44,11 +43,15 @@ func (c *BaseController) MissingNameHandler(w http.ResponseWriter, _ *http.Reque
 	w.WriteHeader(http.StatusNotFound)
 }
 
+const (
+	postRequest = "update"
+	getRequest  = "value"
+
+	gaugeType   = "gauge"
+	counterType = "counter"
+)
+
 // POST HTTP REQUEST.
-const postRequest = "update"
-const getRequest = "value"
-const gaugeType = "gauge"
-const counterType = "counter"
 
 func (c *BaseController) PostHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
