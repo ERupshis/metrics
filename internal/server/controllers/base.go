@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"fmt"
@@ -7,31 +7,81 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
 )
 
-type Handler struct {
+type BaseController struct {
+	config  config.Config
 	storage *memstorage.MemStorage
 }
 
-func Create(storage *memstorage.MemStorage) *Handler {
-	return &Handler{storage}
+func CreateBase() *BaseController {
+	return &BaseController{config.Parse(), memstorage.Create()}
 }
 
-func (h *Handler) Invalid(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) Route() *chi.Mux {
+	r := chi.NewRouter()
+	r.Get("/", c.ListHandler)
+	r.Route("/update", func(r chi.Router) {
+		r.Route("/counter", func(r chi.Router) {
+			r.Get("/", c.MissingName)
+			r.Post("/", c.MissingName)
+			r.Route("/{name}", func(r chi.Router) {
+				r.Post("/{value}", c.PostCounter)
+			})
+
+		})
+		r.Route("/gauge", func(r chi.Router) {
+			r.Get("/", c.MissingName)
+			r.Post("/", c.MissingName)
+			r.Route("/{name}", func(r chi.Router) {
+				r.Post("/{value}", c.PostGauge)
+			})
+		})
+	})
+
+	r.Route("/value", func(r chi.Router) {
+		r.Route("/counter", func(r chi.Router) {
+			r.Get("/", c.MissingName)
+			r.Post("/", c.MissingName)
+			r.Route("/{name}", func(r chi.Router) {
+				r.Get("/", c.GetCounter)
+			})
+
+		})
+		r.Route("/gauge", func(r chi.Router) {
+			r.Get("/", c.MissingName)
+			r.Post("/", c.MissingName)
+			r.Route("/{name}", func(r chi.Router) {
+				r.Get("/", c.GetGauge)
+			})
+		})
+	})
+
+	r.NotFound(c.Invalid)
+
+	return r
+}
+
+func (c *BaseController) GetConfig() *config.Config {
+	return &c.config
+}
+
+func (c *BaseController) Invalid(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
-func (h *Handler) MissingName(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) MissingName(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (h *Handler) PostCounter(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) PostCounter(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
-		h.storage.AddCounter(name, val)
+		c.storage.AddCounter(name, val)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -41,11 +91,11 @@ func (h *Handler) PostCounter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) PostGauge(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) PostGauge(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
-		h.storage.AddGauge(name, val)
+		c.storage.AddGauge(name, val)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -55,10 +105,10 @@ func (h *Handler) PostGauge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) GetCounter(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) GetCounter(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	if value, err := h.storage.GetCounter(name); err == nil {
+	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
 			panic(err)
@@ -69,10 +119,10 @@ func (h *Handler) GetCounter(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) GetGauge(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) GetGauge(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	if value, err := h.storage.GetGauge(name); err == nil {
+	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
 			panic(err)
@@ -108,15 +158,15 @@ type tmplData struct {
 	Counters map[string]int64
 }
 
-func (h *Handler) ListHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
 		fmt.Println("Error parsing gauge template:", err)
 		return
 	}
 
-	gaugesMap := h.storage.GetAllGauges()
-	countersMap := h.storage.GetAllCounters()
+	gaugesMap := c.storage.GetAllGauges()
+	countersMap := c.storage.GetAllCounters()
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		panic(err)
 	}

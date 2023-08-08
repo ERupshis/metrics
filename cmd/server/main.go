@@ -3,12 +3,12 @@ package main
 import (
 	"net/http"
 
-	"github.com/erupshis/metrics/internal/server/controller"
+	"github.com/erupshis/metrics/internal/server/controllers"
 )
 
 func main() {
-	serverController := controller.Create()
-	if err := http.ListenAndServe(serverController.GetConfig().Host, serverController.CreateRoutes()); err != nil {
+	baseController := controllers.CreateBase()
+	if err := http.ListenAndServe(baseController.GetConfig().Host, baseController.Route()); err != nil {
 		panic(err)
 	}
 }
