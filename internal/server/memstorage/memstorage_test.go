@@ -1,13 +1,14 @@
 package memstorage
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestCreateStorage(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 
 	require.NotNil(t, storage)
 	require.NotNil(t, storage.counterMetrics)
@@ -15,7 +16,7 @@ func TestCreateStorage(t *testing.T) {
 }
 
 func TestMemStorage_AddCounter(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	type args struct {
 		name  string
 		value int64
@@ -39,7 +40,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 }
 
 func TestMemStorage_AddGauge(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	type args struct {
 		name  string
 		value float64
@@ -63,7 +64,7 @@ func TestMemStorage_AddGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetCounter(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	storage.AddCounter("metric1", 1)
 
 	tests := []struct {
@@ -89,7 +90,7 @@ func TestMemStorage_GetCounter(t *testing.T) {
 }
 
 func TestMemStorage_GetGauge(t *testing.T) {
-	storage := CreateStorage()
+	storage := Create()
 	storage.AddGauge("metric1", 1.2)
 
 	tests := []struct {
@@ -105,11 +106,11 @@ func TestMemStorage_GetGauge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := storage.GetGauge(tt.req)
 			if err != nil && !tt.wantErr {
-				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
+				assert.NoError(t, err, "GetGauge(%v) missing name", tt.req)
 				return
 			}
 
-			assert.Equalf(t, tt.want, got, "GetCounter(%v)", tt.req)
+			assert.Equalf(t, tt.want, got, "GetGauge(%v)", tt.req)
 		})
 	}
 }
