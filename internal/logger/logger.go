@@ -2,15 +2,16 @@ package logger
 
 import (
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 )
 
-type InfoLogger struct {
+type RequestLogger struct {
 	zap *zap.Logger
 }
 
-func Create(level string) (*InfoLogger, error) {
+func CreateRequest(level string) (*RequestLogger, error) {
 	cfg, err := initConfig(level)
 	if err != nil {
 		return nil, err
@@ -21,7 +22,7 @@ func Create(level string) (*InfoLogger, error) {
 		return nil, err
 	}
 
-	return &InfoLogger{zap: logger}, nil
+	return &RequestLogger{zap: logger}, nil
 }
 
 func initConfig(level string) (zap.Config, error) {
@@ -37,19 +38,25 @@ func initConfig(level string) (zap.Config, error) {
 	return cfg, nil
 }
 
-func (il *InfoLogger) Sync() {
+func (il *RequestLogger) Sync() {
 	err := il.zap.Sync()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (il *InfoLogger) RequestLogger(h http.HandlerFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		il.zap.Debug("got incoming HTTP request",
+func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
+	logWrap := func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		h.ServeHTTP(w, r)
+		duration := time.Since(start)
+
+		il.zap.Info("got incoming HTTP request",
+			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
-			zap.String("path", r.URL.Path),
+			zap.Duration("duration", duration),
 		)
-		h(w, r)
-	})
+	}
+
+	return logWrap
 }
