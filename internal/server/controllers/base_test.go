@@ -56,7 +56,7 @@ func TestBaseController(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer log.Sync()
+	//defer log.Sync()
 
 	ts := httptest.NewServer(CreateBase(cfg, log).Route())
 	defer ts.Close()
