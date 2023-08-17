@@ -48,13 +48,17 @@ func (il *RequestLogger) Sync() {
 func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
 	logWrap := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		h.ServeHTTP(w, r)
+
+		loggingWriter := CreateResponseWriter(w)
+		h.ServeHTTP(loggingWriter, r)
 		duration := time.Since(start)
 
-		il.zap.Info("got incoming HTTP request",
+		il.zap.Info("new incoming HTTP request",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
+			zap.Int("status", loggingWriter.getResponseData().status),
 			zap.Duration("duration", duration),
+			zap.Int("size", loggingWriter.getResponseData().size),
 		)
 	}
 
