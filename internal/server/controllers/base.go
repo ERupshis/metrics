@@ -139,7 +139,6 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
 			panic(err)
 		}
-		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -153,7 +152,6 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
 			panic(err)
 		}
-		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
