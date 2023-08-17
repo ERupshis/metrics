@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +50,15 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 }
 
 func TestBaseController(t *testing.T) {
-	ts := httptest.NewServer(CreateBase().Route())
+	cfg := config.Parse()
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{

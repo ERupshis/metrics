@@ -3,17 +3,33 @@ package main
 import (
 	"net/http"
 
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	baseController := controllers.CreateBase()
+	cfg := config.Parse()
+
+	log := createLogger(cfg.LogLevel)
+	defer log.Sync()
+
+	baseController := controllers.CreateBase(cfg, log)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
-	if err := http.ListenAndServe(baseController.GetConfig().Host, router); err != nil {
+	if err := http.ListenAndServe(cfg.Host, router); err != nil {
 		panic(err)
 	}
+}
+
+func createLogger(level string) logger.BaseLogger {
+	log, err := logger.CreateRequest(level)
+	if err != nil {
+		panic(err)
+	}
+
+	return log
 }

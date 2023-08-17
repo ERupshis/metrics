@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
@@ -15,10 +16,12 @@ import (
 type BaseController struct {
 	config  config.Config
 	storage memstorage.MemStorage
+
+	logger logger.BaseLogger
 }
 
-func CreateBase() *BaseController {
-	return &BaseController{config.Parse(), memstorage.Create()}
+func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
+	return &BaseController{config: config, storage: memstorage.Create(), logger: logger}
 }
 
 func (c *BaseController) GetConfig() *config.Config {
@@ -27,15 +30,18 @@ func (c *BaseController) GetConfig() *config.Config {
 
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
-	r.Get("/", c.ListHandler)
+
+	logRequest := c.logger.Log
+
+	r.Get("/", logRequest(c.ListHandler))
 	r.Route("/{request}/{type}", func(r chi.Router) {
-		r.HandleFunc("/", c.missingNameHandler)
+		r.HandleFunc("/", logRequest(c.missingNameHandler))
 		r.Route("/{name}", func(r chi.Router) {
-			r.Get("/", c.getHandler)
-			r.Post("/{value}", c.postHandler)
+			r.Get("/", logRequest(c.getHandler))
+			r.Post("/{value}", logRequest(c.postHandler))
 		})
 	})
-	r.NotFound(c.badRequestHandler)
+	r.NotFound(logRequest(c.badRequestHandler))
 	return r
 }
 
@@ -133,7 +139,6 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
 			panic(err)
 		}
-		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -147,7 +152,6 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
 			panic(err)
 		}
-		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}

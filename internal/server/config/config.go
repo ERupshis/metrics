@@ -7,11 +7,15 @@ import (
 
 const (
 	envAddress  = "ADDRESS"
-	flagAddress = "a"
+	envLogLevel = "LOG_LEVEL"
+
+	flagAddress  = "a"
+	flagLogLevel = "l"
 )
 
 type Config struct {
-	Host string
+	Host     string
+	LogLevel string
 }
 
 func Parse() Config {
@@ -24,6 +28,7 @@ func Parse() Config {
 // FLAGS PARSING.
 func checkFlags(config *Config) {
 	flag.StringVar(&config.Host, flagAddress, "localhost:8080", "server endpoint")
+	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
 	flag.Parse()
 }
 
@@ -31,5 +36,9 @@ func checkFlags(config *Config) {
 func checkEnvironments(config *Config) {
 	if envHost := os.Getenv(envAddress); envHost != "" {
 		config.Host = envHost
+	}
+
+	if envLogLvl := os.Getenv(envLogLevel); envLogLvl != "" {
+		config.LogLevel = envLogLvl
 	}
 }
