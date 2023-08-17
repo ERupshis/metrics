@@ -12,7 +12,7 @@ type loggingResponseWriter struct {
 	responseData *responseData
 }
 
-func CreateResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+func createResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 	return &loggingResponseWriter{w, &responseData{0, 0}}
 }
 

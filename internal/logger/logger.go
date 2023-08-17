@@ -49,7 +49,7 @@ func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
 	logWrap := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		loggingWriter := CreateResponseWriter(w)
+		loggingWriter := createResponseWriter(w)
 		h.ServeHTTP(loggingWriter, r)
 		duration := time.Since(start)
 
