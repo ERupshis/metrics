@@ -71,7 +71,7 @@ func (a *Agent) createCounterURL(name string, value int64) string {
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJsonStats() {
+func (a *Agent) PostJSONStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
 		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
 	}

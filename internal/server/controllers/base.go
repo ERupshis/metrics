@@ -99,17 +99,19 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if request == getRequest {
 		if data.MType == gaugeType && data.Value != nil {
-			*data.Value, err = c.storage.GetGauge(data.ID)
+			value, err := c.storage.GetGauge(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			data.Value = &value
 		} else if data.MType == counterType && data.Delta != nil {
-			*data.Delta, err = c.storage.GetCounter(data.ID)
+			value, err := c.storage.GetCounter(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			data.Delta = &value
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
