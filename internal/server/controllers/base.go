@@ -103,14 +103,14 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		if data.MType == gaugeType && data.Value != nil {
 			value, err := c.storage.GetGauge(data.ID)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			data.Value = &value
 		} else if data.MType == counterType && data.Delta != nil {
 			value, err := c.storage.GetCounter(data.ID)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			data.Delta = &value
