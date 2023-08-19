@@ -1,7 +1,6 @@
 package agentimpl
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 
@@ -42,32 +41,32 @@ func (a *Agent) UpdateStats() {
 
 //URL POST REQUESTS.
 
-func (a *Agent) PostStats() {
-	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
-	}
-
-	a.postStat(a.createGaugeURL("RandomValue", rand.Float64()))
-	a.postStat(a.createCounterURL("PollCount", a.pollCount))
-}
-
-func (a *Agent) postStat(url string) {
-	_, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
-		Post(url)
-
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (a *Agent) createGaugeURL(name string, value float64) string {
-	return a.config.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
-}
-
-func (a *Agent) createCounterURL(name string, value int64) string {
-	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
-}
+//func (a *Agent) PostStats() {
+//	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+//		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
+//	}
+//
+//	a.postStat(a.createGaugeURL("RandomValue", rand.Float64()))
+//	a.postStat(a.createCounterURL("PollCount", a.pollCount))
+//}
+//
+//func (a *Agent) postStat(url string) {
+//	_, err := a.client.R().
+//		SetHeader("Content-Type", "text/plain").
+//		Post(url)
+//
+//	if err != nil {
+//		panic(err)
+//	}
+//}
+//
+//func (a *Agent) createGaugeURL(name string, value float64) string {
+//	return a.config.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
+//}
+//
+//func (a *Agent) createCounterURL(name string, value int64) string {
+//	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+//}
 
 //JSON POST REQUESTS.
 
