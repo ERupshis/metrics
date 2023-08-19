@@ -18,7 +18,7 @@ func main() {
 	defer repeatTicker.Stop()
 
 	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, func() { agent.PostJsonStats() })
+	go ticker.Run(repeatTicker, func() { agent.PostJSONStats() })
 
 	time.Sleep(time.Minute)
 }

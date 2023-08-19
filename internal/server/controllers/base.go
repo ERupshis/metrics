@@ -86,36 +86,42 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 
 	if request == postRequest {
 		if data.MType == gaugeType && data.Value != nil {
-			c.storage.AddGauge(data.ID, *data.Value)
-			*data.Value, _ = c.storage.GetGauge(data.ID)
+			valueIn := data.Value
+			c.storage.AddGauge(data.ID, *valueIn)
+			valueOut, _ := c.storage.GetGauge(data.ID)
+			data.Value = &valueOut
 		} else if data.MType == counterType && data.Delta != nil {
-			c.storage.AddCounter(data.ID, *data.Delta)
-			*data.Delta, _ = c.storage.GetCounter(data.ID)
+			valueIn := data.Delta
+			c.storage.AddCounter(data.ID, *valueIn)
+			value, _ := c.storage.GetCounter(data.ID)
+			data.Delta = &value
 		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
 			return
 		}
 	} else if request == getRequest {
 		if data.MType == gaugeType && data.Value != nil {
-			*data.Value, err = c.storage.GetGauge(data.ID)
+			value, err := c.storage.GetGauge(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			data.Value = &value
 		} else if data.MType == counterType && data.Delta != nil {
-			*data.Delta, err = c.storage.GetCounter(data.ID)
+			value, err := c.storage.GetCounter(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			data.Delta = &value
 		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(networkmsg.CreatePostUpdateMessage(data))
+	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(data))
 }
 
 // postHandler POST HTTP REQUEST HANDLING.

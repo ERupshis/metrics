@@ -71,16 +71,16 @@ func (a *Agent) createCounterURL(name string, value int64) string {
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJsonStats() {
+func (a *Agent) PostJSONStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postJsonStat(a.createJsonGaugeMessage(name, valueGetter(&a.stats)))
+		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
 	}
 
-	a.postJsonStat(a.createJsonGaugeMessage("RandomValue", rand.Float64()))
-	a.postJsonStat(a.createJsonCounterMessage("PollCount", a.pollCount))
+	a.postJSONStat(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	a.postJSONStat(a.createJSONCounterMessage("PollCount", a.pollCount))
 }
 
-func (a *Agent) postJsonStat(body []byte) {
+func (a *Agent) postJSONStat(body []byte) {
 	_, err := a.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
@@ -90,10 +90,10 @@ func (a *Agent) postJsonStat(body []byte) {
 		panic(err)
 	}
 }
-func (a *Agent) createJsonGaugeMessage(name string, value float64) []byte {
+func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
 }
 
-func (a *Agent) createJsonCounterMessage(name string, value int64) []byte {
+func (a *Agent) createJSONCounterMessage(name string, value int64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateCounterMetrics(name, value))
 }
