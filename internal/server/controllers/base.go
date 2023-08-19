@@ -95,9 +95,6 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			c.storage.AddCounter(data.ID, *valueIn)
 			value, _ := c.storage.GetCounter(data.ID)
 			data.Delta = &value
-		} else {
-			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
-			return
 		}
 	} else if request == getRequest {
 		if data.MType == gaugeType && data.Value != nil {
@@ -114,9 +111,6 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			data.Delta = &value
-		} else {
-			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
-			return
 		}
 	}
 
