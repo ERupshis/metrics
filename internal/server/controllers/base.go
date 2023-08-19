@@ -76,11 +76,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-		}
-	}(r.Body)
+	defer r.Body.Close()
 
 	data, err := networkmsg.ParsePostValueMessage(buf.Bytes())
 	if err != nil {
