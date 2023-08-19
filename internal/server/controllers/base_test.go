@@ -46,28 +46,6 @@ type wantJSON struct {
 	body        string
 }
 
-func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
-	for _, tt := range *tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
-			require.NoError(t, errReq)
-
-			req.Header.Add("Content-Type", "text/plain")
-
-			resp, errResp := ts.Client().Do(req)
-			assert.NoError(t, errResp)
-			defer resp.Body.Close()
-
-			respBody, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.response, string(respBody))
-			assert.Equal(t, tt.want.code, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-		})
-	}
-}
-
 func TestJSONBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
@@ -96,6 +74,37 @@ func TestJSONBaseController(t *testing.T) {
 					networkmsg.Metrics{
 						ID:    "asd",
 						MType: "counter",
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":0}"},
+		},
+		{
+			"counter post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"},
+		},
+		{
+			"counter post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
 						Delta: &val1,
 					})),
 			},
@@ -114,6 +123,37 @@ func TestJSONBaseController(t *testing.T) {
 			reqJSON{
 				http.MethodPost,
 				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":0}"},
+		},
+		{
+			"gauge post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
 					networkmsg.Metrics{
 						ID:    "asd",
@@ -370,4 +410,26 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &gaugeTests, ts)
+}
+
+func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
+	for _, tt := range *tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
+			require.NoError(t, errReq)
+
+			req.Header.Add("Content-Type", "text/plain")
+
+			resp, errResp := ts.Client().Do(req)
+			assert.NoError(t, errResp)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want.response, string(respBody))
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+		})
+	}
 }

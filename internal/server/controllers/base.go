@@ -85,26 +85,32 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request == postRequest {
-		if data.MType == gaugeType && data.Value != nil {
-			valueIn := data.Value
+		if data.MType == gaugeType {
+			valueIn := new(float64)
+			if data.Value != nil {
+				valueIn = data.Value
+			}
 			c.storage.AddGauge(data.ID, *valueIn)
 			valueOut, _ := c.storage.GetGauge(data.ID)
 			data.Value = &valueOut
-		} else if data.MType == counterType && data.Delta != nil {
-			valueIn := data.Delta
+		} else if data.MType == counterType {
+			valueIn := new(int64)
+			if data.Delta != nil {
+				valueIn = data.Delta
+			}
 			c.storage.AddCounter(data.ID, *valueIn)
 			value, _ := c.storage.GetCounter(data.ID)
 			data.Delta = &value
 		}
 	} else if request == getRequest {
-		if data.MType == gaugeType && data.Value != nil {
+		if data.MType == gaugeType {
 			value, err := c.storage.GetGauge(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
 			data.Value = &value
-		} else if data.MType == counterType && data.Delta != nil {
+		} else if data.MType == counterType {
 			value, err := c.storage.GetCounter(data.ID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusNotFound)
