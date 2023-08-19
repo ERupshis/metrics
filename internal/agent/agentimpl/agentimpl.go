@@ -1,12 +1,12 @@
 package agentimpl
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -39,29 +39,27 @@ func (a *Agent) UpdateStats() {
 	a.pollCount++
 }
 
-func (a *Agent) PostStats() {
+//JSON POST REQUESTS.
+
+func (a *Agent) PostJSONStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
+		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
 	}
 
-	a.postStat(a.createGaugeURL("RandomValue", rand.Float64()))
-	a.postStat(a.createCounterURL("PollCount", a.pollCount))
+	a.postJSONStat(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	a.postJSONStat(a.createJSONCounterMessage("PollCount", a.pollCount))
 }
 
-func (a *Agent) postStat(url string) {
-	_, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
-		Post(url)
-
-	if err != nil {
-		panic(err)
-	}
+func (a *Agent) postJSONStat(body []byte) {
+	_, _ = a.client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(body).
+		Post(a.config.Host + "/update/")
+}
+func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
 }
 
-func (a *Agent) createGaugeURL(name string, value float64) string {
-	return a.config.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
-}
-
-func (a *Agent) createCounterURL(name string, value int64) string {
-	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+func (a *Agent) createJSONCounterMessage(name string, value int64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateCounterMetrics(name, value))
 }

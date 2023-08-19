@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/ticker"
@@ -18,7 +16,8 @@ func main() {
 	defer repeatTicker.Stop()
 
 	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, func() { agent.PostStats() })
+	go ticker.Run(repeatTicker, func() { agent.PostJSONStats() })
 
-	time.Sleep(time.Minute)
+	waitCh := make(chan struct{})
+	<-waitCh
 }
