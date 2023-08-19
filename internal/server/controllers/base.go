@@ -86,11 +86,15 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 
 	if request == postRequest {
 		if data.MType == gaugeType && data.Value != nil {
-			c.storage.AddGauge(data.ID, *data.Value)
-			value, _ := c.storage.GetGauge(data.ID)
-			data.Value = &value
+			var valueIn *float64
+			valueIn = data.Value
+			c.storage.AddGauge(data.ID, *valueIn)
+			valueOut, _ := c.storage.GetGauge(data.ID)
+			data.Value = &valueOut
 		} else if data.MType == counterType && data.Delta != nil {
-			c.storage.AddCounter(data.ID, *data.Delta)
+			var valueIn *int64
+			valueIn = data.Delta
+			c.storage.AddCounter(data.ID, *valueIn)
 			value, _ := c.storage.GetCounter(data.ID)
 			data.Delta = &value
 		} else {
