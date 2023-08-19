@@ -55,7 +55,6 @@ func (a *Agent) postJSONStat(body []byte) {
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
 		Post(a.config.Host + "/update/")
-
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))

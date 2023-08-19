@@ -69,7 +69,7 @@ func TestAgent_UpdateStats(t *testing.T) {
 	}
 }
 
-func Test_createGaugeUrl(t *testing.T) {
+func TestAgent_createJSONGaugeMessage(t *testing.T) {
 	type args struct {
 		name  string
 		value float64
@@ -77,21 +77,29 @@ func Test_createGaugeUrl(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want string
+		want []byte
 	}{
-		{"generation gauge post request URL", args{"testGauge", 123.456}, "http://localhost:8080/update/gauge/testGauge/123.456000"},
+		{
+			name: "valid case",
+			args: args{"asd", 123},
+			want: []byte("{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"),
+		},
+		{
+			name: "valid case without value",
+			args: args{name: "asd"},
+			want: []byte("{\"id\":\"asd\",\"type\":\"gauge\",\"value\":0}"),
+		},
 	}
 
-	//agent := CreateDefault()
+	a := CreateDefault()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//assert.Equalf(t, tt.want, agent.createGaugeURL(tt.args.name, tt.args.value), "createGaugeURL(%v, %v)", tt.args.name, tt.args.value)
-			assert.Equal(t, true, true)
+			assert.Equalf(t, tt.want, tt.want, string(a.createJSONGaugeMessage(tt.args.name, tt.args.value)))
 		})
 	}
 }
 
-func Test_createCounterUrl(t *testing.T) {
+func TestAgent_createJSONCounterMessage(t *testing.T) {
 	type args struct {
 		name  string
 		value int64
@@ -99,16 +107,24 @@ func Test_createCounterUrl(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want string
+		want []byte
 	}{
-		{"generation counter post request URL", args{"testCounter", 123}, "http://localhost:8080/update/counter/testCounter/123"},
+		{
+			name: "valid case",
+			args: args{"asd", 123},
+			want: []byte("{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"),
+		},
+		{
+			name: "valid case without value",
+			args: args{name: "asd"},
+			want: []byte("{\"id\":\"asd\",\"type\":\"counter\",\"delta\":0}"),
+		},
 	}
 
-	//agent := CreateDefault()
+	a := CreateDefault()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//assert.Equalf(t, tt.want, agent.createCounterURL(tt.args.name, tt.args.value), "createCounterURL(%v, %v)", tt.args.name, tt.args.value)
-			assert.Equal(t, true, true)
+			assert.Equalf(t, tt.want, tt.want, string(a.createJSONCounterMessage(tt.args.name, tt.args.value)))
 		})
 	}
 }
