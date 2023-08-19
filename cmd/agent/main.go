@@ -17,9 +17,6 @@ func main() {
 	defer pollTicker.Stop()
 	defer repeatTicker.Stop()
 
-	agent.UpdateStats()
-	agent.PostJSONStats()
-
 	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
 	go ticker.Run(repeatTicker, func() { agent.PostJSONStats() })
 
