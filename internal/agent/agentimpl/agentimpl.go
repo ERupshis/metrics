@@ -87,7 +87,7 @@ func (a *Agent) postJSONStat(body []byte) {
 		Post(a.config.Host + "/update/")
 
 	if err != nil {
-		panic(err)
+		//panic(err)
 	}
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
