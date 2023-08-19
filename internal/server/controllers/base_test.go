@@ -46,7 +46,7 @@ type wantJSON struct {
 	body        string
 }
 
-func TestJSONBaseController(t *testing.T) {
+func TestJSONCounterBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
@@ -66,7 +66,7 @@ func TestJSONBaseController(t *testing.T) {
 
 	counterTests := []testJSON{
 		{
-			"counter post valid case",
+			"counter post without value",
 			reqJSON{
 				http.MethodPost,
 				"/update/",
@@ -97,7 +97,7 @@ func TestJSONBaseController(t *testing.T) {
 				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"},
 		},
 		{
-			"counter post valid case",
+			"counter get valid case",
 			reqJSON{
 				http.MethodPost,
 				"/value/",
@@ -112,14 +112,78 @@ func TestJSONBaseController(t *testing.T) {
 				http.StatusOK, "application/json",
 				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"},
 		},
+		{
+			"counter post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":246}"},
+		},
+		{
+			"counter get increased valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":246}"},
+		},
+		{
+			"counter get missing value",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asds",
+						MType: "counter",
+					})),
+			},
+			wantJSON{
+				http.StatusNotFound, "text/plain; charset=utf-8",
+				"invalid counter name\n"},
+		},
 	}
 	runJSONTests(t, &counterTests, ts)
 
+}
+
+func TestJSONGaugeBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
+
 	var float1 float64 = 123
-	//var val2 int64 = 456
+	var float2 float64 = 123.23
 	gaugeTests := []testJSON{
 		{
-			"gauge post valid case",
+			"gauge post without value",
 			reqJSON{
 				http.MethodPost,
 				"/update/",
@@ -150,7 +214,7 @@ func TestJSONBaseController(t *testing.T) {
 				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
 		},
 		{
-			"gauge post valid case",
+			"gauge get valid case",
 			reqJSON{
 				http.MethodPost,
 				"/value/",
@@ -164,6 +228,69 @@ func TestJSONBaseController(t *testing.T) {
 			wantJSON{
 				http.StatusOK, "application/json",
 				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asdf",
+						MType: "gauge",
+						Value: &float2,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asdf\",\"type\":\"gauge\",\"value\":123.23}"},
+		},
+		{
+			"gauge get increased valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge get missing value",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asds",
+						MType: "gauge",
+					})),
+			},
+			wantJSON{
+				http.StatusNotFound, "text/plain; charset=utf-8",
+				"invalid counter name\n"},
 		},
 	}
 	runJSONTests(t, &gaugeTests, ts)
