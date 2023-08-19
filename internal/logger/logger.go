@@ -46,7 +46,7 @@ func (il *RequestLogger) Sync() {
 }
 
 func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
-	logWrap := func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		loggingWriter := createResponseWriter(w)
@@ -62,6 +62,4 @@ func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
 			zap.Int("size", loggingWriter.getResponseData().size),
 		)
 	}
-
-	return logWrap
 }
