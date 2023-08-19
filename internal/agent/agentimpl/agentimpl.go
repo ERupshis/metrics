@@ -84,7 +84,7 @@ func (a *Agent) postJSONStat(body []byte) {
 	_, err := a.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
-		Post(a.config.Host + "/update")
+		Post(a.config.Host + "/update/")
 
 	if err != nil {
 		panic(err)
