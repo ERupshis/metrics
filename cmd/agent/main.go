@@ -20,5 +20,5 @@ func main() {
 	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
 	go ticker.Run(repeatTicker, func() { agent.PostJSONStats() })
 
-	time.Sleep(time.Hour)
+	time.Sleep(10 * time.Second)
 }
