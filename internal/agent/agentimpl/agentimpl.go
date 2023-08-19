@@ -7,6 +7,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -39,6 +40,8 @@ func (a *Agent) UpdateStats() {
 	a.pollCount++
 }
 
+//URL POST REQUESTS.
+
 func (a *Agent) PostStats() {
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
 		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
@@ -64,4 +67,33 @@ func (a *Agent) createGaugeURL(name string, value float64) string {
 
 func (a *Agent) createCounterURL(name string, value int64) string {
 	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+}
+
+//JSON POST REQUESTS.
+
+func (a *Agent) PostJsonStats() {
+	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+		a.postJsonStat(a.createJsonGaugeMessage(name, valueGetter(&a.stats)))
+	}
+
+	a.postJsonStat(a.createJsonGaugeMessage("RandomValue", rand.Float64()))
+	a.postJsonStat(a.createJsonCounterMessage("PollCount", a.pollCount))
+}
+
+func (a *Agent) postJsonStat(body []byte) {
+	_, err := a.client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(body).
+		Post(a.config.Host + "/update")
+
+	if err != nil {
+		panic(err)
+	}
+}
+func (a *Agent) createJsonGaugeMessage(name string, value float64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
+}
+
+func (a *Agent) createJsonCounterMessage(name string, value int64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateCounterMetrics(name, value))
 }
