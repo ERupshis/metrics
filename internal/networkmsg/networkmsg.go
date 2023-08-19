@@ -17,6 +17,7 @@ func CreateCounterMetrics(name string, value int64) Metrics {
 		ID:    name,
 		MType: "counter",
 		Delta: &value,
+		Value: nil,
 	}
 }
 
@@ -24,6 +25,7 @@ func CreateGaugeMetrics(name string, value float64) Metrics {
 	return Metrics{
 		ID:    name,
 		MType: "gauge",
+		Delta: nil,
 		Value: &value,
 	}
 }

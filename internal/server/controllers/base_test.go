@@ -70,8 +70,8 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 
 func TestJSONBaseController(t *testing.T) {
 	cfg := config.Config{
-		"localhost:8080",
-		"Info",
+		Host:     "localhost:8080",
+		LogLevel: "Info",
 	}
 
 	log, err := logger.CreateRequest(cfg.LogLevel)
@@ -106,14 +106,27 @@ func TestJSONBaseController(t *testing.T) {
 	}
 	runJSONTests(t, &counterTests, ts)
 
-	//gaugeTests := []test{
-	//	{
-	//		"gauge post valid case",
-	//		req{http.MethodPost, "/update/"},
-	//		want{http.StatusOK, "", "application/json"},
-	//	},
-	//}
-	//runTests(t, &gaugeTests, ts)
+	var float1 float64 = 123
+	//var val2 int64 = 456
+	gaugeTests := []testJSON{
+		{
+			"gauge post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+	}
+	runJSONTests(t, &gaugeTests, ts)
 }
 
 func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
@@ -132,6 +145,7 @@ func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
+			//assert.Equal(t, tt.req.method, )
 			assert.Equal(t, tt.want.body, string(respBody))
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
@@ -141,8 +155,8 @@ func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 
 func TestBaseController(t *testing.T) {
 	cfg := config.Config{
-		"localhost:8080",
-		"Info",
+		Host:     "localhost:8080",
+		LogLevel: "Info",
 	}
 
 	log, err := logger.CreateRequest(cfg.LogLevel)
