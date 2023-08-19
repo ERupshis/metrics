@@ -51,14 +51,11 @@ func (a *Agent) PostJSONStats() {
 }
 
 func (a *Agent) postJSONStat(body []byte) {
-	_, err := a.client.R().
+	_, _ = a.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
 		Post(a.config.Host + "/update/")
 
-	if err != nil {
-		panic(err)
-	}
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
