@@ -76,7 +76,11 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+		}
+	}(r.Body)
 
 	data, err := networkmsg.ParsePostValueMessage(buf.Bytes())
 	if err != nil {
@@ -85,43 +89,54 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request == postRequest {
-		if data.MType == gaugeType {
-			valueIn := new(float64)
-			if data.Value != nil {
-				valueIn = data.Value
-			}
-			c.storage.AddGauge(data.ID, *valueIn)
-			valueOut, _ := c.storage.GetGauge(data.ID)
-			data.Value = &valueOut
-		} else if data.MType == counterType {
-			valueIn := new(int64)
-			if data.Delta != nil {
-				valueIn = data.Delta
-			}
-			c.storage.AddCounter(data.ID, *valueIn)
-			value, _ := c.storage.GetCounter(data.ID)
-			data.Delta = &value
-		}
+		c.jsonPostHandler(w, &data)
 	} else if request == getRequest {
-		if data.MType == gaugeType {
-			value, err := c.storage.GetGauge(data.ID)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusNotFound)
-				return
-			}
-			data.Value = &value
-		} else if data.MType == counterType {
-			value, err := c.storage.GetCounter(data.ID)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusNotFound)
-				return
-			}
-			data.Delta = &value
+		c.jsonGetHandler(w, &data)
+	}
+}
+
+func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metrics) {
+	if data.MType == gaugeType {
+		valueIn := new(float64)
+		if data.Value != nil {
+			valueIn = data.Value
 		}
+		c.storage.AddGauge(data.ID, *valueIn)
+		valueOut, _ := c.storage.GetGauge(data.ID)
+		data.Value = &valueOut
+	} else if data.MType == counterType {
+		valueIn := new(int64)
+		if data.Delta != nil {
+			valueIn = data.Delta
+		}
+		c.storage.AddCounter(data.ID, *valueIn)
+		value, _ := c.storage.GetCounter(data.ID)
+		data.Delta = &value
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(data))
+	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
+}
+
+func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metrics) {
+	if data.MType == gaugeType {
+		value, err := c.storage.GetGauge(data.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		data.Value = &value
+	} else if data.MType == counterType {
+		value, err := c.storage.GetCounter(data.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		data.Delta = &value
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
 }
 
 // postHandler POST HTTP REQUEST HANDLING.
