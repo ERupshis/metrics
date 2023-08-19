@@ -87,10 +87,12 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	if request == postRequest {
 		if data.MType == gaugeType && data.Value != nil {
 			c.storage.AddGauge(data.ID, *data.Value)
-			*data.Value, _ = c.storage.GetGauge(data.ID)
+			value, _ := c.storage.GetGauge(data.ID)
+			data.Value = &value
 		} else if data.MType == counterType && data.Delta != nil {
 			c.storage.AddCounter(data.ID, *data.Delta)
-			*data.Delta, _ = c.storage.GetCounter(data.ID)
+			value, _ := c.storage.GetCounter(data.ID)
+			data.Delta = &value
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -115,7 +117,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(networkmsg.CreatePostUpdateMessage(data))
+	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(data))
 }
 
 // postHandler POST HTTP REQUEST HANDLING.
