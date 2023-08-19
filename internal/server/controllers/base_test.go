@@ -14,21 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type req struct {
-	method string
-	url    string
-}
-type want struct {
-	code        int
-	response    string
-	contentType string
-}
-type test struct {
-	name string
-	req  req
-	want want
-}
-
+// JSON HANDLERS.
 type testJSON struct {
 	name string
 	req  reqJSON
@@ -180,7 +166,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	defer ts.Close()
 
 	var float1 float64 = 123
-	var float2 float64 = 123.23
+	var float2 = 123.23
 	gaugeTests := []testJSON{
 		{
 			"gauge post without value",
@@ -320,7 +306,23 @@ func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 	}
 }
 
-func TestBaseController(t *testing.T) {
+// DEFAULT HANDLERS.
+type req struct {
+	method string
+	url    string
+}
+type want struct {
+	code        int
+	response    string
+	contentType string
+}
+type test struct {
+	name string
+	req  req
+	want want
+}
+
+func TestBadRequestHandlerBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
@@ -354,7 +356,22 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &badRequestTests, ts)
+}
 
+func TestMissingNameBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
 	missingNameTests := []test{
 		{
 			"post update counter valid path",
@@ -398,6 +415,22 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &missingNameTests, ts)
+}
+
+func TestCounterBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
 
 	counterTests := []test{
 		{
@@ -457,6 +490,22 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &counterTests, ts)
+}
+
+func TestGaugeBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
 
 	gaugeTests := []test{
 		{
