@@ -84,9 +84,10 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if request == postRequest {
+	switch request {
+	case postRequest:
 		c.jsonPostHandler(w, &data)
-	} else if request == getRequest {
+	case getRequest:
 		c.jsonGetHandler(w, &data)
 	}
 }
