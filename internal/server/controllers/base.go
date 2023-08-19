@@ -96,7 +96,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			value, _ := c.storage.GetCounter(data.ID)
 			data.Delta = &value
 		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
 			return
 		}
 	} else if request == getRequest {
@@ -115,7 +115,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			data.Delta = &value
 		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid request or missing data", http.StatusBadRequest)
 			return
 		}
 	}
