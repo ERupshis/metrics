@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"bytes"
 	"net/http"
 	"time"
 
@@ -54,15 +53,11 @@ func (il *RequestLogger) Log(h http.HandlerFunc) http.HandlerFunc {
 		h.ServeHTTP(loggingWriter, r)
 		duration := time.Since(start)
 
-		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(r.Body)
-		defer r.Body.Close()
-
 		il.zap.Info("new incoming HTTP request",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
-			zap.String("body", buf.String()),
 			zap.Int("status", loggingWriter.getResponseData().status),
+			zap.String("content-type", loggingWriter.Header().Get("Content-Type")),
 			zap.Duration("duration", duration),
 			zap.Int("size", loggingWriter.getResponseData().size),
 		)
