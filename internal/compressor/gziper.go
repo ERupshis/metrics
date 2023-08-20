@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var availableContentTypes = []string{"application/json", "text/html"}
+var availableContentTypes = []string{"application/json", "html/text", "text/html"}
 
 type gzipWriter struct {
 	http.ResponseWriter
@@ -46,8 +46,10 @@ func GzipHandle(next http.Handler) http.Handler {
 
 func canCompress(req *http.Request) bool {
 	for _, contType := range availableContentTypes {
-		if strings.Contains(req.Header.Get("Content-Type"), contType) {
-			return true
+		for _, value := range req.Header.Values("Content-Type") {
+			if strings.Contains(value, contType) {
+				return true
+			}
 		}
 	}
 

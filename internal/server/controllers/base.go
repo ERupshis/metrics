@@ -41,6 +41,7 @@ func (c *BaseController) Route() *chi.Mux {
 	r.Use(compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
+
 	r.Route("/{request}", func(r chi.Router) {
 		r.Post("/", c.jsonHandler)
 		r.Route("/{type}", func(r chi.Router) {
