@@ -6,7 +6,6 @@ import (
 
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
-	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/go-resty/resty/v2"
 )
@@ -52,13 +51,14 @@ func (a *Agent) PostJSONStats() {
 }
 
 func (a *Agent) postJSONStat(body []byte) {
-	compressedBody, _ := compressor.GzipCompress(body)
+	//compressedBody, _ := compressor.GzipCompress(body)
 	//TODD: add logger
 
 	_, _ = a.client.R().
 		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept-Encoding", "gzip").
-		SetBody(compressedBody).
+		//SetHeader("Accept-Encoding", "gzip").
+		//SetBody(compressedBody).
+		SetBody(body).
 		Post(a.config.Host + "/update/")
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
