@@ -54,7 +54,7 @@ type envConfig struct {
 	Host           string `env:"ADDRESS"`
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
-	LogLevel       string `env:"LOG_LEVEL`
+	LogLevel       string `env:"LOG_LEVEL"`
 }
 
 func checkEnvironments(config *Config) {
