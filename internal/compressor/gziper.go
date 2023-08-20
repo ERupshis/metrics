@@ -11,22 +11,12 @@ import (
 
 var availableContentTypes = []string{"application/json", "text/html"}
 
-type GzipWriter struct {
+type gzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
 }
 
-//
-//func CreateGzipWriter() *GzipWriter {
-//	gz, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed)
-//	return &GzipWriter{Writer: *gz}
-//}
-//
-//func (gz *GzipWriter) setNewWriter(newWriter io.Writer) {
-//	gz.Writer.Reset(newWriter)
-//}
-
-func (gz GzipWriter) Write(b []byte) (int, error) {
+func (gz gzipWriter) Write(b []byte) (int, error) {
 	return gz.Writer.Write(b)
 }
 
@@ -50,7 +40,7 @@ func GzipHandle(next http.Handler) http.Handler {
 		defer gz.Close()
 
 		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(GzipWriter{ResponseWriter: w, Writer: gz}, r)
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }
 

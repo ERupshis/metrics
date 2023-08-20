@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -36,8 +37,8 @@ func (c *BaseController) GetConfig() *config.Config {
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
-	//r.Use(compressor.GzipHandle)
 	r.Use(c.logger.Log)
+	r.Use(compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
 	r.Route("/{request}", func(r chi.Router) {
