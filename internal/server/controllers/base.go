@@ -96,6 +96,8 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	case getRequest:
 		c.jsonGetHandler(w, &data)
 	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metrics) {
