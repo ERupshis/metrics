@@ -633,7 +633,7 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 			response, _ := compressor.GzipDecompress(respBody)
 
 			assert.Equal(t, tt.want.response, string(response))
-			//assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}
