@@ -58,6 +58,7 @@ func (il *RequestLogger) Log(h http.Handler) http.Handler {
 			zap.String("method", r.Method),
 			zap.Int("status", loggingWriter.getResponseData().status),
 			zap.String("content-type", loggingWriter.Header().Get("Content-Type")),
+			zap.String("content-encoding", loggingWriter.Header().Get("Content-Encoding")),
 			zap.Duration("duration", duration),
 			zap.Int("size", loggingWriter.getResponseData().size),
 		)
