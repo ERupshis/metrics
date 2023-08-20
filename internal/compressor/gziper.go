@@ -22,10 +22,10 @@ func (gz gzipWriter) Write(b []byte) (int, error) {
 
 func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !canCompress(r) {
-			next.ServeHTTP(w, r)
-			return
-		}
+		//if !canCompress(r) {
+		//	next.ServeHTTP(w, r)
+		//	return
+		//}
 
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)

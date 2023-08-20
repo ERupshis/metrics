@@ -358,6 +358,32 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	runTests(t, &badRequestTests, ts)
 }
 
+func TestListHandlerBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateRequest(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
+
+	badRequestTests := []test{
+		//badRequestHandler
+		{
+			"list of params valid",
+			req{http.MethodGet, "/"},
+			want{http.StatusOK, "\n<html><body>\n<caption>GAUGES</caption>\n<table border = 2>\n</table>\n\n<caption>COUNTERS</caption>\n<table border = 2>\n</table>\n</body></html>\n", "text/html; charset=utf-8"},
+		},
+	}
+	runTests(t, &badRequestTests, ts)
+}
+
 func TestMissingNameBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
@@ -595,6 +621,7 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 			require.NoError(t, errReq)
 
 			req.Header.Add("Content-Type", "text/plain")
+			req.Header.Add("Content-Encoding", "gzip")
 
 			resp, errResp := ts.Client().Do(req)
 			assert.NoError(t, errResp)
