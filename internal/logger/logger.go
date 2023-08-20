@@ -39,6 +39,7 @@ func initConfig(level string) (zap.Config, error) {
 		return emptyConfig, err
 	}
 	cfg.Level = lvl
+	cfg.DisableCaller = true
 
 	return cfg, nil
 }
