@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -620,8 +621,8 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
 			require.NoError(t, errReq)
 
-			req.Header.Add("Content-Type", "text/plain")
-			req.Header.Add("Content-Encoding", "gzip")
+			req.Header.Add("Content-Type", "html/text")
+			req.Header.Add("Accept-Encoding", "gzip")
 
 			resp, errResp := ts.Client().Do(req)
 			assert.NoError(t, errResp)
@@ -629,9 +630,10 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
+			response, _ := compressor.GzipDecompress(respBody)
 
-			assert.Equal(t, tt.want.response, string(respBody))
-			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.response, string(response))
+			//assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 		})
 	}

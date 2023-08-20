@@ -272,9 +272,10 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 	gaugesMap := c.storage.GetAllGauges()
 	countersMap := c.storage.GetAllCounters()
+
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
+
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		panic(err)
 	}
-
-	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 }
