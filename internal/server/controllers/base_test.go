@@ -39,7 +39,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -157,7 +157,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -329,7 +329,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -365,7 +365,7 @@ func TestListHandlerBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -391,7 +391,7 @@ func TestMissingNameBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -450,7 +450,7 @@ func TestCounterBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -525,7 +525,7 @@ func TestGaugeBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}

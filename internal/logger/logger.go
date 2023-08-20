@@ -1,28 +1,33 @@
 package logger
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-type RequestLogger struct {
+type logger struct {
 	zap *zap.Logger
 }
 
-func CreateRequest(level string) (*RequestLogger, error) {
+func CreateZapLogger(level string) (*logger, error) {
 	cfg, err := initConfig(level)
 	if err != nil {
 		return nil, err
 	}
 
-	logger, err := cfg.Build()
+	log, err := cfg.Build()
 	if err != nil {
 		return nil, err
 	}
 
-	return &RequestLogger{zap: logger}, nil
+	return &logger{zap: log}, nil
+}
+
+func (l *logger) Info(msg string, fields ...interface{}) {
+	l.zap.Info(fmt.Sprintf(msg, fields...))
 }
 
 func initConfig(level string) (zap.Config, error) {
@@ -38,14 +43,14 @@ func initConfig(level string) (zap.Config, error) {
 	return cfg, nil
 }
 
-func (il *RequestLogger) Sync() {
-	err := il.zap.Sync()
+func (l *logger) Sync() {
+	err := l.zap.Sync()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (il *RequestLogger) Log(h http.Handler) http.Handler {
+func (l *logger) LogHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -53,7 +58,7 @@ func (il *RequestLogger) Log(h http.Handler) http.Handler {
 		h.ServeHTTP(loggingWriter, r)
 		duration := time.Since(start)
 
-		il.zap.Info("new incoming HTTP request",
+		l.zap.Info("new incoming HTTP request",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.Int("status", loggingWriter.getResponseData().status),

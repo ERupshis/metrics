@@ -20,13 +20,14 @@ func main() {
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
+	log.Info("Server started with Host setting: %s", cfg.Host)
 	if err := http.ListenAndServe(cfg.Host, router); err != nil {
 		panic(err)
 	}
 }
 
 func createLogger(level string) logger.BaseLogger {
-	log, err := logger.CreateRequest(level)
+	log, err := logger.CreateZapLogger(level)
 	if err != nil {
 		panic(err)
 	}

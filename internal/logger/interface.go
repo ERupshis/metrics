@@ -5,5 +5,6 @@ import "net/http"
 type BaseLogger interface {
 	Sync()
 
-	Log(h http.Handler) http.Handler
+	Info(msg string, fields ...interface{})
+	LogHandler(h http.Handler) http.Handler
 }
