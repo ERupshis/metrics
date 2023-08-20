@@ -42,6 +42,11 @@ func GzipHandle(next http.Handler) http.Handler {
 
 func canCompress(req *http.Request) bool {
 	for _, contType := range availableContentTypes {
+		for _, value := range req.Header.Values("Accept") {
+			if strings.Contains(value, contType) {
+				return true
+			}
+		}
 		for _, value := range req.Header.Values("Content-Type") {
 			if strings.Contains(value, contType) {
 				return true
