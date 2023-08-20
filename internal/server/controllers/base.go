@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -18,12 +19,15 @@ import (
 type BaseController struct {
 	config  config.Config
 	storage memstorage.MemStorage
-
-	logger logger.BaseLogger
+	logger  logger.BaseLogger
 }
 
 func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
-	return &BaseController{config: config, storage: memstorage.Create(), logger: logger}
+	return &BaseController{
+		config:  config,
+		storage: memstorage.Create(),
+		logger:  logger,
+	}
 }
 
 func (c *BaseController) GetConfig() *config.Config {
@@ -33,20 +37,21 @@ func (c *BaseController) GetConfig() *config.Config {
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
-	logRequest := c.logger.Log
+	r.Use(compressor.GzipHandle)
+	r.Use(c.logger.Log)
 
-	r.Get("/", logRequest(c.ListHandler))
+	r.Get("/", c.ListHandler)
 	r.Route("/{request}", func(r chi.Router) {
-		r.Post("/", logRequest(c.jsonHandler))
+		r.Post("/", c.jsonHandler)
 		r.Route("/{type}", func(r chi.Router) {
-			r.HandleFunc("/", logRequest(c.missingNameHandler))
+			r.HandleFunc("/", c.missingNameHandler)
 			r.Route("/{name}", func(r chi.Router) {
-				r.Get("/", logRequest(c.getHandler))
-				r.Post("/{value}", logRequest(c.postHandler))
+				r.Get("/", c.getHandler)
+				r.Post("/{value}", c.postHandler)
 			})
 		})
 	})
-	r.NotFound(logRequest(c.badRequestHandler))
+	r.NotFound(c.badRequestHandler)
 	return r
 }
 
