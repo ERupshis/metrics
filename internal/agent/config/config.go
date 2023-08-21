@@ -13,6 +13,7 @@ type Config struct {
 	Host           string
 	ReportInterval int64
 	PollInterval   int64
+	LogLevel       string
 }
 
 func Default() Config {
@@ -20,6 +21,7 @@ func Default() Config {
 		Host:           "http://localhost:8080",
 		ReportInterval: 10,
 		PollInterval:   2,
+		LogLevel:       "Info",
 	}
 }
 
@@ -36,12 +38,14 @@ const (
 	flagAddress        = "a"
 	flagReportInterval = "r"
 	flagPollInterval   = "p"
+	flagLogLevel       = "l"
 )
 
 func checkFlags(config *Config) {
 	flag.StringVar(&config.Host, flagAddress, "http://localhost:8080", "server endpoint")
 	flag.Int64Var(&config.ReportInterval, flagReportInterval, 10, "report interval val (sec)")
 	flag.Int64Var(&config.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
+	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
 	flag.Parse()
 }
 
@@ -50,6 +54,7 @@ type envConfig struct {
 	Host           string `env:"ADDRESS"`
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
+	LogLevel       string `env:"LOG_LEVEL"`
 }
 
 func checkEnvironments(config *Config) {
@@ -77,6 +82,10 @@ func checkEnvironments(config *Config) {
 		} else {
 			panic(err)
 		}
+	}
+
+	if envs.LogLevel != "" {
+		config.LogLevel = envs.LogLevel
 	}
 }
 

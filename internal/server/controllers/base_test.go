@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -38,7 +39,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -156,7 +157,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -328,7 +329,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -358,13 +359,39 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	runTests(t, &badRequestTests, ts)
 }
 
+func TestListHandlerBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	ts := httptest.NewServer(CreateBase(cfg, log).Route())
+	defer ts.Close()
+
+	badRequestTests := []test{
+		//badRequestHandler
+		{
+			"list of params valid",
+			req{http.MethodGet, "/"},
+			want{http.StatusOK, "\n<html><body>\n<caption>GAUGES</caption>\n<table border = 2>\n</table>\n\n<caption>COUNTERS</caption>\n<table border = 2>\n</table>\n</body></html>\n", "text/html; charset=utf-8"},
+		},
+	}
+	runTests(t, &badRequestTests, ts)
+}
+
 func TestMissingNameBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -423,7 +450,7 @@ func TestCounterBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -498,7 +525,7 @@ func TestGaugeBaseController(t *testing.T) {
 		LogLevel: "Info",
 	}
 
-	log, err := logger.CreateRequest(cfg.LogLevel)
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
 	if err != nil {
 		panic(err)
 	}
@@ -594,7 +621,8 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
 			require.NoError(t, errReq)
 
-			req.Header.Add("Content-Type", "text/plain")
+			req.Header.Add("Content-Type", "html/text")
+			req.Header.Add("Accept-Encoding", "gzip")
 
 			resp, errResp := ts.Client().Do(req)
 			assert.NoError(t, errResp)
@@ -602,8 +630,9 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
+			response, _ := compressor.GzipDecompress(respBody)
 
-			assert.Equal(t, tt.want.response, string(respBody))
+			assert.Equal(t, tt.want.response, string(response))
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 		})

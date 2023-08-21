@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -16,14 +17,19 @@ import (
 )
 
 type BaseController struct {
-	config  config.Config
-	storage memstorage.MemStorage
-
-	logger logger.BaseLogger
+	config     config.Config
+	storage    memstorage.MemStorage
+	logger     logger.BaseLogger
+	compressor compressor.GzipHandler
 }
 
 func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
-	return &BaseController{config: config, storage: memstorage.Create(), logger: logger}
+	return &BaseController{
+		config:     config,
+		storage:    memstorage.Create(),
+		logger:     logger,
+		compressor: compressor.GzipHandler{},
+	}
 }
 
 func (c *BaseController) GetConfig() *config.Config {
@@ -33,20 +39,22 @@ func (c *BaseController) GetConfig() *config.Config {
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
-	logRequest := c.logger.Log
+	r.Use(c.logger.LogHandler)
+	r.Use(c.compressor.GzipHandle)
 
-	r.Get("/", logRequest(c.ListHandler))
+	r.Get("/", c.ListHandler)
+
 	r.Route("/{request}", func(r chi.Router) {
-		r.Post("/", logRequest(c.jsonHandler))
+		r.Post("/", c.jsonHandler)
 		r.Route("/{type}", func(r chi.Router) {
-			r.HandleFunc("/", logRequest(c.missingNameHandler))
+			r.HandleFunc("/", c.missingNameHandler)
 			r.Route("/{name}", func(r chi.Router) {
-				r.Get("/", logRequest(c.getHandler))
-				r.Post("/{value}", logRequest(c.postHandler))
+				r.Get("/", c.getHandler)
+				r.Post("/{value}", c.postHandler)
 			})
 		})
 	})
-	r.NotFound(logRequest(c.badRequestHandler))
+	r.NotFound(c.badRequestHandler)
 	return r
 }
 
@@ -78,6 +86,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 	data, err := networkmsg.ParsePostValueMessage(buf.Bytes())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -160,6 +169,7 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
+	c.logger.Info("[BaseController::postCounterHandler] Handle url post request for: '%s'(%s) value", name, value)
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
 		c.storage.AddCounter(name, val)
 	} else {
@@ -174,6 +184,7 @@ func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Reque
 func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
+	c.logger.Info("[BaseController::postGaugeHandler] Handle url post request for: '%s'(%s) value", name, value)
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
 		c.storage.AddGauge(name, val)
 	} else {
@@ -209,6 +220,7 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
+	c.logger.Info("[BaseController::getCounterHandler] Handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
@@ -222,6 +234,7 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
+	c.logger.Info("[BaseController::getGaugeHandler] Handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
@@ -266,9 +279,10 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 	gaugesMap := c.storage.GetAllGauges()
 	countersMap := c.storage.GetAllCounters()
+
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
+
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		panic(err)
 	}
-
-	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 }
