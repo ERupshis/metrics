@@ -124,7 +124,7 @@ func TestGzipHandler(t *testing.T) {
 		defer r.Body.Close()
 
 		if buf.String() != in {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "decompressed input is incorrect.", http.StatusBadRequest)
 			return
 		}
 
