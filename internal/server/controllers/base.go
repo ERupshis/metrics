@@ -17,16 +17,18 @@ import (
 )
 
 type BaseController struct {
-	config  config.Config
-	storage memstorage.MemStorage
-	logger  logger.BaseLogger
+	config     config.Config
+	storage    memstorage.MemStorage
+	logger     logger.BaseLogger
+	compressor compressor.GzipHandler
 }
 
 func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
 	return &BaseController{
-		config:  config,
-		storage: memstorage.Create(),
-		logger:  logger,
+		config:     config,
+		storage:    memstorage.Create(),
+		logger:     logger,
+		compressor: compressor.GzipHandler{},
 	}
 }
 
@@ -38,7 +40,7 @@ func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(c.logger.LogHandler)
-	r.Use(compressor.GzipHandle)
+	r.Use(c.compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
 

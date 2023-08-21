@@ -10,30 +10,44 @@ import (
 
 var availableContentTypes = []string{"application/json", "html/text", "text/html"}
 
-func GzipHandle(next http.Handler) http.Handler {
+type GzipHandler struct {
+	writer *compressWriter
+	reader *compressReader
+}
+
+func (gz *GzipHandler) GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
-
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 		if supportsGzip && canCompress(r) {
-			cw := newGzipCompressWriter(w)
-			ow = cw
+			if gz.writer == nil {
+				gz.writer = newGzipCompressWriter(w)
+			} else {
+				gz.writer.Reset(w)
+			}
+			ow = gz.writer
 
 			w.Header().Set("Content-Encoding", "gzip")
-			defer cw.Close()
+			defer gz.writer.Close()
 		}
 
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if sendsGzip {
-			cr, err := newGzipCompressReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+			if gz.reader == nil {
+				var err error
+				gz.reader, err = newGzipCompressReader(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			} else {
+				gz.reader.Reset(r.Body)
 			}
-			r.Body = cr
-			defer cr.Close()
+
+			r.Body = gz.reader
+			defer gz.reader.Close()
 		}
 
 		next.ServeHTTP(ow, r)

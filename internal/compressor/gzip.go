@@ -14,20 +14,23 @@ type compressWriter struct {
 }
 
 func newGzipCompressWriter(w http.ResponseWriter) *compressWriter {
+	gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+	if err != nil {
+		return nil
+	}
+
 	return &compressWriter{
 		w:  w,
-		zw: gzip.NewWriter(w),
+		zw: gz,
 	}
 }
 
 func (c *compressWriter) Reset(w http.ResponseWriter) {
-	var res io.Writer
-	res, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-	if err != nil {
-		//TODO: add log.
-		res = w
+	if c.zw == nil {
+		return
 	}
-	c.zw.Reset(res)
+	c.w = w
+	c.zw.Reset(c.w)
 }
 
 func (c *compressWriter) Header() http.Header {
@@ -66,6 +69,14 @@ func newGzipCompressReader(r io.ReadCloser) (*compressReader, error) {
 		r:  r,
 		zr: zr,
 	}, nil
+}
+
+func (c *compressReader) Reset(r io.ReadCloser) {
+	if c.zr == nil {
+		return
+	}
+	c.r = r
+	_ = c.zr.Reset(r)
 }
 
 func (c compressReader) Read(p []byte) (n int, err error) {
