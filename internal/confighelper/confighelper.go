@@ -13,15 +13,15 @@ func SetEnvToParamIfNeed(param interface{}, val string) {
 		return
 	}
 
-	switch param.(type) {
+	switch param := param.(type) {
 	case *int64:
 		if envVal, err := Atoi64(val); err == nil {
-			*param.(*int64) = envVal
+			*param = envVal
 		} else {
 			panic(err)
 		}
 	case *string:
-		*param.(*string) = val
+		*param = val
 	default:
 		panic(fmt.Errorf("wrong input param type"))
 	}
