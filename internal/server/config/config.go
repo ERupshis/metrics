@@ -45,7 +45,7 @@ func checkFlags(config *Config) {
 type envConfig struct {
 	Host          string `env:"ADDRESS"`
 	LogLevel      string `env:"LOG_LEVEL"`
-	Restore       string `env:"RESTORE"`
+	Restore       bool   `env:"RESTORE"`
 	StoragePath   string `env:"FILE_STORAGE_PATH"`
 	StoreInterval string `env:"STORE_INTERVAL"`
 }
@@ -59,7 +59,10 @@ func checkEnvironments(config *Config) {
 
 	confighelper.SetEnvToParamIfNeed(&config.Host, envs.Host)
 	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
-	confighelper.SetEnvToParamIfNeed(&config.Restore, envs.Restore)
 	confighelper.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
 	confighelper.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
+
+	if !envs.Restore {
+		config.Restore = false
+	}
 }

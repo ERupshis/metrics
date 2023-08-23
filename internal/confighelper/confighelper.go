@@ -20,6 +20,12 @@ func SetEnvToParamIfNeed(param interface{}, val string) {
 		} else {
 			panic(err)
 		}
+	case *bool:
+		if envVal, err := Atoi64(val); err == nil {
+			*param = envVal
+		} else {
+			panic(err)
+		}
 	case *string:
 		*param = val
 	default:
