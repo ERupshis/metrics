@@ -12,23 +12,26 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/erupshis/metrics/internal/server/filemngr"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
 )
 
 type BaseController struct {
-	config     config.Config
-	storage    memstorage.MemStorage
-	logger     logger.BaseLogger
-	compressor compressor.GzipHandler
+	config      config.Config
+	storage     memstorage.MemStorage
+	logger      logger.BaseLogger
+	compressor  compressor.GzipHandler
+	fileManager *filemngr.FileManager
 }
 
 func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
 	return &BaseController{
-		config:     config,
-		storage:    memstorage.Create(),
-		logger:     logger,
-		compressor: compressor.GzipHandler{},
+		config:      config,
+		storage:     memstorage.Create(),
+		logger:      logger,
+		compressor:  compressor.GzipHandler{},
+		fileManager: filemngr.Create(),
 	}
 }
 
@@ -284,5 +287,25 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		panic(err)
+	}
+}
+
+// FILE METRICS MANAGING.
+
+func (c *BaseController) SaveMetricsInFile() {
+	if !c.fileManager.IsFileOpen() {
+		if err := c.fileManager.OpenFile(c.config.StoragePath); err != nil {
+			c.logger.Info("cannot save metrics data in file. Failed to open '%s' file.", c.config.StoragePath)
+			return
+		}
+		defer c.fileManager.CloseFile()
+	}
+
+	for name, val := range c.storage.GetAllGauges() {
+		c.fileManager.WriteMetric(name, val)
+	}
+
+	for name, val := range c.storage.GetAllCounters() {
+		c.fileManager.WriteMetric(name, val)
 	}
 }
