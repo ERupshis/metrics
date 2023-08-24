@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strconv"
 	"text/template"
+	"time"
 
+	"github.com/erupshis/metrics/internal/agent/ticker"
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
@@ -26,13 +28,16 @@ type BaseController struct {
 }
 
 func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
-	return &BaseController{
+	controller := &BaseController{
 		config:      config,
 		storage:     memstorage.Create(),
 		logger:      logger,
 		compressor:  compressor.GzipHandler{},
 		fileManager: filemngr.Create(),
 	}
+
+	controller.restoreDataFromFileIfNeed()
+	return controller
 }
 
 func (c *BaseController) GetConfig() *config.Config {
@@ -292,10 +297,22 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 // FILE METRICS MANAGING.
 
-func (c *BaseController) SaveMetricsInFile() {
+func (c *BaseController) ScheduleDataStoringInFile() *time.Ticker {
+	var interval int64 = 1
+	if c.config.StoreInterval > 1 {
+		interval = c.config.StoreInterval
+	}
+
+	interval = 10
+	storeTicker := ticker.CreateWithSecondsInterval(interval)
+	go ticker.Run(storeTicker, func() { c.saveMetricsInFile() })
+	return storeTicker
+}
+
+func (c *BaseController) saveMetricsInFile() {
 	if !c.fileManager.IsFileOpen() {
-		if err := c.fileManager.OpenFile(c.config.StoragePath); err != nil {
-			c.logger.Info("cannot save metrics data in file. Failed to open '%s' file.", c.config.StoragePath)
+		if err := c.fileManager.OpenFile(c.config.StoragePath, true); err != nil {
+			c.logger.Info("[BaseController::SameMetricsInFile] cannot save metrics data in file. Failed to open '%s' file.", c.config.StoragePath)
 			return
 		}
 		defer c.fileManager.CloseFile()
@@ -307,5 +324,39 @@ func (c *BaseController) SaveMetricsInFile() {
 
 	for name, val := range c.storage.GetAllCounters() {
 		c.fileManager.WriteMetric(name, val)
+	}
+}
+
+func (c *BaseController) restoreDataFromFileIfNeed() {
+	if !c.config.Restore {
+		return
+	}
+
+	if !c.fileManager.IsFileOpen() {
+		if err := c.fileManager.OpenFile(c.config.StoragePath, false); err != nil {
+			c.logger.Info("[BaseController::SameMetricsInFile] cannot read metrics from file. Failed to open '%s' file.", c.config.StoragePath)
+			return
+		}
+		defer c.fileManager.CloseFile()
+	}
+
+	metric, _ := c.fileManager.ScanMetric()
+	for metric != nil {
+		switch metric.ValueType {
+		case "gauge":
+			value, err := strconv.ParseFloat(metric.Value, 64)
+			if err != nil {
+				c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse float64 value for '%s'", metric.Name)
+			}
+			c.storage.AddGauge(metric.Name, value)
+		case "counter":
+			value, err := strconv.ParseInt(metric.Value, 10, 64)
+			if err != nil {
+				c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse int64 value for '%s'", metric.Name)
+			}
+			c.storage.AddCounter(metric.Name, value)
+		}
+
+		metric, _ = c.fileManager.ScanMetric()
 	}
 }

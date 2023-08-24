@@ -62,7 +62,5 @@ func checkEnvironments(config *Config) {
 	confighelper.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
 	confighelper.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
 
-	if !envs.Restore {
-		config.Restore = false
-	}
+	config.Restore = envs.Restore || config.Restore
 }

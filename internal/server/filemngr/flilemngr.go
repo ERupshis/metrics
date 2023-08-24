@@ -41,14 +41,14 @@ func (fm *FileManager) IsFileOpen() bool {
 	return fm.writer != nil && fm.scanner != nil
 }
 
-func (fm *FileManager) OpenFile(path string) error {
+func (fm *FileManager) OpenFile(path string, withTrunc bool) error {
 	fm.path = path
 
 	if err := os.MkdirAll(filepath.Dir(fm.path), 0755); err != nil {
 		return err
 	}
 
-	if err := fm.initWriter(); err != nil {
+	if err := fm.initWriter(withTrunc); err != nil {
 		return err
 	}
 
@@ -75,8 +75,14 @@ func (fm *FileManager) CloseFile() error {
 
 // WRITER.
 
-func (fm *FileManager) initWriter() error {
-	file, err := os.OpenFile(fm.path, os.O_WRONLY|os.O_CREATE, 0666)
+func (fm *FileManager) initWriter(withTrunc bool) error {
+	var flag int
+	flag = os.O_WRONLY | os.O_CREATE
+	if withTrunc {
+		flag |= os.O_TRUNC
+	}
+
+	file, err := os.OpenFile(fm.path, flag, 0666)
 	if err != nil {
 		return err
 	}
@@ -148,13 +154,13 @@ func (fm *FileManager) initScanner() error {
 	return nil
 }
 
-func (fm *FileManager) ReadMetric() (*MetricData, error) {
+func (fm *FileManager) ScanMetric() (*MetricData, error) {
 	var metric MetricData
 	if !fm.IsFileOpen() {
 		return nil, fmt.Errorf("failed reading metric. file is not open")
 	}
 
-	if err := fm.scan(); err != nil {
+	if isScanOk, err := fm.scan(); !isScanOk {
 		return nil, err
 	}
 
@@ -166,12 +172,16 @@ func (fm *FileManager) ReadMetric() (*MetricData, error) {
 	return &metric, nil
 }
 
-func (fm *FileManager) scan() error {
+func (fm *FileManager) scan() (bool, error) {
 	if !fm.scanner.scanner.Scan() {
-		return fm.scanner.scanner.Err()
+		if err := fm.scanner.scanner.Err(); err != nil {
+			return false, err
+		} else {
+			return false, nil
+		}
 	}
 
-	return nil
+	return true, nil
 }
 
 func (fm *FileManager) scannedBytes() []byte {
