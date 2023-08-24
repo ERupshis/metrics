@@ -303,7 +303,6 @@ func (c *BaseController) ScheduleDataStoringInFile() *time.Ticker {
 		interval = c.config.StoreInterval
 	}
 
-	interval = 10
 	storeTicker := ticker.CreateWithSecondsInterval(interval)
 	go ticker.Run(storeTicker, func() { c.saveMetricsInFile() })
 	return storeTicker
