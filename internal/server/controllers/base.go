@@ -281,7 +281,7 @@ type tmplData struct {
 func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
-		fmt.Println("Error parsing gauge template:", err)
+		c.logger.Info("Error parsing gauge template: %s", err)
 		return
 	}
 
@@ -303,6 +303,7 @@ func (c *BaseController) ScheduleDataStoringInFile() *time.Ticker {
 		interval = c.config.StoreInterval
 	}
 
+	c.logger.Info("[BaseController::ScheduleDataStoringInFile] init saving in file with interval: %d", c.config.StoreInterval)
 	storeTicker := ticker.CreateWithSecondsInterval(interval)
 	go ticker.Run(storeTicker, func() { c.saveMetricsInFile() })
 	return storeTicker
@@ -311,7 +312,8 @@ func (c *BaseController) ScheduleDataStoringInFile() *time.Ticker {
 func (c *BaseController) saveMetricsInFile() {
 	if !c.fileManager.IsFileOpen() {
 		if err := c.fileManager.OpenFile(c.config.StoragePath, true); err != nil {
-			c.logger.Info("[BaseController::SameMetricsInFile] cannot save metrics data in file. Failed to open '%s' file.", c.config.StoragePath)
+			c.logger.Info("[BaseController::saveMetricsInFile] cannot save metrics data in file. Failed to open '%s' file. err: %s",
+				c.config.StoragePath, err)
 			return
 		}
 		defer c.fileManager.CloseFile()
@@ -324,23 +326,31 @@ func (c *BaseController) saveMetricsInFile() {
 	for name, val := range c.storage.GetAllCounters() {
 		c.fileManager.WriteMetric(name, val)
 	}
+
+	c.logger.Info("[BaseController::saveMetricsInFile] storage successfully saved in file: %s", c.config.StoragePath)
 }
 
 func (c *BaseController) restoreDataFromFileIfNeed() {
 	if !c.config.Restore {
+		c.logger.Info("[BaseController::restoreDataFromFileIfNeed] data restoring from file switched off.")
 		return
 	}
 
 	if !c.fileManager.IsFileOpen() {
 		if err := c.fileManager.OpenFile(c.config.StoragePath, false); err != nil {
-			c.logger.Info("[BaseController::SameMetricsInFile] cannot read metrics from file. Failed to open '%s' file.", c.config.StoragePath)
+			c.logger.Info("[BaseController::restoreDataFromFileIfNeed] cannot read metrics from file. Failed to open '%s' file. err: %s",
+				c.config.StoragePath, err)
 			return
 		}
 		defer c.fileManager.CloseFile()
 	}
 
-	metric, _ := c.fileManager.ScanMetric()
+	metric, err := c.fileManager.ScanMetric()
 	for metric != nil {
+		if err != nil {
+			c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to scan metric '%s' from file", metric.Name)
+		}
+
 		switch metric.ValueType {
 		case "gauge":
 			value, err := strconv.ParseFloat(metric.Value, 64)
@@ -356,6 +366,8 @@ func (c *BaseController) restoreDataFromFileIfNeed() {
 			c.storage.AddCounter(metric.Name, value)
 		}
 
-		metric, _ = c.fileManager.ScanMetric()
+		metric, err = c.fileManager.ScanMetric()
 	}
+
+	c.logger.Info("[BaseController::restoreDataFromFileIfNeed] storage successfully restored from file: %s", c.config.StoragePath)
 }
