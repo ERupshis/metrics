@@ -320,11 +320,15 @@ func (c *BaseController) saveMetricsInFile() {
 	}
 
 	for name, val := range c.storage.GetAllGauges() {
-		c.fileManager.WriteMetric(name, val)
+		if err := c.fileManager.WriteMetric(name, val); err != nil {
+			c.logger.Info("[BaseController::saveMetricsInFile] failed to write gauge metric in file. err: %v", err)
+		}
 	}
 
 	for name, val := range c.storage.GetAllCounters() {
-		c.fileManager.WriteMetric(name, val)
+		if err := c.fileManager.WriteMetric(name, val); err != nil {
+			c.logger.Info("[BaseController::saveMetricsInFile] failed to write counter metric in file. err: %v", err)
+		}
 	}
 
 	c.logger.Info("[BaseController::saveMetricsInFile] storage successfully saved in file: %s", c.config.StoragePath)

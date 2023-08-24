@@ -103,9 +103,6 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 	type fields struct {
 		path string
 	}
-	type args struct {
-		withTrunc bool
-	}
 	tests := []struct {
 		name    string
 		fields  fields
