@@ -10,7 +10,6 @@ import (
 const testFolder = "/test"
 
 func TestFileManager_IsFileOpen(t *testing.T) {
-	os.RemoveAll(testFolder)
 
 	fm := Create()
 	if fm.IsFileOpen() {
@@ -35,7 +34,6 @@ func TestFileManager_IsFileOpen(t *testing.T) {
 }
 
 func TestFileManager_OpenFile(t *testing.T) {
-	os.RemoveAll(testFolder)
 	type fields struct {
 		path string
 	}
@@ -45,7 +43,7 @@ func TestFileManager_OpenFile(t *testing.T) {
 	}{
 		{
 			name:   "valid open file",
-			fields: fields{path: testFolder + "/asd/aa"},
+			fields: fields{path: testFolder + "/aa"},
 		},
 	}
 	for _, tt := range tests {
@@ -60,7 +58,6 @@ func TestFileManager_OpenFile(t *testing.T) {
 }
 
 func TestFileManager_CloseFile(t *testing.T) {
-	os.RemoveAll(testFolder)
 	//test close on missing file.
 	fm := Create()
 	if err := fm.CloseFile(); err != nil {
@@ -77,7 +74,7 @@ func TestFileManager_CloseFile(t *testing.T) {
 	}{
 		{
 			name:   "valid close file",
-			fields: fields{path: testFolder + "/asd/aa11"},
+			fields: fields{path: testFolder + "/aa11"},
 		},
 	}
 	for _, tt := range tests {
@@ -98,7 +95,6 @@ func TestFileManager_CloseFile(t *testing.T) {
 }
 
 func TestFileManager_initWriterAndScanner(t *testing.T) {
-	os.RemoveAll(testFolder)
 	var path = testFolder + "/dd"
 	fm := Create()
 	fm.OpenFile(path, false)
