@@ -8,11 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type logger struct {
+type Logger struct {
 	zap *zap.Logger
 }
 
-func CreateZapLogger(level string) (*logger, error) {
+func CreateZapLogger(level string) (*Logger, error) {
 	cfg, err := initConfig(level)
 	if err != nil {
 		return nil, err
@@ -23,10 +23,10 @@ func CreateZapLogger(level string) (*logger, error) {
 		return nil, err
 	}
 
-	return &logger{zap: log}, nil
+	return &Logger{zap: log}, nil
 }
 
-func (l *logger) Info(msg string, fields ...interface{}) {
+func (l *Logger) Info(msg string, fields ...interface{}) {
 	l.zap.Info(fmt.Sprintf(msg, fields...))
 }
 
@@ -44,14 +44,14 @@ func initConfig(level string) (zap.Config, error) {
 	return cfg, nil
 }
 
-func (l *logger) Sync() {
+func (l *Logger) Sync() {
 	err := l.zap.Sync()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (l *logger) LogHandler(h http.Handler) http.Handler {
+func (l *Logger) LogHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

@@ -20,6 +20,10 @@ func main() {
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
+	//Schedule data saving in file with storeInterval
+	storeTicker := baseController.ScheduleDataStoringInFile()
+	defer storeTicker.Stop()
+
 	log.Info("Server started with Host setting: %s", cfg.Host)
 	if err := http.ListenAndServe(cfg.Host, router); err != nil {
 		panic(err)

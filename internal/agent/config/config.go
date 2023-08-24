@@ -3,24 +3,23 @@ package config
 import (
 	"flag"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/caarlos0/env"
+	"github.com/erupshis/metrics/internal/confighelper"
 )
 
 type Config struct {
 	Host           string
-	ReportInterval int64
 	PollInterval   int64
+	ReportInterval int64
 	LogLevel       string
 }
 
 func Default() Config {
 	return Config{
 		Host:           "http://localhost:8080",
-		ReportInterval: 10,
 		PollInterval:   2,
+		ReportInterval: 10,
 		LogLevel:       "Info",
 	}
 }
@@ -29,7 +28,7 @@ func Parse() Config {
 	var config = Config{}
 	checkFlags(&config)
 	checkEnvironments(&config)
-	config.Host = addHTTPPrefixIfNeed(config.Host)
+	config.Host = confighelper.AddHTTPPrefixIfNeed(config.Host)
 	return config
 }
 
@@ -64,41 +63,8 @@ func checkEnvironments(config *Config) {
 		log.Fatal(err)
 	}
 
-	if envs.Host != "" {
-		config.Host = envs.Host
-	}
-
-	if envs.ReportInterval != "" {
-		if envVal, err := atoi64(envs.ReportInterval); err == nil {
-			config.ReportInterval = envVal
-		} else {
-			panic(err)
-		}
-	}
-
-	if envs.PollInterval != "" {
-		if envVal, err := atoi64(envs.PollInterval); err == nil {
-			config.PollInterval = envVal
-		} else {
-			panic(err)
-		}
-	}
-
-	if envs.LogLevel != "" {
-		config.LogLevel = envs.LogLevel
-	}
-}
-
-// SUPPORT FUNCTIONS.
-func atoi64(value string) (int64, error) {
-	return strconv.ParseInt(value, 10, 64)
-}
-
-//goland:noinspection HttpUrlsUsage
-func addHTTPPrefixIfNeed(value string) string {
-	if !strings.HasPrefix(value, "http://") {
-		return "http://" + value
-	}
-
-	return value
+	confighelper.SetEnvToParamIfNeed(&config.Host, envs.Host)
+	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
+	confighelper.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
+	confighelper.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
 }
