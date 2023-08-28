@@ -35,7 +35,7 @@ type FileManager struct {
 }
 
 func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager {
-	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'.")
+	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'.", dataPath)
 	return &FileManager{path: dataPath, logger: logger}
 }
 
