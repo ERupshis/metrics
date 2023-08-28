@@ -20,7 +20,7 @@ var testConfig = config.Config{
 func TestCreateStorage(t *testing.T) {
 	log := logger.CreateLogger("Info")
 	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
-	storage := Create(storageManager)
+	storage := Create(&storageManager)
 
 	require.NotNil(t, storage)
 	require.NotNil(t, storage.counterMetrics)
@@ -30,7 +30,7 @@ func TestCreateStorage(t *testing.T) {
 func TestMemStorage_AddCounter(t *testing.T) {
 	log := logger.CreateLogger("Info")
 	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
-	storage := Create(storageManager)
+	storage := Create(&storageManager)
 	type args struct {
 		name  string
 		value int64
@@ -56,7 +56,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 func TestMemStorage_AddGauge(t *testing.T) {
 	log := logger.CreateLogger("Info")
 	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
-	storage := Create(storageManager)
+	storage := Create(&storageManager)
 	type args struct {
 		name  string
 		value float64
@@ -82,7 +82,7 @@ func TestMemStorage_AddGauge(t *testing.T) {
 func TestMemStorage_GetCounter(t *testing.T) {
 	log := logger.CreateLogger("Info")
 	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
-	storage := Create(storageManager)
+	storage := Create(&storageManager)
 	storage.AddCounter("metric1", 1)
 
 	tests := []struct {
@@ -110,7 +110,7 @@ func TestMemStorage_GetCounter(t *testing.T) {
 func TestMemStorage_GetGauge(t *testing.T) {
 	log := logger.CreateLogger("Info")
 	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
-	storage := Create(storageManager)
+	storage := Create(&storageManager)
 	storage.AddGauge("metric1", 1.2)
 
 	tests := []struct {
