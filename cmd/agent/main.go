@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
+	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/ticker"
 	"github.com/erupshis/metrics/internal/logger"
@@ -13,7 +14,9 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	agent := agentimpl.Create(cfg, log)
+	client := client.CreateResty()
+
+	agent := agentimpl.Create(cfg, log, client)
 	log.Info("Agent is started.")
 
 	pollTicker := ticker.CreateWithSecondsInterval(agent.GetPollInterval())

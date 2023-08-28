@@ -4,29 +4,28 @@ import (
 	"math/rand"
 	"runtime"
 
+	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
-	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
-	"github.com/go-resty/resty/v2"
 )
 
 type Agent struct {
 	stats  runtime.MemStats
-	client *resty.Client
+	client client.BaseClient
 	logger logger.BaseLogger
 
 	config    config.Config
 	pollCount int64
 }
 
-func Create(config config.Config, logger logger.BaseLogger) *Agent {
-	return &Agent{client: resty.New(), config: config, logger: logger}
+func Create(config config.Config, logger logger.BaseLogger, client client.BaseClient) *Agent {
+	return &Agent{client: client, config: config, logger: logger}
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: resty.New(), config: config.Default(), logger: logger.CreateLogger("Info")}
+	return &Agent{client: client.CreateResty(), config: config.Default(), logger: logger.CreateLogger("Info")}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -60,15 +59,7 @@ func (a *Agent) PostJSONStats() {
 }
 
 func (a *Agent) postJSONStat(body []byte) {
-	compressedBody, _ := compressor.GzipCompress(body)
-	//TODD: add logger
-
-	_, _ = a.client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip").
-		SetBody(compressedBody).
-		Post(a.config.Host + "/update/")
+	a.client.PostJson(a.config.Host+"/update/", body)
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
