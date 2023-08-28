@@ -13,7 +13,7 @@ func CreateResty() BaseClient {
 	return &restyClient{resty.New()}
 }
 
-func (c *restyClient) PostJson(url string, body []byte) error {
+func (c *restyClient) PostJSON(url string, body []byte) error {
 	compressedBody, _ := compressor.GzipCompress(body)
 
 	_, err := c.client.R().

@@ -59,7 +59,7 @@ func (a *Agent) PostJSONStats() {
 }
 
 func (a *Agent) postJSONStat(body []byte) {
-	a.client.PostJson(a.config.Host+"/update/", body)
+	a.client.PostJSON(a.config.Host+"/update/", body)
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
