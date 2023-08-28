@@ -7,9 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"text/template"
-	"time"
 
-	"github.com/erupshis/metrics/internal/agent/ticker"
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
@@ -297,22 +295,10 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 // FILE METRICS MANAGING.
 
-func (c *BaseController) ScheduleDataStoringInFile() *time.Ticker {
-	var interval int64 = 1
-	if c.config.StoreInterval > 1 {
-		interval = c.config.StoreInterval
-	}
-
-	c.logger.Info("[BaseController::ScheduleDataStoringInFile] init saving in file with interval: %d", c.config.StoreInterval)
-	storeTicker := ticker.CreateWithSecondsInterval(interval)
-	go ticker.Run(storeTicker, func() { c.saveMetricsInFile() })
-	return storeTicker
-}
-
-func (c *BaseController) saveMetricsInFile() {
+func (c *BaseController) SaveMetricsInFile() {
 	if !c.fileManager.IsFileOpen() {
 		if err := c.fileManager.OpenFile(c.config.StoragePath, true); err != nil {
-			c.logger.Info("[BaseController::saveMetricsInFile] cannot save metrics data in file. Failed to open '%s' file. err: %s",
+			c.logger.Info("[BaseController::SaveMetricsInFile] cannot save metrics data in file. Failed to open '%s' file. err: %s",
 				c.config.StoragePath, err)
 			return
 		}
@@ -321,17 +307,17 @@ func (c *BaseController) saveMetricsInFile() {
 
 	for name, val := range c.storage.GetAllGauges() {
 		if err := c.fileManager.WriteMetric(name, val); err != nil {
-			c.logger.Info("[BaseController::saveMetricsInFile] failed to write gauge metric in file. err: %v", err)
+			c.logger.Info("[BaseController::SaveMetricsInFile] failed to write gauge metric in file. err: %v", err)
 		}
 	}
 
 	for name, val := range c.storage.GetAllCounters() {
 		if err := c.fileManager.WriteMetric(name, val); err != nil {
-			c.logger.Info("[BaseController::saveMetricsInFile] failed to write counter metric in file. err: %v", err)
+			c.logger.Info("[BaseController::SaveMetricsInFile] failed to write counter metric in file. err: %v", err)
 		}
 	}
 
-	c.logger.Info("[BaseController::saveMetricsInFile] storage successfully saved in file: %s", c.config.StoragePath)
+	c.logger.Info("[BaseController::SaveMetricsInFile] storage successfully saved in file: %s", c.config.StoragePath)
 }
 
 func (c *BaseController) restoreDataFromFileIfNeed() {
