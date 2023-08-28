@@ -146,7 +146,6 @@ func (fm *FileManager) CloseFile() error {
 
 	fm.writer = nil
 	fm.scanner = nil
-	fm.path = ""
 
 	return err
 }

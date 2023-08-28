@@ -37,7 +37,7 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
 	flag.BoolVar(&config.Restore, flagRestore, true, "restore values from file")
 	flag.StringVar(&config.StoragePath, flagStoragePath, "/tmp/metrics-db.json", "file storage path")
-	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 300, "store interval val (sec)")
+	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 2, "store interval val (sec)")
 	flag.Parse()
 }
 

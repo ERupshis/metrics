@@ -37,7 +37,7 @@ func main() {
 	}
 }
 
-func scheduleDataStoringInFile(cfg *config.Config, storage memstorage.MemStorage, log *logger.BaseLogger) *time.Ticker {
+func scheduleDataStoringInFile(cfg *config.Config, storage *memstorage.MemStorage, log *logger.BaseLogger) *time.Ticker {
 	var interval int64 = 1
 	if cfg.StoreInterval > 1 {
 		interval = cfg.StoreInterval

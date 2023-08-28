@@ -23,10 +23,10 @@ type BaseController struct {
 	compressor compressor.GzipHandler
 }
 
-func CreateBase(config config.Config, logger logger.BaseLogger, storage memstorage.MemStorage) *BaseController {
+func CreateBase(config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage) *BaseController {
 	controller := &BaseController{
 		config:     config,
-		storage:    storage,
+		storage:    *storage,
 		logger:     logger,
 		compressor: compressor.GzipHandler{},
 	}

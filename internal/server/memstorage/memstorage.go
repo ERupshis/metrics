@@ -13,19 +13,19 @@ type counter = int64
 type MemStorage struct {
 	gaugeMetrics   map[string]gauge
 	counterMetrics map[string]counter
-	manager        storagemanager.StorageManager
+	manager        *storagemanager.StorageManager
 }
 
-func Create(manager *storagemanager.StorageManager) MemStorage {
-	return MemStorage{
+func Create(manager *storagemanager.StorageManager) *MemStorage {
+	return &MemStorage{
 		make(map[string]gauge),
 		make(map[string]counter),
-		*manager,
+		manager,
 	}
 }
 
 func (m *MemStorage) RestoreData() {
-	gauges, counters := m.manager.RestoreDataFromStorage()
+	gauges, counters := (*m.manager).RestoreDataFromStorage()
 
 	for key, val := range gauges {
 		m.AddGauge(key, val)
@@ -37,7 +37,7 @@ func (m *MemStorage) RestoreData() {
 }
 
 func (m *MemStorage) SaveData() {
-	m.manager.SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
+	(*m.manager).SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {
