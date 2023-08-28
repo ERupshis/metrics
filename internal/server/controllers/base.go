@@ -12,29 +12,31 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
-	"github.com/erupshis/metrics/internal/server/filemngr"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
 )
 
 type BaseController struct {
-	config      config.Config
-	storage     memstorage.MemStorage
-	logger      logger.BaseLogger
-	compressor  compressor.GzipHandler
-	fileManager *filemngr.FileManager
+	config     config.Config
+	storage    memstorage.MemStorage
+	logger     logger.BaseLogger
+	compressor compressor.GzipHandler
 }
 
-func CreateBase(config config.Config, logger logger.BaseLogger) *BaseController {
+func CreateBase(config config.Config, logger logger.BaseLogger, storage memstorage.MemStorage) *BaseController {
 	controller := &BaseController{
-		config:      config,
-		storage:     memstorage.Create(),
-		logger:      logger,
-		compressor:  compressor.GzipHandler{},
-		fileManager: filemngr.Create(),
+		config:     config,
+		storage:    storage,
+		logger:     logger,
+		compressor: compressor.GzipHandler{},
 	}
 
-	controller.restoreDataFromFileIfNeed()
+	if !controller.config.Restore {
+		controller.logger.Info("[BaseController::restoreDataFromFileIfNeed] data restoring from file switched off.")
+	} else {
+		controller.storage.RestoreData()
+	}
+
 	return controller
 }
 
@@ -291,73 +293,4 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		panic(err)
 	}
-}
-
-// FILE METRICS MANAGING.
-
-func (c *BaseController) SaveMetricsInFile() {
-	if !c.fileManager.IsFileOpen() {
-		if err := c.fileManager.OpenFile(c.config.StoragePath, true); err != nil {
-			c.logger.Info("[BaseController::SaveMetricsInFile] cannot save metrics data in file. Failed to open '%s' file. err: %s",
-				c.config.StoragePath, err)
-			return
-		}
-		defer c.fileManager.CloseFile()
-	}
-
-	for name, val := range c.storage.GetAllGauges() {
-		if err := c.fileManager.WriteMetric(name, val); err != nil {
-			c.logger.Info("[BaseController::SaveMetricsInFile] failed to write gauge metric in file. err: %v", err)
-		}
-	}
-
-	for name, val := range c.storage.GetAllCounters() {
-		if err := c.fileManager.WriteMetric(name, val); err != nil {
-			c.logger.Info("[BaseController::SaveMetricsInFile] failed to write counter metric in file. err: %v", err)
-		}
-	}
-
-	c.logger.Info("[BaseController::SaveMetricsInFile] storage successfully saved in file: %s", c.config.StoragePath)
-}
-
-func (c *BaseController) restoreDataFromFileIfNeed() {
-	if !c.config.Restore {
-		c.logger.Info("[BaseController::restoreDataFromFileIfNeed] data restoring from file switched off.")
-		return
-	}
-
-	if !c.fileManager.IsFileOpen() {
-		if err := c.fileManager.OpenFile(c.config.StoragePath, false); err != nil {
-			c.logger.Info("[BaseController::restoreDataFromFileIfNeed] cannot read metrics from file. Failed to open '%s' file. err: %s",
-				c.config.StoragePath, err)
-			return
-		}
-		defer c.fileManager.CloseFile()
-	}
-
-	metric, err := c.fileManager.ScanMetric()
-	for metric != nil {
-		if err != nil {
-			c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to scan metric '%s' from file", metric.Name)
-		}
-
-		switch metric.ValueType {
-		case "gauge":
-			value, err := strconv.ParseFloat(metric.Value, 64)
-			if err != nil {
-				c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse float64 value for '%s'", metric.Name)
-			}
-			c.storage.AddGauge(metric.Name, value)
-		case "counter":
-			value, err := strconv.ParseInt(metric.Value, 10, 64)
-			if err != nil {
-				c.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse int64 value for '%s'", metric.Name)
-			}
-			c.storage.AddCounter(metric.Name, value)
-		}
-
-		metric, err = c.fileManager.ScanMetric()
-	}
-
-	c.logger.Info("[BaseController::restoreDataFromFileIfNeed] storage successfully restored from file: %s", c.config.StoragePath)
 }

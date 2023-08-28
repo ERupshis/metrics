@@ -3,12 +3,24 @@ package memstorage
 import (
 	"testing"
 
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+var testConfig = config.Config{
+	Host:          "",
+	Restore:       true,
+	StoragePath:   "/tmp/metrics-db.json",
+	StoreInterval: 300,
+}
+
 func TestCreateStorage(t *testing.T) {
-	storage := Create()
+	log := logger.CreateLogger("Info")
+	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
+	storage := Create(storageManager)
 
 	require.NotNil(t, storage)
 	require.NotNil(t, storage.counterMetrics)
@@ -16,7 +28,9 @@ func TestCreateStorage(t *testing.T) {
 }
 
 func TestMemStorage_AddCounter(t *testing.T) {
-	storage := Create()
+	log := logger.CreateLogger("Info")
+	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
+	storage := Create(storageManager)
 	type args struct {
 		name  string
 		value int64
@@ -40,7 +54,9 @@ func TestMemStorage_AddCounter(t *testing.T) {
 }
 
 func TestMemStorage_AddGauge(t *testing.T) {
-	storage := Create()
+	log := logger.CreateLogger("Info")
+	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
+	storage := Create(storageManager)
 	type args struct {
 		name  string
 		value float64
@@ -64,7 +80,9 @@ func TestMemStorage_AddGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetCounter(t *testing.T) {
-	storage := Create()
+	log := logger.CreateLogger("Info")
+	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
+	storage := Create(storageManager)
 	storage.AddCounter("metric1", 1)
 
 	tests := []struct {
@@ -90,7 +108,9 @@ func TestMemStorage_GetCounter(t *testing.T) {
 }
 
 func TestMemStorage_GetGauge(t *testing.T) {
-	storage := Create()
+	log := logger.CreateLogger("Info")
+	storageManager := storagemanager.CreateFileManager(testConfig.StoragePath, log)
+	storage := Create(storageManager)
 	storage.AddGauge("metric1", 1.2)
 
 	tests := []struct {

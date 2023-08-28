@@ -1,17 +1,28 @@
-package filemngr
+package storagemanager
 
 import (
 	"os"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/stretchr/testify/assert"
 )
 
 const testFolder = "/test"
 
-func TestFileManager_IsFileOpen(t *testing.T) {
+var testConfig = config.Config{
+	Host:          "",
+	Restore:       true,
+	StoragePath:   "/tmp/metrics-db.json",
+	StoreInterval: 300,
+}
 
-	fm := Create()
+func TestFileManager_IsFileOpen(t *testing.T) {
+	cfg := config.Parse()
+	log := logger.CreateLogger("Info")
+
+	fm := createFileManagerTest(cfg.StoragePath, log)
 	if fm.IsFileOpen() {
 		t.Errorf("IsFileOpen() file wasn't opened before")
 	}
@@ -48,7 +59,9 @@ func TestFileManager_OpenFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm := Create()
+			log := logger.CreateLogger("Info")
+
+			fm := createFileManagerTest(testConfig.StoragePath, log)
 
 			if err := fm.OpenFile(tt.fields.path, false); err != nil {
 				t.Errorf("OpenFile() without Trunc error = %v", err)
@@ -59,7 +72,9 @@ func TestFileManager_OpenFile(t *testing.T) {
 
 func TestFileManager_CloseFile(t *testing.T) {
 	//test close on missing file.
-	fm := Create()
+	log := logger.CreateLogger("Info")
+
+	fm := createFileManagerTest(testConfig.StoragePath, log)
 	if err := fm.CloseFile(); err != nil {
 		t.Errorf("CloseFile() file wasn't opened before, error = %v", err)
 	}
@@ -96,7 +111,9 @@ func TestFileManager_CloseFile(t *testing.T) {
 
 func TestFileManager_initWriterAndScanner(t *testing.T) {
 	var path = testFolder + "/dd"
-	fm := Create()
+	log := logger.CreateLogger("Info")
+
+	fm := createFileManagerTest(path, log)
 	fm.OpenFile(path, false)
 	fm.CloseFile()
 
@@ -139,7 +156,9 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 
 func TestFileManager_WriteAndReadMetric(t *testing.T) {
 	os.RemoveAll(testFolder)
-	fm := Create()
+	log := logger.CreateLogger("Info")
+
+	fm := createFileManagerTest(testConfig.StoragePath, log)
 
 	type fields struct {
 		path string
