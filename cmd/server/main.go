@@ -20,7 +20,7 @@ func main() {
 	defer log.Sync()
 
 	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(&storageManager)
 
 	baseController := controllers.CreateBase(cfg, log, storage)
 

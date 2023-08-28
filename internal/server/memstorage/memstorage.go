@@ -16,11 +16,11 @@ type MemStorage struct {
 	manager        storagemanager.StorageManager
 }
 
-func Create(manager storagemanager.StorageManager) MemStorage {
+func Create(manager *storagemanager.StorageManager) MemStorage {
 	return MemStorage{
 		make(map[string]gauge),
 		make(map[string]counter),
-		manager,
+		*manager,
 	}
 }
 

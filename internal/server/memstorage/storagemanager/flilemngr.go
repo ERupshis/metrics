@@ -35,6 +35,7 @@ type FileManager struct {
 }
 
 func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager {
+	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'.")
 	return &FileManager{path: dataPath, logger: logger}
 }
 
@@ -48,7 +49,7 @@ func createFileManagerTest(dataPath string, logger logger.BaseLogger) *FileManag
 func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]float64, counterValues map[string]int64) {
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, true); err != nil {
-			fm.logger.Info("[BaseController::SaveMetricsInFile] cannot save metrics data in file. Failed to open '%s' file. err: %s",
+			fm.logger.Info("[FileManager::SaveMetricsInStorage] cannot save metrics data in file. Failed to open '%s' file. err: %s",
 				fm.path, err)
 			return
 		}
@@ -57,17 +58,17 @@ func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]float64, coun
 
 	for name, val := range gaugeValues {
 		if err := fm.WriteMetric(name, val); err != nil {
-			fm.logger.Info("[BaseController::SaveMetricsInFile] failed to write gauge metric in file. err: %v", err)
+			fm.logger.Info("[FileManager::SaveMetricsInStorage] failed to write gauge metric in file. err: %v", err)
 		}
 	}
 
 	for name, val := range counterValues {
 		if err := fm.WriteMetric(name, val); err != nil {
-			fm.logger.Info("[BaseController::SaveMetricsInFile] failed to write counter metric in file. err: %v", err)
+			fm.logger.Info("[FileManager::SaveMetricsInStorage] failed to write counter metric in file. err: %v", err)
 		}
 	}
 
-	fm.logger.Info("[BaseController::SaveMetricsInFile] storage successfully saved in file: %s", fm.path)
+	fm.logger.Info("[FileManager::SaveMetricsInStorage] storage successfully saved in file: %s", fm.path)
 }
 
 func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]int64) {
@@ -76,7 +77,7 @@ func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]
 
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, false); err != nil {
-			fm.logger.Info("[BaseController::restoreDataFromFileIfNeed] cannot read metrics from file. Failed to open '%s' file. err: %s",
+			fm.logger.Info("[FileManager::RestoreDataFromStorage] cannot read metrics from file. Failed to open '%s' file. err: %s",
 				fm.path, err)
 			return gauges, counters
 		}
@@ -86,20 +87,20 @@ func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]
 	metric, err := fm.ScanMetric()
 	for metric != nil {
 		if err != nil {
-			fm.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to scan metric '%s' from file", metric.Name)
+			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to scan metric '%s' from file", metric.Name)
 		}
 
 		switch metric.ValueType {
 		case "gauge":
 			value, err := strconv.ParseFloat(metric.Value, 64)
 			if err != nil {
-				fm.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse float64 value for '%s'", metric.Name)
+				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse float64 value for '%s'", metric.Name)
 			}
 			gauges[metric.Name] = value
 		case "counter":
 			value, err := strconv.ParseInt(metric.Value, 10, 64)
 			if err != nil {
-				fm.logger.Info("[BaseController::restoreDataFromFileIfNeed] failed to parse int64 value for '%s'", metric.Name)
+				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse int64 value for '%s'", metric.Name)
 			}
 			counters[metric.Name] = value
 		}
@@ -107,7 +108,7 @@ func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]
 		metric, err = fm.ScanMetric()
 	}
 
-	fm.logger.Info("[BaseController::restoreDataFromFileIfNeed] storage successfully restored from file: %s", fm.path)
+	fm.logger.Info("[FileManager::restoreDataFromFileIfNeed] storage successfully restored from file: %s", fm.path)
 	return gauges, counters
 }
 
