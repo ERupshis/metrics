@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
@@ -25,8 +27,10 @@ func main() {
 	defer pollTicker.Stop()
 	defer repeatTicker.Stop()
 
-	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, func() { agent.PostJSONStats() })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
+	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStats() })
 
 	waitCh := make(chan struct{})
 	<-waitCh

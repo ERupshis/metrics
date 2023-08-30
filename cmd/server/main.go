@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -28,8 +29,9 @@ func main() {
 	router.Mount("/", baseController.Route())
 
 	//Schedule data saving in file with storeInterval
-	storeTicker := scheduleDataStoringInFile(&cfg, storage, &log)
-	defer storeTicker.Stop()
+	ctx, cancel := context.WithCancel(context.Background())
+	scheduleDataStoringInFile(ctx, &cfg, storage, &log)
+	defer cancel()
 
 	log.Info("Server started with Host setting: %s", cfg.Host)
 	if err := http.ListenAndServe(cfg.Host, router); err != nil {
@@ -37,7 +39,7 @@ func main() {
 	}
 }
 
-func scheduleDataStoringInFile(cfg *config.Config, storage *memstorage.MemStorage, log *logger.BaseLogger) *time.Ticker {
+func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log *logger.BaseLogger) *time.Ticker {
 	var interval int64 = 1
 	if cfg.StoreInterval > 1 {
 		interval = cfg.StoreInterval
@@ -45,6 +47,7 @@ func scheduleDataStoringInFile(cfg *config.Config, storage *memstorage.MemStorag
 
 	(*log).Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
 	storeTicker := ticker.CreateWithSecondsInterval(interval)
-	go ticker.Run(storeTicker, func() { storage.SaveData() })
+	go ticker.Run(storeTicker, ctx, func() { storage.SaveData() })
+
 	return storeTicker
 }
