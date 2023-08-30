@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 
 	"github.com/erupshis/metrics/internal/compressor"
@@ -27,6 +28,12 @@ func (c *DefaultClient) PostJSON(url string, body []byte) error {
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	_, err = c.client.Do(req)
+	resp, err := c.client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return err
+	}
+	defer resp.Body.Close()
+
 	return err
 }
