@@ -25,7 +25,7 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: client.CreateResty(), config: config.Default(), logger: logger.CreateLogger("Info")}
+	return &Agent{client: client.CreateDefault(), config: config.Default(), logger: logger.CreateLogger("Info")}
 }
 
 func (a *Agent) GetPollInterval() int64 {

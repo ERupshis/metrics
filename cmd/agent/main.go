@@ -14,7 +14,7 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	client := client.CreateResty()
+	client := client.CreateDefault()
 
 	agent := agentimpl.Create(cfg, log, client)
 	log.Info("Agent is started.")
