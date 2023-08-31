@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/erupshis/metrics/internal/agent/ticker"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
+	"github.com/erupshis/metrics/internal/ticker"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -46,7 +46,7 @@ func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage 
 	}
 
 	(*log).Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
-	storeTicker := ticker.CreateWithSecondsInterval(interval)
+	storeTicker := time.NewTicker(time.Duration(interval) * time.Second)
 	go ticker.Run(storeTicker, ctx, func() { storage.SaveData() })
 
 	return storeTicker

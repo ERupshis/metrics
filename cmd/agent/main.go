@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
-	"github.com/erupshis/metrics/internal/agent/ticker"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/ticker"
 )
 
 func main() {
@@ -21,10 +22,9 @@ func main() {
 	agent := agentimpl.Create(cfg, log, client)
 	log.Info("Agent is started.")
 
-	pollTicker := ticker.CreateWithSecondsInterval(agent.GetPollInterval())
-	repeatTicker := ticker.CreateWithSecondsInterval(agent.GetReportInterval())
-
+	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
 	defer pollTicker.Stop()
+	repeatTicker := time.NewTicker(time.Duration(agent.GetReportInterval()) * time.Second)
 	defer repeatTicker.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
