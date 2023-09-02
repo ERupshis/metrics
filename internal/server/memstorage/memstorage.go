@@ -2,6 +2,8 @@ package memstorage
 
 import (
 	"errors"
+
+	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
 )
 
 // TODO: make independent package with custom types?
@@ -11,10 +13,31 @@ type counter = int64
 type MemStorage struct {
 	gaugeMetrics   map[string]gauge
 	counterMetrics map[string]counter
+	manager        *storagemanager.StorageManager
 }
 
-func Create() MemStorage {
-	return MemStorage{make(map[string]gauge), make(map[string]counter)}
+func Create(manager *storagemanager.StorageManager) *MemStorage {
+	return &MemStorage{
+		make(map[string]gauge),
+		make(map[string]counter),
+		manager,
+	}
+}
+
+func (m *MemStorage) RestoreData() {
+	gauges, counters := (*m.manager).RestoreDataFromStorage()
+
+	for key, val := range gauges {
+		m.AddGauge(key, val)
+	}
+
+	for key, val := range counters {
+		m.AddCounter(key, val)
+	}
+}
+
+func (m *MemStorage) SaveData() {
+	(*m.manager).SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {

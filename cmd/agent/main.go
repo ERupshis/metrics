@@ -1,24 +1,37 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
+	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
-	"github.com/erupshis/metrics/internal/agent/ticker"
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/ticker"
 )
 
 func main() {
-	agent := agentimpl.Create(config.Parse())
+	cfg := config.Parse()
 
-	pollTicker := ticker.CreateWithSecondsInterval(agent.GetPollInterval())
-	repeatTicker := ticker.CreateWithSecondsInterval(agent.GetReportInterval())
+	log := logger.CreateLogger(cfg.LogLevel)
+	defer log.Sync()
 
+	client := client.CreateDefault()
+
+	agent := agentimpl.Create(cfg, log, client)
+	log.Info("Agent is started.")
+
+	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
 	defer pollTicker.Stop()
+	repeatTicker := time.NewTicker(time.Duration(agent.GetReportInterval()) * time.Second)
 	defer repeatTicker.Stop()
 
-	go ticker.Run(pollTicker, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, func() { agent.PostStats() })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
+	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStats() })
 
-	time.Sleep(time.Minute)
+	waitCh := make(chan struct{})
+	<-waitCh
 }

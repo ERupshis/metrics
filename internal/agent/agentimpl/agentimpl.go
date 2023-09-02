@@ -1,29 +1,31 @@
 package agentimpl
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 
+	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
-	"github.com/go-resty/resty/v2"
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/networkmsg"
 )
 
 type Agent struct {
 	stats  runtime.MemStats
-	client *resty.Client
+	client client.BaseClient
+	logger logger.BaseLogger
 
 	config    config.Config
 	pollCount int64
 }
 
-func Create(config config.Config) *Agent {
-	return &Agent{client: resty.New(), config: config}
+func Create(config config.Config, logger logger.BaseLogger, client client.BaseClient) *Agent {
+	return &Agent{client: client, config: config, logger: logger}
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: resty.New(), config: config.Default()}
+	return &Agent{client: client.CreateDefault(), config: config.Default(), logger: logger.CreateLogger("Info")}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -35,33 +37,34 @@ func (a *Agent) GetReportInterval() int64 {
 }
 
 func (a *Agent) UpdateStats() {
+	a.logger.Info("agent trying to update stats.")
 	runtime.ReadMemStats(&a.stats)
 	a.pollCount++
+
+	a.logger.Info("agent has completed stats posting. pollcount: %d", a.pollCount)
 }
 
-func (a *Agent) PostStats() {
+//JSON POST REQUESTS.
+
+func (a *Agent) PostJSONStats() {
+	a.logger.Info("agent trying to update stats.")
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postStat(a.createGaugeURL(name, valueGetter(&a.stats)))
+		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
 	}
 
-	a.postStat(a.createGaugeURL("RandomValue", rand.Float64()))
-	a.postStat(a.createCounterURL("PollCount", a.pollCount))
+	a.postJSONStat(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	a.postJSONStat(a.createJSONCounterMessage("PollCount", a.pollCount))
+
+	a.logger.Info("agent has completed stats updating.")
 }
 
-func (a *Agent) postStat(url string) {
-	_, err := a.client.R().
-		SetHeader("Content-Type", "text/plain").
-		Post(url)
-
-	if err != nil {
-		panic(err)
-	}
+func (a *Agent) postJSONStat(body []byte) {
+	a.client.PostJSON(a.config.Host+"/update/", body)
+}
+func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))
 }
 
-func (a *Agent) createGaugeURL(name string, value float64) string {
-	return a.config.Host + "/update/gauge/" + name + "/" + fmt.Sprintf("%f", value)
-}
-
-func (a *Agent) createCounterURL(name string, value int64) string {
-	return a.config.Host + "/update/counter/" + name + "/" + fmt.Sprintf("%d", value)
+func (a *Agent) createJSONCounterMessage(name string, value int64) []byte {
+	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateCounterMetrics(name, value))
 }

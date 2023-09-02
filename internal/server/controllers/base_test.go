@@ -1,15 +1,320 @@
 package controllers
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/networkmsg"
+	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/erupshis/metrics/internal/server/memstorage"
+	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// JSON HANDLERS.
+type testJSON struct {
+	name string
+	req  reqJSON
+	want wantJSON
+}
+
+type reqJSON struct {
+	method string
+	url    string
+	body   string
+}
+type wantJSON struct {
+	code        int
+	contentType string
+	body        string
+}
+
+func TestJSONCounterBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
+
+	var val1 int64 = 123
+	//var val2 int64 = 456
+
+	counterTests := []testJSON{
+		{
+			"counter post without value",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":0}"},
+		},
+		{
+			"counter post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"},
+		},
+		{
+			"counter get valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"},
+		},
+		{
+			"counter post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":246}"},
+		},
+		{
+			"counter get increased valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "counter",
+						Delta: &val1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"counter\",\"delta\":246}"},
+		},
+		{
+			"counter get missing value",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asds",
+						MType: "counter",
+					})),
+			},
+			wantJSON{
+				http.StatusNotFound, "text/plain; charset=utf-8",
+				"invalid counter name\n"},
+		},
+	}
+	runJSONTests(t, &counterTests, ts)
+
+}
+
+func TestJSONGaugeBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
+
+	var float1 float64 = 123
+	var float2 = 123.23
+	gaugeTests := []testJSON{
+		{
+			"gauge post without value",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":0}"},
+		},
+		{
+			"gauge post valid case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge get valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge post one more time case",
+			reqJSON{
+				http.MethodPost,
+				"/update/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asdf",
+						MType: "gauge",
+						Value: &float2,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asdf\",\"type\":\"gauge\",\"value\":123.23}"},
+		},
+		{
+			"gauge get increased valid case",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asd",
+						MType: "gauge",
+						Value: &float1,
+					})),
+			},
+			wantJSON{
+				http.StatusOK, "application/json",
+				"{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"},
+		},
+		{
+			"gauge get missing value",
+			reqJSON{
+				http.MethodPost,
+				"/value/",
+				string(networkmsg.CreatePostUpdateMessage(
+					networkmsg.Metrics{
+						ID:    "asds",
+						MType: "gauge",
+					})),
+			},
+			wantJSON{
+				http.StatusNotFound, "text/plain; charset=utf-8",
+				"invalid counter name\n"},
+		},
+	}
+	runJSONTests(t, &gaugeTests, ts)
+}
+
+func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
+	for _, tt := range *tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := bytes.NewBufferString(tt.req.body)
+			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, body)
+			require.NoError(t, errReq)
+
+			req.Header.Add("Content-Type", "application/json")
+
+			resp, errResp := ts.Client().Do(req)
+			assert.NoError(t, errResp)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			//assert.Equal(t, tt.req.method, )
+			assert.Equal(t, tt.want.body, string(respBody))
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+		})
+	}
+}
+
+// DEFAULT HANDLERS.
 type req struct {
 	method string
 	url    string
@@ -25,30 +330,21 @@ type test struct {
 	want want
 }
 
-func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
-	for _, tt := range *tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
-			require.NoError(t, errReq)
-
-			req.Header.Add("Content-Type", "text/plain")
-
-			resp, errResp := ts.Client().Do(req)
-			assert.NoError(t, errResp)
-			defer resp.Body.Close()
-
-			respBody, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.response, string(respBody))
-			assert.Equal(t, tt.want.code, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-		})
+func TestBadRequestHandlerBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
 	}
-}
 
-func TestBaseController(t *testing.T) {
-	ts := httptest.NewServer(CreateBase().Route())
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -59,38 +355,63 @@ func TestBaseController(t *testing.T) {
 			want{http.StatusBadRequest, "", ""},
 		},
 		{
-			"post invalid path",
-			req{http.MethodPost, "/sdf"},
-			want{http.StatusBadRequest, "", ""},
-		},
-		{
 			"get invalid path",
 			req{http.MethodGet, "/update/count/sdfgdf/dfgdfg/gg"},
 			want{http.StatusBadRequest, "", ""},
 		},
 		{
 			"get invalid path",
-			req{http.MethodGet, "/sdf"},
-			want{http.StatusBadRequest, "", ""},
+			req{http.MethodGet, "/sdf/"},
+			want{http.StatusMethodNotAllowed, "", ""},
 		},
-		//{
-		//	"post invalid path",
-		//	req{http.MethodPost, "/sdf/sfdg/"},
-		//	want{http.StatusBadRequest, "", ""},
-		//},
-		//{
-		//	"get invalid path",
-		//	req{http.MethodGet, "/sdf/dfsg"},
-		//	want{http.StatusBadRequest, "", ""},
-		//},
-		//{
-		//	"get invalid path",
-		//	req{http.MethodGet, "/update/dfsg"},
-		//	want{http.StatusBadRequest, "", ""},
-		//},
 	}
 	runTests(t, &badRequestTests, ts)
+}
 
+func TestListHandlerBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
+
+	badRequestTests := []test{
+		//badRequestHandler
+		{
+			"list of params valid",
+			req{http.MethodGet, "/"},
+			want{http.StatusOK, "\n<html><body>\n<caption>GAUGES</caption>\n<table border = 2>\n</table>\n\n<caption>COUNTERS</caption>\n<table border = 2>\n</table>\n</body></html>\n", "text/html; charset=utf-8"},
+		},
+	}
+	runTests(t, &badRequestTests, ts)
+}
+
+func TestMissingNameBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
 	missingNameTests := []test{
 		{
 			"post update counter valid path",
@@ -134,6 +455,24 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &missingNameTests, ts)
+}
+
+func TestCounterBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
 
 	counterTests := []test{
 		{
@@ -193,6 +532,24 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &counterTests, ts)
+}
+
+func TestGaugeBaseController(t *testing.T) {
+	cfg := config.Config{
+		Host:     "localhost:8080",
+		LogLevel: "Info",
+	}
+
+	log, err := logger.CreateZapLogger(cfg.LogLevel)
+	if err != nil {
+		panic(err)
+	}
+	//defer log.Sync()
+	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storage := memstorage.Create(&storageManager)
+
+	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	defer ts.Close()
 
 	gaugeTests := []test{
 		{
@@ -273,4 +630,28 @@ func TestBaseController(t *testing.T) {
 		},
 	}
 	runTests(t, &gaugeTests, ts)
+}
+
+func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
+	for _, tt := range *tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
+			require.NoError(t, errReq)
+
+			req.Header.Add("Content-Type", "html/text")
+			req.Header.Add("Accept-Encoding", "gzip")
+
+			resp, errResp := ts.Client().Do(req)
+			assert.NoError(t, errResp)
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			response, _ := compressor.GzipDecompress(respBody)
+
+			assert.Equal(t, tt.want.response, string(response))
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+		})
+	}
 }
