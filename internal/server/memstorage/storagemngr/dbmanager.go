@@ -205,6 +205,4 @@ func getMetricsTableName(value interface{}) string {
 		//TODO is it correct or better to handle wrong type?
 		panic("Unknown value type")
 	}
-
-	return ""
 }
