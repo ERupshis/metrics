@@ -13,10 +13,10 @@ type counter = int64
 type MemStorage struct {
 	gaugeMetrics   map[string]gauge
 	counterMetrics map[string]counter
-	manager        *storagemngr.StorageManager
+	manager        storagemngr.StorageManager
 }
 
-func Create(manager *storagemngr.StorageManager) *MemStorage {
+func Create(manager storagemngr.StorageManager) *MemStorage {
 	return &MemStorage{
 		make(map[string]gauge),
 		make(map[string]counter),
@@ -25,7 +25,11 @@ func Create(manager *storagemngr.StorageManager) *MemStorage {
 }
 
 func (m *MemStorage) RestoreData() {
-	gauges, counters := (*m.manager).RestoreDataFromStorage()
+	if m.manager == nil {
+		return
+	}
+
+	gauges, counters := m.manager.RestoreDataFromStorage()
 
 	for key, val := range gauges {
 		m.AddGauge(key, val)
@@ -37,11 +41,15 @@ func (m *MemStorage) RestoreData() {
 }
 
 func (m *MemStorage) IsAvailable() bool {
-	return (*m.manager).CheckConnection()
+	return m.manager.CheckConnection()
 }
 
 func (m *MemStorage) SaveData() {
-	(*m.manager).SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
+	if m.manager == nil {
+		return
+	}
+
+	m.manager.SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {
