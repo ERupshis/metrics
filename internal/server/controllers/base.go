@@ -51,7 +51,7 @@ func (c *BaseController) Route() *chi.Mux {
 	r.Use(c.compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
-
+	r.Get("/ping", c.checkStorageHandler)
 	r.Route("/{request}", func(r chi.Router) {
 		r.Post("/", c.jsonHandler)
 		r.Route("/{type}", func(r chi.Router) {
@@ -72,6 +72,14 @@ func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Reques
 
 func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
+}
+
+func (c *BaseController) checkStorageHandler(w http.ResponseWriter, _ *http.Request) {
+	if c.storage.IsAvailable() {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 const (

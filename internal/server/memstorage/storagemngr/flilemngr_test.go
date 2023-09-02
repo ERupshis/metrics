@@ -1,4 +1,4 @@
-package storagemanager
+package storagemngr
 
 import (
 	"os"
@@ -16,6 +16,10 @@ var testConfig = config.Config{
 	Restore:       true,
 	StoragePath:   "/tmp/metrics-db.json",
 	StoreInterval: 300,
+}
+
+func createFileManagerTest(dataPath string, logger logger.BaseLogger) *FileManager {
+	return &FileManager{path: dataPath, logger: logger}
 }
 
 func TestFileManager_IsFileOpen(t *testing.T) {

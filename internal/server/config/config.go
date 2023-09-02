@@ -14,6 +14,7 @@ type Config struct {
 	Restore       bool
 	StoreInterval int64
 	StoragePath   string
+	DataBaseDSN   string
 }
 
 func Parse() Config {
@@ -30,6 +31,7 @@ const (
 	flagRestore       = "r"
 	flagStoragePath   = "f"
 	flagStoreInterval = "i"
+	flagDataBaseDSN   = "d"
 )
 
 func checkFlags(config *Config) {
@@ -38,6 +40,9 @@ func checkFlags(config *Config) {
 	flag.BoolVar(&config.Restore, flagRestore, true, "restore values from file")
 	flag.StringVar(&config.StoragePath, flagStoragePath, "/tmp/metrics-db.json", "file storage path")
 	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 300, "store interval val (sec)")
+
+	databaseDefDSN := "host=localhost user=postgres password=postgres dbname=postgres sslmode=disable"
+	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, databaseDefDSN, "database DSN")
 	flag.Parse()
 }
 
@@ -48,6 +53,7 @@ type envConfig struct {
 	Restore       bool   `env:"RESTORE"`
 	StoragePath   string `env:"FILE_STORAGE_PATH"`
 	StoreInterval string `env:"STORE_INTERVAL"`
+	DataBaseDSN   string `env:"DATABASE_DSN"`
 }
 
 func checkEnvironments(config *Config) {
@@ -61,6 +67,7 @@ func checkEnvironments(config *Config) {
 	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
 	confighelper.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
 	confighelper.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
+	confighelper.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
 
 	config.Restore = envs.Restore || config.Restore
 }

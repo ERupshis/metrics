@@ -9,7 +9,7 @@ import (
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/erupshis/metrics/internal/server/memstorage"
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
+	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
 	"github.com/go-chi/chi/v5"
 )
@@ -20,7 +20,12 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
+	storageManager, err := storagemngr.CreateDataBaseManager(&cfg, &log)
+	if err != nil {
+		log.Info("[main] failed to create connection to database: %s", cfg.DataBaseDSN)
+	}
+	defer storageManager.Close()
+	//storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(&storageManager)
 
 	baseController := controllers.CreateBase(cfg, log, storage)

@@ -1,4 +1,4 @@
-package storagemanager
+package storagemngr
 
 import (
 	"bufio"
@@ -10,12 +10,6 @@ import (
 
 	"github.com/erupshis/metrics/internal/logger"
 )
-
-type MetricData struct {
-	Name      string `json:"name"`
-	ValueType string `json:"type"`
-	Value     string `json:"value"`
-}
 
 type fileWriter struct {
 	file   *os.File
@@ -39,12 +33,18 @@ func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager
 	return &FileManager{path: dataPath, logger: logger}
 }
 
-func createFileManagerTest(dataPath string, logger logger.BaseLogger) *FileManager {
-	return &FileManager{path: dataPath, logger: logger}
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERFACE FOR STORAGE.
+
+func (fm *FileManager) Close() error {
+	//NOTHING TO DO.
+	return nil
+}
+
+func (fm *FileManager) CheckConnection() bool {
+	//TODO need to fix. probably file file should be open during all application life time.
+	return true
+}
 
 func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]float64, counterValues map[string]int64) {
 	if !fm.IsFileOpen() {

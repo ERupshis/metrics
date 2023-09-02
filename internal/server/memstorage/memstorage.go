@@ -3,7 +3,7 @@ package memstorage
 import (
 	"errors"
 
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
+	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
 
 // TODO: make independent package with custom types?
@@ -13,10 +13,10 @@ type counter = int64
 type MemStorage struct {
 	gaugeMetrics   map[string]gauge
 	counterMetrics map[string]counter
-	manager        *storagemanager.StorageManager
+	manager        *storagemngr.StorageManager
 }
 
-func Create(manager *storagemanager.StorageManager) *MemStorage {
+func Create(manager *storagemngr.StorageManager) *MemStorage {
 	return &MemStorage{
 		make(map[string]gauge),
 		make(map[string]counter),
@@ -34,6 +34,10 @@ func (m *MemStorage) RestoreData() {
 	for key, val := range counters {
 		m.AddCounter(key, val)
 	}
+}
+
+func (m *MemStorage) IsAvailable() bool {
+	return (*m.manager).CheckConnection()
 }
 
 func (m *MemStorage) SaveData() {
