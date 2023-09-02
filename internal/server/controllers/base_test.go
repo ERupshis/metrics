@@ -48,7 +48,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	//defer log.Sync()
 
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -168,7 +168,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -342,7 +342,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -380,7 +380,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -408,7 +408,7 @@ func TestMissingNameBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -469,7 +469,7 @@ func TestCounterBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()
@@ -546,7 +546,7 @@ func TestGaugeBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(storageManager)
 
 	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
 	defer ts.Close()

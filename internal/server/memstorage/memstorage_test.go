@@ -131,7 +131,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
-		manager        *storagemngr.StorageManager
+		manager        storagemngr.StorageManager
 	}
 	tests := []struct {
 		name   string
@@ -182,7 +182,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
-		manager        *storagemngr.StorageManager
+		manager        storagemngr.StorageManager
 	}
 	tests := []struct {
 		name   string
@@ -273,7 +273,7 @@ func TestMemStorage_IsAvailable(t *testing.T) {
 			m := &MemStorage{
 				gaugeMetrics:   tt.fields.gaugeMetrics,
 				counterMetrics: tt.fields.counterMetrics,
-				manager:        &tt.fields.manager,
+				manager:        tt.fields.manager,
 			}
 			assert.Equalf(t, tt.want, m.IsAvailable(), "IsAvailable()")
 		})
@@ -312,7 +312,7 @@ func TestMemStorage_SaveData(t *testing.T) {
 			m := &MemStorage{
 				gaugeMetrics:   tt.fields.gaugeMetrics,
 				counterMetrics: tt.fields.counterMetrics,
-				manager:        &tt.fields.manager,
+				manager:        tt.fields.manager,
 			}
 			m.SaveData()
 		})
@@ -360,7 +360,7 @@ func TestMemStorage_RestoreData(t *testing.T) {
 			m := &MemStorage{
 				gaugeMetrics:   tt.fields.gaugeMetrics,
 				counterMetrics: tt.fields.counterMetrics,
-				manager:        &tt.fields.manager,
+				manager:        tt.fields.manager,
 			}
 
 			m.RestoreData()

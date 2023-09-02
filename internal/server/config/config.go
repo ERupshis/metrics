@@ -38,11 +38,13 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.Host, flagAddress, "localhost:8080", "server endpoint")
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
 	flag.BoolVar(&config.Restore, flagRestore, true, "restore values from file")
-	flag.StringVar(&config.StoragePath, flagStoragePath, "/tmp/metrics-db.json", "file storage path")
-	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 300, "store interval val (sec)")
 
-	databaseDefDSN := "host=localhost user=postgres password=postgres dbname=postgres sslmode=disable"
-	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, databaseDefDSN, "database DSN")
+	//storagePathDef := "/tmp/metrics-db.json"
+	flag.StringVar(&config.StoragePath, flagStoragePath, "", "file storage path")
+	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 5, "store interval val (sec)")
+
+	//databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_bd?sslmode=disable"
+	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, "", "database DSN")
 	flag.Parse()
 }
 
