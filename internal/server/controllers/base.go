@@ -144,7 +144,7 @@ func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(body)
+	//_, _ = w.Write(body)
 }
 
 func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) {
