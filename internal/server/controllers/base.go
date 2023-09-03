@@ -138,13 +138,13 @@ func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 		c.addMetricFromMessage(&metric)
 	}
 
-	_, err := json.Marshal(metrics)
+	body, err := json.Marshal(metrics)
 	if err != nil {
-		c.logger.Info("[BaseController::jsonPostBatchHandler] Error occurs due batch handling: %v", err)
+		c.logger.Info("[BaseController::jsonPostBatchHandler] Error occurs during batch marshaling for response: %v", err)
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	//_, _ = w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) {
