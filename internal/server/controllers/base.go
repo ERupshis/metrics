@@ -138,7 +138,7 @@ func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 		c.addMetricFromMessage(&metric)
 	}
 
-	body, err := json.Marshal(metrics)
+	_, err := json.Marshal(metrics)
 	if err != nil {
 		c.logger.Info("[BaseController::jsonPostBatchHandler] Error occurs due batch handling: %v", err)
 	}
