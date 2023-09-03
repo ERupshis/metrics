@@ -81,11 +81,15 @@ func (a *Agent) PostJSONStats() {
 }
 
 func (a *Agent) postBatchJSON(body []byte) {
-	a.client.PostJSON(a.config.Host+"/updates/", body)
+	if err := a.client.PostJSON(a.config.Host+"/updates/", body); err != nil {
+		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
+	}
 }
 
 func (a *Agent) postJSON(body []byte) {
-	a.client.PostJSON(a.config.Host+"/update/", body)
+	if err := a.client.PostJSON(a.config.Host+"/update/", body); err != nil {
+		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
+	}
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))

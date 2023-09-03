@@ -17,9 +17,9 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	client := client.CreateDefault()
+	defClient := client.CreateDefault()
 
-	agent := agentimpl.Create(cfg, log, client)
+	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("Agent is started.")
 
 	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
