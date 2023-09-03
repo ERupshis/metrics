@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -136,11 +135,6 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) {
 	for _, metric := range metrics {
 		c.addMetricFromMessage(&metric)
-	}
-
-	_, err := json.Marshal(metrics)
-	if err != nil {
-		c.logger.Info("[BaseController::jsonPostBatchHandler] Error occurs during batch marshaling for response: %v", err)
 	}
 
 	w.Header().Add("Content-Type", "application/json")
