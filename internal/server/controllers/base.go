@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -83,8 +84,9 @@ func (c *BaseController) checkStorageHandler(w http.ResponseWriter, _ *http.Requ
 }
 
 const (
-	postRequest = "update"
-	getRequest  = "value"
+	postBatchRequest = "updates"
+	postRequest      = "update"
+	getRequest       = "value"
 
 	gaugeType   = "gauge"
 	counterType = "counter"
@@ -103,21 +105,55 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
-	data, err := networkmsg.ParsePostValueMessage(buf.Bytes())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	switch request {
 	case postRequest:
-		c.jsonPostHandler(w, &data)
+		metric, err := networkmsg.ParsePostValueMessage(buf.Bytes())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		c.jsonPostHandler(w, &metric)
+
+	case postBatchRequest:
+		data, err := networkmsg.ParsePostBatchValueMessage(buf.Bytes())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		c.jsonPostBatchHandler(w, data)
+
 	case getRequest:
-		c.jsonGetHandler(w, &data)
+		metric, err := networkmsg.ParsePostValueMessage(buf.Bytes())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		c.jsonGetHandler(w, &metric)
 	}
 }
 
-func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metrics) {
+func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) {
+	for _, metric := range metrics {
+		c.addMetricFromMessage(&metric)
+	}
+
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		c.logger.Info("[BaseController::jsonPostBatchHandler] Error occurs due batch handling: %v", err)
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	_, _ = w.Write(body)
+}
+
+func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) {
+	c.addMetricFromMessage(data)
+	w.Header().Add("Content-Type", "application/json")
+	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
+}
+
+func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 	if data.MType == gaugeType {
 		valueIn := new(float64)
 		if data.Value != nil {
@@ -135,12 +171,9 @@ func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg
 		value, _ := c.storage.GetCounter(data.ID)
 		data.Delta = &value
 	}
-
-	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
 }
 
-func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metrics) {
+func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) {
 	if data.MType == gaugeType {
 		value, err := c.storage.GetGauge(data.ID)
 		if err != nil {
