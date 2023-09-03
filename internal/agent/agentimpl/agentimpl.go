@@ -49,7 +49,7 @@ func (a *Agent) UpdateStats() {
 
 func (a *Agent) PostJSONStatsBatch() error {
 	a.logger.Info("[Agent:PostJSONStatsBatch] Agent is trying to update stats.")
-	metrics := make([]networkmsg.Metric, 0, 0)
+	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
 		metrics = append(metrics, networkmsg.CreateGaugeMetrics(name, valueGetter(&a.stats)))
 	}
