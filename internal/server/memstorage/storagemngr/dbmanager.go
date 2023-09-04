@@ -20,6 +20,10 @@ const (
 	schemaName    = "metrics"
 	gaugesTable   = "gauges"
 	countersTable = "counters"
+
+	insertStmt = "insert"
+	updateStmt = "update"
+	existStmt  = "exist"
 )
 
 func CreateDataBaseManager(cfg *config.Config, log *logger.BaseLogger) (StorageManager, error) {
@@ -84,19 +88,27 @@ func (m *DataBaseManager) CheckConnection() bool {
 	return true
 }
 
-func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]float64, countersValues map[string]int64) {
-	for key, value := range gaugesValues {
-		if err := m.saveMetric(key, value); err != nil {
-			(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
-				key, value, err)
-		}
+func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]interface{}, countersValues map[string]interface{}) {
+	//TODO add error handling
+	tx, err := m.database.Begin()
+	if err != nil {
+		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create transaction, error: %s", err)
+		return
 	}
 
-	for key, value := range countersValues {
-		if err := m.saveMetric(key, value); err != nil {
-			(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to save counter metric in database name: %s, value: %v, error: %s",
-				key, value, err)
-		}
+	if err = m.saveMetrics(tx, gaugesTable, gaugesValues); err != nil {
+		tx.Rollback()
+		return
+	}
+
+	if err = m.saveMetrics(tx, countersTable, countersValues); err != nil {
+		tx.Rollback()
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
 	}
 }
 
@@ -104,19 +116,29 @@ func (m *DataBaseManager) RestoreDataFromStorage() (map[string]float64, map[stri
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 
-	if err := m.restoreDataInMap(gaugesTable, gauges); err != nil {
+	tx, err := m.database.Begin()
+	if err != nil {
+		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to create transaction, error: %s", err)
+		return gauges, counters
+	}
+
+	if err := m.restoreDataInMap(tx, gaugesTable, gauges); err != nil {
 		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (error: %s)", err)
 	}
 
-	if err := m.restoreDataInMap(countersTable, counters); err != nil {
+	if err := m.restoreDataInMap(tx, countersTable, counters); err != nil {
 		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (with error: %s)", err)
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
+	}
 	return gauges, counters
 }
 
-func (m *DataBaseManager) restoreDataInMap(tableName string, mapDest interface{}) error {
-	rows, err := m.database.Query(`SELECT * FROM ` + tableName)
+func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest interface{}) error {
+	rows, err := tx.Query(`SELECT * FROM ` + tableName)
 	if err != nil {
 		return err
 	}
@@ -151,46 +173,62 @@ func (m *DataBaseManager) restoreDataInMap(tableName string, mapDest interface{}
 	return err
 }
 
-func (m *DataBaseManager) saveMetric(name string, value interface{}) error {
-	exists, err := m.checkMetricExists(name, value)
+func (m *DataBaseManager) saveMetrics(tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
+	requestGaugeStmts, err := createDatabaseStmts(tx, metricTable)
+	if err != nil {
+		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create statements for requests, error: %s", err)
+		return err
+	}
+	defer closeDatabaseStmts(requestGaugeStmts)
+
+	for key, value := range metricsValues {
+		if err := m.saveMetric(requestGaugeStmts, key, value); err != nil {
+			(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
+				key, value, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *DataBaseManager) saveMetric(stmts map[string]*sql.Stmt, name string, value interface{}) error {
+	exists, err := m.checkMetricExists(stmts[existStmt], name, value)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		err = m.updateMetric(name, value)
+		err = m.updateMetric(stmts[updateStmt], name, value)
 	} else {
-		err = m.insertMetric(name, value)
+		err = m.insertMetric(stmts[insertStmt], name, value)
 	}
 
 	return err
 }
 
-func (m *DataBaseManager) checkMetricExists(name string, value interface{}) (bool, error) {
+func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, value interface{}) (bool, error) {
 	var exists bool
-	requestBody := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1);`, getMetricsTableName(value))
-	err := m.database.QueryRow(requestBody, name).Scan(&exists)
+	err := stmt.QueryRow(name).Scan(&exists)
 	return exists, err
 }
 
-func (m *DataBaseManager) insertMetric(name string, value interface{}) error {
-	requestBody := fmt.Sprintf(`INSERT INTO %s (id, value) VALUES ($1, $2);`, getMetricsTableName(value))
+func (m *DataBaseManager) insertMetric(stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
 	if getMetricsTableName(value) == gaugesTable {
-		_, err = m.database.Exec(requestBody, name, value.(float64))
+		_, err = stmt.Exec(name, value.(float64))
 	} else {
-		_, err = m.database.Exec(requestBody, name, value.(int64))
+		_, err = stmt.Exec(name, value.(int64))
 	}
 	return err
 }
 
-func (m *DataBaseManager) updateMetric(name string, value interface{}) error {
-	requestBody := fmt.Sprintf(`UPDATE %s SET value = $1 WHERE id = $2;`, getMetricsTableName(value))
+func (m *DataBaseManager) updateMetric(stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
 	if getMetricsTableName(value) == gaugesTable {
-		_, err = m.database.Exec(requestBody, value.(float64), name)
+		_, err = stmt.Exec(value.(float64), name)
 	} else {
-		_, err = m.database.Exec(requestBody, value.(int64), name)
+		_, err = stmt.Exec(value.(int64), name)
 	}
 	return err
 }
@@ -203,6 +241,39 @@ func getMetricsTableName(value interface{}) string {
 		return gaugesTable
 	default:
 		//TODO is it correct or better to handle wrong type?
-		panic("Unknown value type")
+		panic("[storagemngr:getMetricsTableName] Unknown value type")
+	}
+}
+
+func createDatabaseStmts(tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
+	existBody := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1);`, metricTable)
+	insertBody := fmt.Sprintf(`INSERT INTO %s (id, value) VALUES ($1, $2);`, metricTable)
+	updateBody := fmt.Sprintf(`UPDATE %s SET value = $1 WHERE id = $2;`, metricTable)
+
+	existStmtBody, err := tx.Prepare(existBody)
+	if err != nil {
+		return nil, err
+	}
+
+	insertStmtBody, err := tx.Prepare(insertBody)
+	if err != nil {
+		return nil, err
+	}
+
+	updateStmtBody, err := tx.Prepare(updateBody)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]*sql.Stmt{
+		existStmt:  existStmtBody,
+		insertStmt: insertStmtBody,
+		updateStmt: updateStmtBody,
+	}, nil
+}
+
+func closeDatabaseStmts(stmts map[string]*sql.Stmt) {
+	for _, stmt := range stmts {
+		stmt.Close()
 	}
 }

@@ -1,6 +1,7 @@
 package agentimpl
 
 import (
+	"encoding/json"
 	"math/rand"
 	"runtime"
 
@@ -46,20 +47,49 @@ func (a *Agent) UpdateStats() {
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJSONStats() {
-	a.logger.Info("agent trying to update stats.")
+func (a *Agent) PostJSONStatsBatch() error {
+	a.logger.Info("[Agent:PostJSONStatsBatch] Agent is trying to update stats.")
+	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+		metrics = append(metrics, networkmsg.CreateGaugeMetrics(name, valueGetter(&a.stats)))
 	}
 
-	a.postJSONStat(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
-	a.postJSONStat(a.createJSONCounterMessage("PollCount", a.pollCount))
+	metrics = append(metrics, networkmsg.CreateGaugeMetrics("RandomValue", rand.Float64()))
+	metrics = append(metrics, networkmsg.CreateCounterMetrics("PollCount", a.pollCount))
+
+	body, err := json.Marshal(&metrics)
+	if err != nil {
+		a.logger.Info("[Agent:PostJSONStatsBatch] Failed to create request's JSON body.")
+		return err
+	}
+
+	a.postBatchJSON(body)
+	a.logger.Info("[Agent:PostJSONStatsBatch] Stats was sent.")
+	return nil
+}
+
+func (a *Agent) PostJSONStats() {
+	a.logger.Info("[Agent:PostJSONStats] Agent is trying to update stats.")
+	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+		a.postJSON(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+	}
+
+	a.postJSON(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	a.postJSON(a.createJSONCounterMessage("PollCount", a.pollCount))
 
 	a.logger.Info("agent has completed stats updating.")
 }
 
-func (a *Agent) postJSONStat(body []byte) {
-	a.client.PostJSON(a.config.Host+"/update/", body)
+func (a *Agent) postBatchJSON(body []byte) {
+	if err := a.client.PostJSON(a.config.Host+"/updates/", body); err != nil {
+		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
+	}
+}
+
+func (a *Agent) postJSON(body []byte) {
+	if err := a.client.PostJSON(a.config.Host+"/update/", body); err != nil {
+		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
+	}
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))

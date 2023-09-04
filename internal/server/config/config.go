@@ -43,7 +43,7 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.StoragePath, flagStoragePath, "", "file storage path")
 	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 5, "store interval val (sec)")
 
-	//databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_bd?sslmode=disable"
+	//databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable"
 	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, "", "database DSN")
 	flag.Parse()
 }

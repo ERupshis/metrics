@@ -17,9 +17,9 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	client := client.CreateDefault()
+	defClient := client.CreateDefault()
 
-	agent := agentimpl.Create(cfg, log, client)
+	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("Agent is started.")
 
 	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
@@ -30,7 +30,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStats() })
+	go ticker.Run(repeatTicker, ctx, func() { _ = agent.PostJSONStatsBatch() })
 
 	waitCh := make(chan struct{})
 	<-waitCh

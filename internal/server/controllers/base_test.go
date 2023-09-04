@@ -63,7 +63,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 					})),
@@ -78,7 +78,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -94,7 +94,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -110,7 +110,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -126,7 +126,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -142,7 +142,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asds",
 						MType: "counter",
 					})),
@@ -182,7 +182,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 					})),
@@ -197,7 +197,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -213,7 +213,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -229,7 +229,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -245,7 +245,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asdf",
 						MType: "gauge",
 						Value: &float2,
@@ -261,7 +261,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -277,7 +277,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asds",
 						MType: "gauge",
 					})),

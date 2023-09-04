@@ -77,7 +77,7 @@ func (mr *MockStorageManagerMockRecorder) RestoreDataFromStorage() *gomock.Call 
 }
 
 // SaveMetricsInStorage mocks base method.
-func (m *MockStorageManager) SaveMetricsInStorage(arg0 map[string]float64, arg1 map[string]int64) {
+func (m *MockStorageManager) SaveMetricsInStorage(arg0, arg1 map[string]interface{}) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SaveMetricsInStorage", arg0, arg1)
 }
