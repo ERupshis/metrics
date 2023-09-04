@@ -46,7 +46,7 @@ func (fm *FileManager) CheckConnection() bool {
 	return true
 }
 
-func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]float64, counterValues map[string]int64) {
+func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) {
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, true); err != nil {
 			fm.logger.Info("[FileManager::SaveMetricsInStorage] cannot save metrics data in file. Failed to open '%s' file. err: %s",

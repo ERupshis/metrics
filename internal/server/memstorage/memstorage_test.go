@@ -136,7 +136,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   map[string]counter
+		want   map[string]interface{}
 	}{
 		{
 			name: "valid",
@@ -145,7 +145,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]counter{"metric2": 1},
+			want: map[string]interface{}{"metric2": int64(1)},
 		},
 		{
 			name: "valid empty",
@@ -154,7 +154,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{},
 				manager:        nil,
 			},
-			want: map[string]counter{},
+			want: map[string]interface{}{},
 		},
 		{
 			name: "valid with 2 values",
@@ -163,7 +163,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1, "metric3": 2},
 				manager:        nil,
 			},
-			want: map[string]counter{"metric2": 1, "metric3": 2},
+			want: map[string]interface{}{"metric2": int64(1), "metric3": int64(2)},
 		},
 	}
 	for _, tt := range tests {
@@ -187,7 +187,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   map[string]gauge
+		want   map[string]interface{}
 	}{
 		{
 			name: "valid",
@@ -196,7 +196,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]gauge{"metric1": 1.1},
+			want: map[string]interface{}{"metric1": 1.1},
 		},
 		{
 			name: "valid empty",
@@ -205,7 +205,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{},
 				manager:        nil,
 			},
-			want: map[string]gauge{},
+			want: map[string]interface{}{},
 		},
 		{
 			name: "valid with 2 values",
@@ -214,7 +214,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]gauge{"metric1": 1.1, "metric3": 2.2},
+			want: map[string]interface{}{"metric1": 1.1, "metric3": 2.2},
 		},
 	}
 	for _, tt := range tests {

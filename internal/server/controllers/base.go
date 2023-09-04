@@ -309,8 +309,8 @@ const tmplMap = `
 `
 
 type tmplData struct {
-	Gauges   map[string]float64
-	Counters map[string]int64
+	Gauges   map[string]interface{}
+	Counters map[string]interface{}
 }
 
 func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {

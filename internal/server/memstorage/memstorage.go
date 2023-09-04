@@ -63,7 +63,7 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 	return -1, errors.New("invalid counter name")
 }
 
-func (m *MemStorage) GetAllCounters() map[string]counter {
+func (m *MemStorage) GetAllCounters() map[string]interface{} {
 	return copyMap(m.counterMetrics)
 }
 
@@ -78,12 +78,12 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 	return -1.0, errors.New("invalid counter name")
 }
 
-func (m *MemStorage) GetAllGauges() map[string]gauge {
+func (m *MemStorage) GetAllGauges() map[string]interface{} {
 	return copyMap(m.gaugeMetrics)
 }
 
-func copyMap[V comparable](m map[string]V) map[string]V {
-	result := make(map[string]V)
+func copyMap[V any](m map[string]V) map[string]interface{} {
+	result := make(map[string]interface{})
 	for k, v := range m {
 		result[k] = v
 	}
