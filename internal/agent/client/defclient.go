@@ -11,10 +11,6 @@ import (
 	"github.com/erupshis/metrics/internal/retryer"
 )
 
-const (
-	errorPostJson = "postJson request: %w"
-)
-
 type DefaultClient struct {
 	client *http.Client
 	log    logger.BaseLogger
@@ -27,7 +23,7 @@ func CreateDefault(log logger.BaseLogger) BaseClient {
 func (c *DefaultClient) PostJSON(url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
-		return fmt.Errorf(errorPostJson, err)
+		return fmt.Errorf("postJSON request: %w", err)
 	}
 
 	ctx := context.Background()
@@ -37,14 +33,14 @@ func (c *DefaultClient) PostJSON(url string, body []byte) error {
 		attempt++
 		err := c.makeRequest(context, http.MethodPost, url, compressedBody)
 		if err != nil {
-			c.log.Info("attempt '%d' to postJson failed with error: %v", attempt, err)
+			c.log.Info("attempt '%d' to postJSON failed with error: %v", attempt, err)
 		}
 		return err
 	}
 
 	err = retryer.RetryCallWithTimeout(ctx, nil, request)
 	if err != nil {
-		err = fmt.Errorf("couldn't perform post request")
+		err = fmt.Errorf("couldn't perform postJSON request")
 	}
 	return err
 }
