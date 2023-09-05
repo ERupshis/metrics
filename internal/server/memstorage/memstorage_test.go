@@ -3,20 +3,12 @@ package memstorage
 import (
 	"testing"
 
-	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var testConfig = config.Config{
-	Host:          "",
-	Restore:       true,
-	StoragePath:   "/tmp/metrics-db.json",
-	StoreInterval: 300,
-}
 
 func TestCreateStorage(t *testing.T) {
 	storage := Create(nil)

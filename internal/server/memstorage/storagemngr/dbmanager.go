@@ -207,7 +207,7 @@ func (m *DataBaseManager) saveMetric(stmts map[string]*sql.Stmt, name string, va
 	return err
 }
 
-func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, value interface{}) (bool, error) {
+func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, _ interface{}) (bool, error) {
 	var exists bool
 	err := stmt.QueryRow(name).Scan(&exists)
 	return exists, err

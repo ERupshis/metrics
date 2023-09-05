@@ -42,7 +42,7 @@ func (fm *FileManager) Close() error {
 }
 
 func (fm *FileManager) CheckConnection() bool {
-	//TODO need to fix. probably file file should be open during all application life time.
+	//TODO need to fix. probably file should be open during all application lifetime.
 	return true
 }
 
