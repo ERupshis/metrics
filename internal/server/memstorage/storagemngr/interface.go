@@ -12,6 +12,6 @@ type MetricData struct {
 type StorageManager interface {
 	SaveMetricsInStorage(ctx context.Context, gaugeValues map[string]interface{}, counterValues map[string]interface{}) error
 	RestoreDataFromStorage(ctx context.Context) (map[string]float64, map[string]int64, error)
-	CheckConnection() (bool, error)
+	CheckConnection(ctx context.Context) (bool, error)
 	Close() error
 }

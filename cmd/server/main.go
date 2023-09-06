@@ -20,27 +20,24 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	storageManager, err := createStorageManager(&cfg, log)
-	if err != nil {
-		log.Info("[main] failed to create connection to database: %s", cfg.DataBaseDSN)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	storageManager, err := createStorageManager(ctx, &cfg, log)
 	if storageManager != nil {
 		defer storageManager.Close()
 	}
 	storage := memstorage.Create(storageManager)
-
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage)
+	baseController := controllers.CreateBase(ctx, cfg, log, storage)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
 	//Schedule data saving in file with storeInterval
-	ctx, cancel := context.WithCancel(context.Background())
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
-	defer cancel()
 
 	log.Info("Server started with Host setting: %s", cfg.Host)
-	if err := http.ListenAndServe(cfg.Host, router); err != nil {
+	if err = http.ListenAndServe(cfg.Host, router); err != nil {
 		panic(err)
 	}
 }
@@ -63,9 +60,13 @@ func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage 
 	return storeTicker
 }
 
-func createStorageManager(cfg *config.Config, log logger.BaseLogger) (storagemngr.StorageManager, error) {
+func createStorageManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (storagemngr.StorageManager, error) {
 	if cfg.DataBaseDSN != "" {
-		return storagemngr.CreateDataBaseManager(cfg, log)
+		manager, err := storagemngr.CreateDataBaseManager(ctx, cfg, log)
+		if err != nil {
+			log.Info("[main] failed to create connection to database: %s", cfg.DataBaseDSN)
+		}
+		return manager, err
 	} else if cfg.StoragePath != "" {
 		return storagemngr.CreateFileManager(cfg.StoragePath, log), nil
 	} else {

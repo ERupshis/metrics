@@ -20,27 +20,19 @@ func CreateDefault(log logger.BaseLogger) BaseClient {
 	return &DefaultClient{client: &http.Client{}, log: log}
 }
 
-func (c *DefaultClient) PostJSON(url string, body []byte) error {
+func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
 		return fmt.Errorf("postJSON request: %w", err)
 	}
 
-	ctx := context.Background()
-
-	attempt := 0
 	request := func(context context.Context) error {
-		attempt++
-		err := c.makeRequest(context, http.MethodPost, url, compressedBody)
-		if err != nil {
-			c.log.Info("attempt '%d' to postJSON failed with error: %v", attempt, err)
-		}
-		return err
+		return c.makeRequest(context, http.MethodPost, url, compressedBody)
 	}
 
-	err = retryer.RetryCallWithTimeout(ctx, nil, request)
+	err = retryer.RetryCallWithTimeout(ctx, c.log, nil, nil, request)
 	if err != nil {
-		err = fmt.Errorf("couldn't perform postJSON request")
+		err = fmt.Errorf("couldn't send post request")
 	}
 	return err
 }

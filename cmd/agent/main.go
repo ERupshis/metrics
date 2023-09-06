@@ -30,7 +30,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStatsBatch() })
+	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStatsBatch(ctx) })
 
 	waitCh := make(chan struct{})
 	<-waitCh

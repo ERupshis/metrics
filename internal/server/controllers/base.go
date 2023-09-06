@@ -75,8 +75,8 @@ func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Reque
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func (c *BaseController) checkStorageHandler(w http.ResponseWriter, _ *http.Request) {
-	if _, err := c.storage.IsAvailable(); err != nil {
+func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
 		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {

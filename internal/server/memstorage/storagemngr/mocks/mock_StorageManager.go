@@ -35,18 +35,18 @@ func (m *MockStorageManager) EXPECT() *MockStorageManagerMockRecorder {
 }
 
 // CheckConnection mocks base method.
-func (m *MockStorageManager) CheckConnection() (bool, error) {
+func (m *MockStorageManager) CheckConnection(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckConnection")
+	ret := m.ctrl.Call(m, "CheckConnection", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CheckConnection indicates an expected call of CheckConnection.
-func (mr *MockStorageManagerMockRecorder) CheckConnection() *gomock.Call {
+func (mr *MockStorageManagerMockRecorder) CheckConnection(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckConnection", reflect.TypeOf((*MockStorageManager)(nil).CheckConnection))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckConnection", reflect.TypeOf((*MockStorageManager)(nil).CheckConnection), arg0)
 }
 
 // Close mocks base method.

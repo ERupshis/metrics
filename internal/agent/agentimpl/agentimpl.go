@@ -1,6 +1,7 @@
 package agentimpl
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
 	"runtime"
@@ -48,7 +49,7 @@ func (a *Agent) UpdateStats() {
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJSONStatsBatch() {
+func (a *Agent) PostJSONStatsBatch(ctx context.Context) {
 	a.logger.Info("[Agent:PostJSONStatsBatch] agent is trying to update stats.")
 	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
@@ -64,31 +65,31 @@ func (a *Agent) PostJSONStatsBatch() {
 		return
 	}
 
-	if err = a.postBatchJSON(body); err != nil {
+	if err = a.postBatchJSON(ctx, body); err != nil {
 		a.logger.Info("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %v", err)
 		return
 	}
 	a.logger.Info("[Agent:PostJSONStatsBatch] stats was sent.")
 }
 
-func (a *Agent) PostJSONStats() {
+func (a *Agent) PostJSONStats(ctx context.Context) {
 	a.logger.Info("[Agent:PostJSONStats] agent is trying to update stats.")
 
 	failedPostsCount := 0
 	var err error
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		err = a.postJSON(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+		err = a.postJSON(ctx, a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
 		if err != nil {
 			failedPostsCount++
 		}
 	}
 
-	err = a.postJSON(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	err = a.postJSON(ctx, a.createJSONGaugeMessage("RandomValue", rand.Float64()))
 	if err != nil {
 		failedPostsCount++
 	}
 
-	err = a.postJSON(a.createJSONCounterMessage("PollCount", a.pollCount))
+	err = a.postJSON(ctx, a.createJSONCounterMessage("PollCount", a.pollCount))
 	if err != nil {
 		failedPostsCount++
 	}
@@ -96,12 +97,12 @@ func (a *Agent) PostJSONStats() {
 	a.logger.Info("[Agent:PostJSONStats] stats was sent with failed posts: %d", failedPostsCount)
 }
 
-func (a *Agent) postBatchJSON(body []byte) error {
-	return a.client.PostJSON(a.config.Host+"/updates/", body)
+func (a *Agent) postBatchJSON(ctx context.Context, body []byte) error {
+	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body)
 }
 
-func (a *Agent) postJSON(body []byte) error {
-	err := a.client.PostJSON(a.config.Host+"/update/", body)
+func (a *Agent) postJSON(ctx context.Context, body []byte) error {
+	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body)
 	if err != nil {
 		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
 	}

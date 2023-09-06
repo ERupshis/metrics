@@ -3,11 +3,13 @@ package storagemngr
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/retryer"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -36,12 +38,23 @@ const (
 	updateMetricError = "update metric name '%s', value '%s', table '%v': %w"
 )
 
+var databaseErrorsToRetry = []error{
+	errors.New(pgerrcode.UniqueViolation),
+	errors.New(pgerrcode.ConnectionException),
+	errors.New(pgerrcode.ConnectionDoesNotExist),
+	errors.New(pgerrcode.ConnectionFailure),
+	errors.New(pgerrcode.SQLClientUnableToEstablishSQLConnection),
+	errors.New(pgerrcode.SQLServerRejectedEstablishmentOfSQLConnection),
+	errors.New(pgerrcode.TransactionResolutionUnknown),
+	errors.New(pgerrcode.ProtocolViolation),
+}
+
 type DataBaseManager struct {
 	database *sql.DB
 	log      logger.BaseLogger
 }
 
-func CreateDataBaseManager(cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
+func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
 	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
@@ -49,39 +62,61 @@ func CreateDataBaseManager(cfg *config.Config, log logger.BaseLogger) (StorageMa
 	}
 
 	manager := &DataBaseManager{database: database, log: log}
-	if _, err = manager.CheckConnection(); err != nil {
+	if _, err = manager.CheckConnection(ctx); err != nil {
 		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
-	if err = manager.createSchema(); err != nil {
+	if err = manager.createSchema(ctx); err != nil {
 		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
-	if err = manager.createTables(); err != nil {
+	if err = manager.createTables(ctx); err != nil {
 		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
 	return manager, nil
 }
 
-func (m *DataBaseManager) createSchema() error {
-	if _, err := m.database.Exec(`CREATE SCHEMA IF NOT EXISTS ` + schemaName + `;`); err != nil {
+func (m *DataBaseManager) createSchema(ctx context.Context) error {
+	createExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE SCHEMA IF NOT EXISTS `+schemaName+`;`)
+		return err
+	}
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createExec)
+	if err != nil {
 		return fmt.Errorf(createSchemaError, err)
 	}
 
-	if _, err := m.database.Exec(`SET search_path TO ` + schemaName); err != nil {
+	searchExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `SET search_path TO `+schemaName)
+		return err
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, searchExec)
+	if err != nil {
 		return fmt.Errorf(createSchemaError, err)
 	}
 
 	return nil
 }
 
-func (m *DataBaseManager) createTables() error {
-	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + gaugesTable + ` (id TEXT PRIMARY KEY, value float8);`); err != nil {
+func (m *DataBaseManager) createTables(ctx context.Context) error {
+	createGaugeExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+gaugesTable+
+			` (id TEXT PRIMARY KEY, value float8);`)
+		return err
+	}
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createGaugeExec)
+	if err != nil {
 		return fmt.Errorf(createTableError, err)
 	}
 
-	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + countersTable + ` (id TEXT PRIMARY KEY, value int8);`); err != nil {
+	createCounterExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+countersTable+
+			` (id TEXT PRIMARY KEY, value int8);`)
+		return err
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createCounterExec)
+	if err != nil {
 		return fmt.Errorf(createTableError, err)
 	}
 
@@ -92,10 +127,12 @@ func (m *DataBaseManager) Close() error {
 	return m.database.Close()
 }
 
-func (m *DataBaseManager) CheckConnection() (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := m.database.PingContext(ctx); err != nil {
+func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
+	exec := func(context context.Context) error {
+		return m.database.PingContext(context)
+	}
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+	if err != nil {
 		return false, err
 	}
 	return true, nil
@@ -155,7 +192,15 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 }
 
 func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
-	rows, err := tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+	var rows *sql.Rows
+	var err error
+
+	query := func(context context.Context) error {
+		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+		return err
+	}
+
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, query)
 	if err != nil {
 		return fmt.Errorf(restoreDataError, err)
 	}
@@ -229,7 +274,13 @@ func (m *DataBaseManager) saveMetric(ctx context.Context, stmts map[string]*sql.
 
 func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt, name string, _ interface{}) (bool, error) {
 	var exists bool
-	err := stmt.QueryRowContext(ctx, name).Scan(&exists)
+	var err error
+
+	query := func(context context.Context) error {
+		return stmt.QueryRowContext(ctx, name).Scan(&exists)
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, query)
+
 	return exists, err
 }
 
@@ -237,9 +288,17 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 	var err error
 	tableName := getMetricsTableName(value)
 	if tableName == gaugesTable {
-		_, err = stmt.ExecContext(ctx, name, value.(float64))
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, name, value.(float64))
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
 	} else {
-		_, err = stmt.ExecContext(ctx, name, value.(int64))
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, name, value.(int64))
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
 	}
 
 	if err != nil {
@@ -252,9 +311,17 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 	var err error
 	tableName := getMetricsTableName(value)
 	if tableName == gaugesTable {
-		_, err = stmt.ExecContext(ctx, value.(float64), name)
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, value.(float64), name)
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
 	} else {
-		_, err = stmt.ExecContext(ctx, value.(int64), name)
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, value.(int64), name)
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
 	}
 
 	if err != nil {

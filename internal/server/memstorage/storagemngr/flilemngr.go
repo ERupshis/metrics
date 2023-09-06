@@ -51,7 +51,7 @@ func (fm *FileManager) Close() error {
 	return nil
 }
 
-func (fm *FileManager) CheckConnection() (bool, error) {
+func (fm *FileManager) CheckConnection(_ context.Context) (bool, error) {
 	return true, nil
 }
 

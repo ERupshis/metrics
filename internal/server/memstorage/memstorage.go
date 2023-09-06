@@ -46,8 +46,8 @@ func (m *MemStorage) RestoreData(ctx context.Context) {
 	}
 }
 
-func (m *MemStorage) IsAvailable() (bool, error) {
-	return m.manager.CheckConnection()
+func (m *MemStorage) IsAvailable(ctx context.Context) (bool, error) {
+	return m.manager.CheckConnection(ctx)
 }
 
 func (m *MemStorage) SaveData(ctx context.Context) error {
