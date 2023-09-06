@@ -195,11 +195,14 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 }
 
 func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
-	var rows **sql.Rows
 	var err error
+	var rows *sql.Rows
+	if rows != nil {
+		err = rows.Err()
+	}
 
 	query := func(context context.Context) error {
-		*rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
 		return err
 	}
 
@@ -207,14 +210,14 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	if err != nil {
 		return fmt.Errorf(restoreDataError, err)
 	}
-	defer (*rows).Close()
+	defer rows.Close()
 
-	for (*rows).Next() {
+	for rows.Next() {
 		switch dest := mapDest.(type) {
 		case map[string]float64:
 			var name string
 			var value float64
-			err = (*rows).Scan(&name, &value)
+			err = rows.Scan(&name, &value)
 			if err != nil {
 				return fmt.Errorf(restoreDataError, err)
 			}
@@ -223,7 +226,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 		case map[string]int64:
 			var name string
 			var value int64
-			err = (*rows).Scan(&name, &value)
+			err = rows.Scan(&name, &value)
 			if err != nil {
 				return fmt.Errorf(restoreDataError, err)
 			}
@@ -234,7 +237,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 		}
 	}
 
-	err = (*rows).Err()
+	err = rows.Err()
 	if err != nil {
 		return fmt.Errorf(restoreDataError, err)
 	}
