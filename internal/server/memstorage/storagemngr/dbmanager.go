@@ -11,11 +11,6 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-type DataBaseManager struct {
-	database *sql.DB
-	log      *logger.BaseLogger
-}
-
 const (
 	schemaName    = "metrics"
 	gaugesTable   = "gauges"
@@ -24,10 +19,18 @@ const (
 	insertStmt = "insert"
 	updateStmt = "update"
 	existStmt  = "exist"
+
+	saveMetricsError    = "save metrics in db: %w"
+	restoreMetricsError = "restore metrics from db: %w"
 )
 
-func CreateDataBaseManager(cfg *config.Config, log *logger.BaseLogger) (StorageManager, error) {
-	(*log).Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
+type DataBaseManager struct {
+	database *sql.DB
+	log      logger.BaseLogger
+}
+
+func CreateDataBaseManager(cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
+	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
 		return nil, err
@@ -88,53 +91,57 @@ func (m *DataBaseManager) CheckConnection() bool {
 	return true
 }
 
-func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]interface{}, countersValues map[string]interface{}) {
-	//TODO add error handling
+func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
+	m.log.Info("[DataBaseManager:SaveMetricsInStorage] start transaction")
 	tx, err := m.database.Begin()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create transaction, error: %s", err)
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
 	if err = m.saveMetrics(tx, gaugesTable, gaugesValues); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
 	if err = m.saveMetrics(tx, countersTable, countersValues); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
+		return fmt.Errorf(saveMetricsError, err)
 	}
+
+	m.log.Info("[DataBaseManager:SaveMetricsInStorage] transaction completed")
+	return nil
 }
 
-func (m *DataBaseManager) RestoreDataFromStorage() (map[string]float64, map[string]int64) {
+func (m *DataBaseManager) RestoreDataFromStorage() (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 
+	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
 	tx, err := m.database.Begin()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to create transaction, error: %s", err)
-		return gauges, counters
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
-	if err := m.restoreDataInMap(tx, gaugesTable, gauges); err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (error: %s)", err)
+	if err = m.restoreDataInMap(tx, gaugesTable, gauges); err != nil {
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
-	if err := m.restoreDataInMap(tx, countersTable, counters); err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (with error: %s)", err)
+	if err = m.restoreDataInMap(tx, countersTable, counters); err != nil {
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
-	return gauges, counters
+
+	m.log.Info("[DataBaseManager:RestoreDataFromStorage] transaction completed")
+	return gauges, counters, nil
 }
 
 func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest interface{}) error {
@@ -176,14 +183,14 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 func (m *DataBaseManager) saveMetrics(tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
 	requestGaugeStmts, err := createDatabaseStmts(tx, metricTable)
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create statements for requests, error: %s", err)
+		m.log.Info("[DataBaseManager:SaveMetricsInStorage] Failed to create statements for requests, error: %s", err)
 		return err
 	}
 	defer closeDatabaseStmts(requestGaugeStmts)
 
 	for key, value := range metricsValues {
 		if err := m.saveMetric(requestGaugeStmts, key, value); err != nil {
-			(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
+			m.log.Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
 				key, value, err)
 			return err
 		}

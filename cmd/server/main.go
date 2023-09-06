@@ -20,7 +20,7 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	storageManager, err := createStorageManager(&cfg, &log)
+	storageManager, err := createStorageManager(&cfg, log)
 	if err != nil {
 		log.Info("[main] failed to create connection to database: %s", cfg.DataBaseDSN)
 	}
@@ -58,11 +58,11 @@ func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage 
 	return storeTicker
 }
 
-func createStorageManager(cfg *config.Config, log *logger.BaseLogger) (storagemngr.StorageManager, error) {
+func createStorageManager(cfg *config.Config, log logger.BaseLogger) (storagemngr.StorageManager, error) {
 	if cfg.DataBaseDSN != "" {
 		return storagemngr.CreateDataBaseManager(cfg, log)
 	} else if cfg.StoragePath != "" {
-		return storagemngr.CreateFileManager(cfg.StoragePath, *log), nil
+		return storagemngr.CreateFileManager(cfg.StoragePath, log), nil
 	} else {
 		return nil, nil
 	}

@@ -11,6 +11,16 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 )
 
+const (
+	initWriterError  = "init writer: %w"
+	writeMetricError = "write metric: %w"
+
+	initScannerError = "init scanner: %w"
+	scanMetricError  = "scan metric: %w"
+
+	openFileError = "open file: %w"
+)
+
 type fileWriter struct {
 	file   *os.File
 	writer *bufio.Writer
@@ -29,7 +39,7 @@ type FileManager struct {
 }
 
 func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager {
-	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'.", dataPath)
+	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'", dataPath)
 	return &FileManager{path: dataPath, logger: logger}
 }
 
@@ -37,21 +47,17 @@ func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager
 // INTERFACE FOR STORAGE.
 
 func (fm *FileManager) Close() error {
-	//NOTHING TO DO.
 	return nil
 }
 
 func (fm *FileManager) CheckConnection() bool {
-	//TODO need to fix. probably file should be open during all application lifetime.
 	return true
 }
 
-func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) {
+func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) error {
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, true); err != nil {
-			fm.logger.Info("[FileManager::SaveMetricsInStorage] cannot save metrics data in file. Failed to open '%s' file. err: %s",
-				fm.path, err)
-			return
+			return fmt.Errorf("cannot open file '%s' to save metrics: %w", fm.path, err)
 		}
 		defer fm.CloseFile()
 	}
@@ -69,47 +75,64 @@ func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, 
 	}
 
 	fm.logger.Info("[FileManager::SaveMetricsInStorage] storage successfully saved in file: %s", fm.path)
+	return nil
 }
 
-func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]int64) {
+func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, false); err != nil {
-			fm.logger.Info("[FileManager::RestoreDataFromStorage] cannot read metrics from file. Failed to open '%s' file. err: %s",
-				fm.path, err)
-			return gauges, counters
+			return gauges, counters, fmt.Errorf("cannot open file '%s' to read metrics: %w", fm.path, err)
 		}
 		defer fm.CloseFile()
 	}
 
+	failedToReadMetricsCount := 0
 	metric, err := fm.ScanMetric()
 	for metric != nil {
 		if err != nil {
-			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to scan metric '%s' from file", metric.Name)
-		}
+			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to scan metric '%s' from file '%s'", metric.Name, fm.path)
+			failedToReadMetricsCount++
 
-		switch metric.ValueType {
-		case "gauge":
-			value, err := strconv.ParseFloat(metric.Value, 64)
-			if err != nil {
-				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse float64 value for '%s'", metric.Name)
-			}
-			gauges[metric.Name] = value
-		case "counter":
-			value, err := strconv.ParseInt(metric.Value, 10, 64)
-			if err != nil {
-				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse int64 value for '%s'", metric.Name)
-			}
-			counters[metric.Name] = value
+		} else {
+			fm.parseMetric(metric, &gauges, &counters)
 		}
 
 		metric, err = fm.ScanMetric()
 	}
 
-	fm.logger.Info("[FileManager::restoreDataFromFileIfNeed] storage successfully restored from file: %s", fm.path)
-	return gauges, counters
+	fm.logger.Info("[FileManager::restoreDataFromFileIfNeed] storage successfully restored from file: '%s', failed to read metrics: '%d'",
+		fm.path, failedToReadMetricsCount)
+
+	err = nil
+	if failedToReadMetricsCount > 0 {
+		err = fmt.Errorf("some metrics weren't read from file, count: '%d'", failedToReadMetricsCount)
+	}
+
+	return gauges, counters, err
+}
+
+func (fm *FileManager) parseMetric(metric *MetricData, gauges *map[string]float64, counters *map[string]int64) {
+	switch metric.ValueType {
+	case "gauge":
+		value, err := strconv.ParseFloat(metric.Value, 64)
+		if err != nil {
+			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse float64 value for '%s'", metric.Name)
+			return
+		}
+		(*gauges)[metric.Name] = value
+	case "counter":
+		value, err := strconv.ParseInt(metric.Value, 10, 64)
+		if err != nil {
+			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse int64 value for '%s'", metric.Name)
+			return
+		}
+		(*counters)[metric.Name] = value
+	default:
+		panic("wrong metric type")
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,15 +146,15 @@ func (fm *FileManager) OpenFile(path string, withTrunc bool) error {
 	fm.path = path
 
 	if err := os.MkdirAll(filepath.Dir(fm.path), 0755); err != nil {
-		return err
+		return fmt.Errorf(openFileError, err)
 	}
 
 	if err := fm.initWriter(withTrunc); err != nil {
-		return err
+		return fmt.Errorf(openFileError, err)
 	}
 
 	if err := fm.initScanner(); err != nil {
-		return err
+		return fmt.Errorf(openFileError, err)
 	}
 
 	return nil
@@ -161,7 +184,7 @@ func (fm *FileManager) initWriter(withTrunc bool) error {
 
 	file, err := os.OpenFile(fm.path, flag, 0666)
 	if err != nil {
-		return err
+		return fmt.Errorf(initWriterError, err)
 	}
 
 	fm.writer = &fileWriter{file, bufio.NewWriter(file)}
@@ -200,15 +223,19 @@ func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf(writeMetricError, err)
 	}
 
 	data = append(data, '\n')
-	if _, err := fm.write(data); err != nil {
-		return err
+	if _, err = fm.write(data); err != nil {
+		return fmt.Errorf(writeMetricError, err)
 	}
 
-	return fm.flushWriter()
+	err = fm.flushWriter()
+	if err != nil {
+		return fmt.Errorf(writeMetricError, err)
+	}
+	return nil
 }
 
 func (fm *FileManager) write(data []byte) (int, error) {
@@ -224,7 +251,7 @@ func (fm *FileManager) flushWriter() error {
 func (fm *FileManager) initScanner() error {
 	file, err := os.OpenFile(fm.path, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return err
+		return fmt.Errorf(initScannerError, err)
 	}
 
 	fm.scanner = &fileScanner{file, bufio.NewScanner(file)}
@@ -234,16 +261,16 @@ func (fm *FileManager) initScanner() error {
 func (fm *FileManager) ScanMetric() (*MetricData, error) {
 	var metric MetricData
 	if !fm.IsFileOpen() {
-		return nil, fmt.Errorf("failed reading metric. file is not open")
+		return nil, fmt.Errorf(scanMetricError, fmt.Errorf("file is not open"))
 	}
 
 	if isScanOk, err := fm.scan(); !isScanOk {
-		return nil, err
+		return nil, fmt.Errorf(scanMetricError, err)
 	}
 
 	data := fm.scannedBytes()
 	if err := json.Unmarshal(data, &metric); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(scanMetricError, err)
 	}
 
 	return &metric, nil

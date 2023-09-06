@@ -29,7 +29,10 @@ func (m *MemStorage) RestoreData() {
 		return
 	}
 
-	gauges, counters := m.manager.RestoreDataFromStorage()
+	gauges, counters, err := m.manager.RestoreDataFromStorage()
+	if err != nil {
+		//TODO log.
+	}
 
 	for key, val := range gauges {
 		m.AddGauge(key, val)

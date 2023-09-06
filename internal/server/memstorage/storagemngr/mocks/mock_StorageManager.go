@@ -62,12 +62,13 @@ func (mr *MockStorageManagerMockRecorder) Close() *gomock.Call {
 }
 
 // RestoreDataFromStorage mocks base method.
-func (m *MockStorageManager) RestoreDataFromStorage() (map[string]float64, map[string]int64) {
+func (m *MockStorageManager) RestoreDataFromStorage() (map[string]float64, map[string]int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RestoreDataFromStorage")
 	ret0, _ := ret[0].(map[string]float64)
 	ret1, _ := ret[1].(map[string]int64)
-	return ret0, ret1
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // RestoreDataFromStorage indicates an expected call of RestoreDataFromStorage.
@@ -77,9 +78,11 @@ func (mr *MockStorageManagerMockRecorder) RestoreDataFromStorage() *gomock.Call 
 }
 
 // SaveMetricsInStorage mocks base method.
-func (m *MockStorageManager) SaveMetricsInStorage(arg0, arg1 map[string]interface{}) {
+func (m *MockStorageManager) SaveMetricsInStorage(arg0, arg1 map[string]interface{}) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SaveMetricsInStorage", arg0, arg1)
+	ret := m.ctrl.Call(m, "SaveMetricsInStorage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // SaveMetricsInStorage indicates an expected call of SaveMetricsInStorage.

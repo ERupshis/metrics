@@ -278,7 +278,7 @@ func TestMemStorage_SaveData(t *testing.T) {
 
 	m := mocks.NewMockStorageManager(ctrl)
 	gomock.InOrder(
-		m.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any()).Return(),
+		m.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any()).Return(nil),
 	)
 
 	type fields struct {
@@ -345,7 +345,7 @@ func TestMemStorage_RestoreData(t *testing.T) {
 		},
 	}
 
-	m.EXPECT().RestoreDataFromStorage().Return(map[string]float64{"gauge1": 1.1, "gauge2": 2.2}, map[string]int64{"counter1": 1, "counter3": 3})
+	m.EXPECT().RestoreDataFromStorage().Return(map[string]float64{"gauge1": 1.1, "gauge2": 2.2}, map[string]int64{"counter1": 1, "counter3": 3}, nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
