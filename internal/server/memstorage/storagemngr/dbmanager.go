@@ -140,7 +140,7 @@ func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 
 func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
 	m.log.Info("[DataBaseManager:SaveMetricsInStorage] start transaction")
-	tx, err := m.database.Begin()
+	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf(saveMetricsError, err)
 	}
@@ -169,16 +169,19 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 	counters := map[string]int64{}
 
 	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
-	tx, err := m.database.Begin()
+	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
+		tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
 	if err = m.restoreDataInMap(ctx, tx, gaugesTable, gauges); err != nil {
+		tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
 	if err = m.restoreDataInMap(ctx, tx, countersTable, counters); err != nil {
+		tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
@@ -192,7 +195,7 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 }
 
 func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
-	var rows *sql.Rows
+	var rows *sql.Rows = nil
 	var err error
 
 	query := func(context context.Context) error {
@@ -239,7 +242,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 }
 
 func (m *DataBaseManager) saveMetrics(ctx context.Context, tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
-	requestStmts, err := createDatabaseStmts(tx, metricTable)
+	requestStmts, err := createDatabaseStmts(ctx, tx, metricTable)
 	if err != nil {
 		return fmt.Errorf(saveMetricsCreateStmtError, err)
 	}
@@ -341,22 +344,22 @@ func getMetricsTableName(value interface{}) string {
 	}
 }
 
-func createDatabaseStmts(tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
+func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
 	existBody := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1);`, metricTable)
 	insertBody := fmt.Sprintf(`INSERT INTO %s (id, value) VALUES ($1, $2);`, metricTable)
 	updateBody := fmt.Sprintf(`UPDATE %s SET value = $1 WHERE id = $2;`, metricTable)
 
-	existStmtBody, err := tx.Prepare(existBody)
+	existStmtBody, err := tx.PrepareContext(ctx, existBody)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric exists statemnt: %w", err)
 	}
 
-	insertStmtBody, err := tx.Prepare(insertBody)
+	insertStmtBody, err := tx.PrepareContext(ctx, insertBody)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric insert statemnt: %w", err)
 	}
 
-	updateStmtBody, err := tx.Prepare(updateBody)
+	updateStmtBody, err := tx.PrepareContext(ctx, updateBody)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric update statemnt: %w", err)
 	}
