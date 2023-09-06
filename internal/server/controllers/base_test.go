@@ -150,7 +150,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid counter name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &counterTests, ts)
@@ -285,7 +285,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid gauge name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &gaugeTests, ts)
