@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,7 +24,7 @@ type BaseController struct {
 	compressor compressor.GzipHandler
 }
 
-func CreateBase(config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage) *BaseController {
+func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage) *BaseController {
 	controller := &BaseController{
 		config:     config,
 		storage:    *storage,
@@ -34,7 +35,7 @@ func CreateBase(config config.Config, logger logger.BaseLogger, storage *memstor
 	if !controller.config.Restore {
 		controller.logger.Info("[BaseController::restoreDataFromFileIfNeed] data restoring from file switched off.")
 	} else {
-		controller.storage.RestoreData()
+		controller.storage.RestoreData(ctx)
 	}
 
 	return controller

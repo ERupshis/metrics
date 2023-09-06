@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -170,7 +171,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -344,7 +345,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -382,7 +383,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -410,7 +411,7 @@ func TestMissingNameBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 	missingNameTests := []test{
 		{
@@ -471,7 +472,7 @@ func TestCounterBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -548,7 +549,7 @@ func TestGaugeBaseController(t *testing.T) {
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	gaugeTests := []test{

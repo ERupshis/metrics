@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -63,9 +64,9 @@ func (mr *MockStorageManagerMockRecorder) Close() *gomock.Call {
 }
 
 // RestoreDataFromStorage mocks base method.
-func (m *MockStorageManager) RestoreDataFromStorage() (map[string]float64, map[string]int64, error) {
+func (m *MockStorageManager) RestoreDataFromStorage(arg0 context.Context) (map[string]float64, map[string]int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreDataFromStorage")
+	ret := m.ctrl.Call(m, "RestoreDataFromStorage", arg0)
 	ret0, _ := ret[0].(map[string]float64)
 	ret1, _ := ret[1].(map[string]int64)
 	ret2, _ := ret[2].(error)
@@ -73,21 +74,21 @@ func (m *MockStorageManager) RestoreDataFromStorage() (map[string]float64, map[s
 }
 
 // RestoreDataFromStorage indicates an expected call of RestoreDataFromStorage.
-func (mr *MockStorageManagerMockRecorder) RestoreDataFromStorage() *gomock.Call {
+func (mr *MockStorageManagerMockRecorder) RestoreDataFromStorage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDataFromStorage", reflect.TypeOf((*MockStorageManager)(nil).RestoreDataFromStorage))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDataFromStorage", reflect.TypeOf((*MockStorageManager)(nil).RestoreDataFromStorage), arg0)
 }
 
 // SaveMetricsInStorage mocks base method.
-func (m *MockStorageManager) SaveMetricsInStorage(arg0, arg1 map[string]interface{}) error {
+func (m *MockStorageManager) SaveMetricsInStorage(arg0 context.Context, arg1, arg2 map[string]interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveMetricsInStorage", arg0, arg1)
+	ret := m.ctrl.Call(m, "SaveMetricsInStorage", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveMetricsInStorage indicates an expected call of SaveMetricsInStorage.
-func (mr *MockStorageManagerMockRecorder) SaveMetricsInStorage(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockStorageManagerMockRecorder) SaveMetricsInStorage(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMetricsInStorage", reflect.TypeOf((*MockStorageManager)(nil).SaveMetricsInStorage), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMetricsInStorage", reflect.TypeOf((*MockStorageManager)(nil).SaveMetricsInStorage), arg0, arg1, arg2)
 }

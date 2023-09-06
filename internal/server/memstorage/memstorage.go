@@ -1,7 +1,9 @@
 package memstorage
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
@@ -24,12 +26,12 @@ func Create(manager storagemngr.StorageManager) *MemStorage {
 	}
 }
 
-func (m *MemStorage) RestoreData() {
+func (m *MemStorage) RestoreData(ctx context.Context) {
 	if m.manager == nil {
 		return
 	}
 
-	gauges, counters, err := m.manager.RestoreDataFromStorage()
+	gauges, counters, err := m.manager.RestoreDataFromStorage(ctx)
 	if err != nil {
 		//TODO log.
 		return
@@ -48,12 +50,15 @@ func (m *MemStorage) IsAvailable() (bool, error) {
 	return m.manager.CheckConnection()
 }
 
-func (m *MemStorage) SaveData() {
+func (m *MemStorage) SaveData(ctx context.Context) error {
 	if m.manager == nil {
-		return
+		return fmt.Errorf("storage manager is not initialized")
 	}
 
-	m.manager.SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
+	if err := m.manager.SaveMetricsInStorage(ctx, m.GetAllGauges(), m.GetAllCounters()); err != nil {
+		return fmt.Errorf("save data: %w", err)
+	}
+	return nil
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {

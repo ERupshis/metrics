@@ -2,6 +2,7 @@ package storagemngr
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -54,7 +55,7 @@ func (fm *FileManager) CheckConnection() (bool, error) {
 	return true, nil
 }
 
-func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) error {
+func (fm *FileManager) SaveMetricsInStorage(_ context.Context, gaugeValues map[string]interface{}, counterValues map[string]interface{}) error {
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, true); err != nil {
 			return fmt.Errorf("cannot open file '%s' to save metrics: %w", fm.path, err)
@@ -78,7 +79,7 @@ func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, 
 	return nil
 }
 
-func (fm *FileManager) RestoreDataFromStorage() (map[string]float64, map[string]int64, error) {
+func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 

@@ -29,14 +29,14 @@ func main() {
 	}
 	storage := memstorage.Create(storageManager)
 
-	baseController := controllers.CreateBase(cfg, log, storage)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
 	//Schedule data saving in file with storeInterval
 	ctx, cancel := context.WithCancel(context.Background())
-	scheduleDataStoringInFile(ctx, &cfg, storage, &log)
+	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 	defer cancel()
 
 	log.Info("Server started with Host setting: %s", cfg.Host)
@@ -45,15 +45,20 @@ func main() {
 	}
 }
 
-func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log *logger.BaseLogger) *time.Ticker {
+func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
 	var interval int64 = 1
 	if cfg.StoreInterval > 1 {
 		interval = cfg.StoreInterval
 	}
 
-	(*log).Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
+	log.Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
 	storeTicker := time.NewTicker(time.Duration(interval) * time.Second)
-	go ticker.Run(storeTicker, ctx, func() { storage.SaveData() })
+	go ticker.Run(storeTicker, ctx, func() {
+		err := storage.SaveData(ctx)
+		if err != nil {
+			log.Info("[main::scheduleDataStoringInFile] failed to save data, error: %v", err)
+		}
+	})
 
 	return storeTicker
 }
