@@ -23,7 +23,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	storageManager, err := createStorageManager(ctx, &cfg, log)
+	storageManager := createStorageManager(ctx, &cfg, log)
 	if storageManager != nil {
 		defer storageManager.Close()
 	}
@@ -37,7 +37,8 @@ func main() {
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
 	log.Info("Server started with Host setting: %s", cfg.Host)
-	if err = http.ListenAndServe(cfg.Host, router); err != nil {
+	if err := http.ListenAndServe(cfg.Host, router); err != nil {
+		log.Info("server refused to start with error: %v", err)
 		panic(err)
 	}
 }
@@ -60,16 +61,16 @@ func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage 
 	return storeTicker
 }
 
-func createStorageManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (storagemngr.StorageManager, error) {
+func createStorageManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) storagemngr.StorageManager {
 	if cfg.DataBaseDSN != "" {
 		manager, err := storagemngr.CreateDataBaseManager(ctx, cfg, log)
 		if err != nil {
-			log.Info("[main] failed to create connection to database: %s", cfg.DataBaseDSN)
+			log.Info("[main] failed to create connection to database: %s with error: %v", cfg.DataBaseDSN, err)
 		}
-		return manager, err
+		return manager
 	} else if cfg.StoragePath != "" {
-		return storagemngr.CreateFileManager(cfg.StoragePath, log), nil
+		return storagemngr.CreateFileManager(cfg.StoragePath, log)
 	} else {
-		return nil, nil
+		return nil
 	}
 }

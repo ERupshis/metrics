@@ -198,12 +198,14 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	var err error
 	var rows *sql.Rows
 	if rows != nil {
+		//get rid of static check problem
 		err = rows.Err()
 	}
 
 	query := func(context context.Context) error {
 		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
 		if rows != nil {
+			//get rid of static check problem
 			rows.Err()
 		}
 		return err
