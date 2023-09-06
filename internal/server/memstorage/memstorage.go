@@ -44,7 +44,7 @@ func (m *MemStorage) RestoreData() {
 	}
 }
 
-func (m *MemStorage) IsAvailable() bool {
+func (m *MemStorage) IsAvailable() (bool, error) {
 	return m.manager.CheckConnection()
 }
 

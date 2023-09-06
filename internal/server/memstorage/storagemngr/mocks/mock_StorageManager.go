@@ -34,11 +34,12 @@ func (m *MockStorageManager) EXPECT() *MockStorageManagerMockRecorder {
 }
 
 // CheckConnection mocks base method.
-func (m *MockStorageManager) CheckConnection() bool {
+func (m *MockStorageManager) CheckConnection() (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckConnection")
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CheckConnection indicates an expected call of CheckConnection.

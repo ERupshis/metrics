@@ -20,8 +20,20 @@ const (
 	updateStmt = "update"
 	existStmt  = "exist"
 
-	saveMetricsError    = "save metrics in db: %w"
+	createDatabaseError = "create db: %w"
+	createSchemaError   = "create db schema: %w"
+	createTableError    = "create db table: %w"
+
+	saveMetricsError           = "save metrics in db: %w"
+	saveMetricsCreateStmtError = "create stmt: %w"
+	saveMetricsUseStmtError    = "use stmt: %w"
+	saveMetricError            = "save metric: %w"
+
 	restoreMetricsError = "restore metrics from db: %w"
+	restoreDataError    = "restore data from db response: %w"
+
+	insertMetricError = "insert new metric name '%s', value '%s', table '%v': %w"
+	updateMetricError = "update metric name '%s', value '%s', table '%v': %w"
 )
 
 type DataBaseManager struct {
@@ -33,22 +45,20 @@ func CreateDataBaseManager(cfg *config.Config, log logger.BaseLogger) (StorageMa
 	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(createDatabaseError, err)
 	}
 
 	manager := &DataBaseManager{database: database, log: log}
-
-	if !manager.CheckConnection() {
-		return manager, fmt.Errorf("[storagemngr:CreateDataBaseManager] Database doesn't respond")
+	if _, err = manager.CheckConnection(); err != nil {
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
 	if err = manager.createSchema(); err != nil {
-		return manager, err
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
 	if err = manager.createTables(); err != nil {
-		return manager, err
-
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
 	return manager, nil
@@ -56,11 +66,11 @@ func CreateDataBaseManager(cfg *config.Config, log logger.BaseLogger) (StorageMa
 
 func (m *DataBaseManager) createSchema() error {
 	if _, err := m.database.Exec(`CREATE SCHEMA IF NOT EXISTS ` + schemaName + `;`); err != nil {
-		return err
+		return fmt.Errorf(createSchemaError, err)
 	}
 
 	if _, err := m.database.Exec(`SET search_path TO ` + schemaName); err != nil {
-		return err
+		return fmt.Errorf(createSchemaError, err)
 	}
 
 	return nil
@@ -68,11 +78,11 @@ func (m *DataBaseManager) createSchema() error {
 
 func (m *DataBaseManager) createTables() error {
 	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + gaugesTable + ` (id TEXT PRIMARY KEY, value float8);`); err != nil {
-		return err
+		return fmt.Errorf(createTableError, err)
 	}
 
 	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + countersTable + ` (id TEXT PRIMARY KEY, value int8);`); err != nil {
-		return err
+		return fmt.Errorf(createTableError, err)
 	}
 
 	return nil
@@ -82,13 +92,13 @@ func (m *DataBaseManager) Close() error {
 	return m.database.Close()
 }
 
-func (m *DataBaseManager) CheckConnection() bool {
+func (m *DataBaseManager) CheckConnection() (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	if err := m.database.PingContext(ctx); err != nil {
-		return false
+		return false, err
 	}
-	return true
+	return true, nil
 }
 
 func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
@@ -147,7 +157,7 @@ func (m *DataBaseManager) RestoreDataFromStorage() (map[string]float64, map[stri
 func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest interface{}) error {
 	rows, err := tx.Query(`SELECT * FROM ` + tableName)
 	if err != nil {
-		return err
+		return fmt.Errorf(restoreDataError, err)
 	}
 	defer rows.Close()
 
@@ -158,7 +168,7 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 			var value float64
 			err = rows.Scan(&name, &value)
 			if err != nil {
-				return err
+				return fmt.Errorf(restoreDataError, err)
 			}
 
 			dest[name] = value
@@ -167,7 +177,7 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 			var value int64
 			err = rows.Scan(&name, &value)
 			if err != nil {
-				return err
+				return fmt.Errorf(restoreDataError, err)
 			}
 
 			dest[name] = value
@@ -177,22 +187,22 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 	}
 
 	err = rows.Err()
-	return err
+	if err != nil {
+		return fmt.Errorf(restoreDataError, err)
+	}
+	return nil
 }
 
 func (m *DataBaseManager) saveMetrics(tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
-	requestGaugeStmts, err := createDatabaseStmts(tx, metricTable)
+	requestStmts, err := createDatabaseStmts(tx, metricTable)
 	if err != nil {
-		m.log.Info("[DataBaseManager:SaveMetricsInStorage] Failed to create statements for requests, error: %s", err)
-		return err
+		return fmt.Errorf(saveMetricsCreateStmtError, err)
 	}
-	defer closeDatabaseStmts(requestGaugeStmts)
+	defer closeDatabaseStmts(requestStmts)
 
 	for key, value := range metricsValues {
-		if err := m.saveMetric(requestGaugeStmts, key, value); err != nil {
-			m.log.Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
-				key, value, err)
-			return err
+		if err = m.saveMetric(requestStmts, key, value); err != nil {
+			return fmt.Errorf(saveMetricsUseStmtError, err)
 		}
 	}
 
@@ -202,7 +212,7 @@ func (m *DataBaseManager) saveMetrics(tx *sql.Tx, metricTable string, metricsVal
 func (m *DataBaseManager) saveMetric(stmts map[string]*sql.Stmt, name string, value interface{}) error {
 	exists, err := m.checkMetricExists(stmts[existStmt], name, value)
 	if err != nil {
-		return err
+		return fmt.Errorf(saveMetricError, err)
 	}
 
 	if exists {
@@ -211,7 +221,10 @@ func (m *DataBaseManager) saveMetric(stmts map[string]*sql.Stmt, name string, va
 		err = m.insertMetric(stmts[insertStmt], name, value)
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf(saveMetricError, err)
+	}
+	return nil
 }
 
 func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, _ interface{}) (bool, error) {
@@ -222,22 +235,32 @@ func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, _ inter
 
 func (m *DataBaseManager) insertMetric(stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
-	if getMetricsTableName(value) == gaugesTable {
+	tableName := getMetricsTableName(value)
+	if tableName == gaugesTable {
 		_, err = stmt.Exec(name, value.(float64))
 	} else {
 		_, err = stmt.Exec(name, value.(int64))
 	}
-	return err
+
+	if err != nil {
+		return fmt.Errorf(insertMetricError, name, value, tableName, err)
+	}
+	return nil
 }
 
 func (m *DataBaseManager) updateMetric(stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
-	if getMetricsTableName(value) == gaugesTable {
+	tableName := getMetricsTableName(value)
+	if tableName == gaugesTable {
 		_, err = stmt.Exec(value.(float64), name)
 	} else {
 		_, err = stmt.Exec(value.(int64), name)
 	}
-	return err
+
+	if err != nil {
+		return fmt.Errorf(updateMetricError, name, value, tableName, err)
+	}
+	return nil
 }
 
 func getMetricsTableName(value interface{}) string {
@@ -247,8 +270,7 @@ func getMetricsTableName(value interface{}) string {
 	case float64:
 		return gaugesTable
 	default:
-		//TODO is it correct or better to handle wrong type?
-		panic("[storagemngr:getMetricsTableName] Unknown value type")
+		panic("unknown value type")
 	}
 }
 
@@ -259,17 +281,17 @@ func createDatabaseStmts(tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, 
 
 	existStmtBody, err := tx.Prepare(existBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric exists statemnt: %w", err)
 	}
 
 	insertStmtBody, err := tx.Prepare(insertBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric insert statemnt: %w", err)
 	}
 
 	updateStmtBody, err := tx.Prepare(updateBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric update statemnt: %w", err)
 	}
 
 	return map[string]*sql.Stmt{

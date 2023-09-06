@@ -227,8 +227,8 @@ func TestMemStorage_IsAvailable(t *testing.T) {
 
 	m := mocks.NewMockStorageManager(ctrl)
 	gomock.InOrder(
-		m.EXPECT().CheckConnection().Return(true),
-		m.EXPECT().CheckConnection().Return(false),
+		m.EXPECT().CheckConnection().Return(true, nil),
+		m.EXPECT().CheckConnection().Return(false, nil),
 	)
 
 	type fields struct {
@@ -267,7 +267,9 @@ func TestMemStorage_IsAvailable(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
-			assert.Equalf(t, tt.want, m.IsAvailable(), "IsAvailable()")
+			ok, err := m.IsAvailable()
+			require.NoError(t, err)
+			assert.Equalf(t, tt.want, ok, "IsAvailable()")
 		})
 	}
 }

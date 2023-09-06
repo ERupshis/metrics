@@ -10,6 +10,6 @@ type MetricData struct {
 type StorageManager interface {
 	SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) error
 	RestoreDataFromStorage() (map[string]float64, map[string]int64, error)
-	CheckConnection() bool
+	CheckConnection() (bool, error)
 	Close() error
 }

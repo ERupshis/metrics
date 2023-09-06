@@ -50,8 +50,8 @@ func (fm *FileManager) Close() error {
 	return nil
 }
 
-func (fm *FileManager) CheckConnection() bool {
-	return true
+func (fm *FileManager) CheckConnection() (bool, error) {
+	return true, nil
 }
 
 func (fm *FileManager) SaveMetricsInStorage(gaugeValues map[string]interface{}, counterValues map[string]interface{}) error {
