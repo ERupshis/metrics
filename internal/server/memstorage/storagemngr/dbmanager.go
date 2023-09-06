@@ -203,6 +203,9 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 
 	query := func(context context.Context) error {
 		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+		if rows != nil {
+			rows.Err()
+		}
 		return err
 	}
 
