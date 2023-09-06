@@ -2,7 +2,6 @@ package memstorage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
@@ -69,7 +68,7 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 	if value, inMap := m.counterMetrics[name]; inMap {
 		return value, nil
 	}
-	return -1, errors.New("invalid counter name")
+	return -1, fmt.Errorf("invalid counter name '%s'", name)
 }
 
 func (m *MemStorage) GetAllCounters() map[string]interface{} {
@@ -84,7 +83,7 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 	if value, inMap := m.gaugeMetrics[name]; inMap {
 		return value, nil
 	}
-	return -1.0, errors.New("invalid counter name")
+	return -1.0, fmt.Errorf("invalid gauge name '%s'", name)
 }
 
 func (m *MemStorage) GetAllGauges() map[string]interface{} {

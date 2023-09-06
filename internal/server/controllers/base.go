@@ -265,13 +265,14 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c.logger.Info("[BaseController::getCounterHandler] Handle url get request for: '%s' value", name)
+	c.logger.Info("[BaseController::getCounterHandler] handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
 			panic(err)
 		}
 	} else {
+		c.logger.Info("[BaseController::getGaugeHandler] counter metric not found error: %v", err)
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
@@ -279,13 +280,14 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c.logger.Info("[BaseController::getGaugeHandler] Handle url get request for: '%s' value", name)
+	c.logger.Info("[BaseController::getGaugeHandler] handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
 			panic(err)
 		}
 	} else {
+		c.logger.Info("[BaseController::getGaugeHandler] gauge metric not found error: %v", err)
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
@@ -318,7 +320,7 @@ type tmplData struct {
 func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
-		c.logger.Info("Error parsing gauge template: %s", err)
+		c.logger.Info("[BaseController:ListHandler] error parsing gauge template: %v", err)
 		return
 	}
 
