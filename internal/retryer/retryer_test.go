@@ -92,13 +92,11 @@ func TestRetryCallWithTimeout(t *testing.T) {
 							return errors.New(pgerrcode.ConnectionException)
 						default:
 							if time.Since(currentTime) > 10*time.Second {
-								break
+								return nil
 							}
 							time.Sleep(50 * time.Millisecond)
 						}
 					}
-
-					return nil
 				},
 			},
 			wantErr: errors.New(pgerrcode.ConnectionException),
@@ -131,13 +129,11 @@ func TestRetryCallWithTimeout(t *testing.T) {
 							return errors.New(pgerrcode.ConnectionException)
 						default:
 							if time.Since(currentTime) > 10*time.Second {
-								break
+								return nil
 							}
 							time.Sleep(50 * time.Millisecond)
 						}
 					}
-
-					return nil
 				},
 			},
 			wantErr: errors.New(pgerrcode.ConnectionException),
@@ -157,13 +153,11 @@ func TestRetryCallWithTimeout(t *testing.T) {
 							return errors.New("some error")
 						default:
 							if time.Since(currentTime) > 10*time.Second {
-								break
+								return nil
 							}
 							time.Sleep(50 * time.Millisecond)
 						}
 					}
-
-					return nil
 				},
 			},
 			wantErr: errors.New("some error"),
