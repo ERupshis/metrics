@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,6 @@ import (
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,10 +47,9 @@ func TestJSONCounterBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -149,7 +148,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid counter name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &counterTests, ts)
@@ -167,10 +166,9 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -284,7 +282,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid gauge name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &gaugeTests, ts)
@@ -341,10 +339,9 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -379,10 +376,9 @@ func TestListHandlerBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -407,10 +403,9 @@ func TestMissingNameBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 	missingNameTests := []test{
 		{
@@ -468,10 +463,9 @@ func TestCounterBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -545,10 +539,9 @@ func TestGaugeBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	gaugeTests := []test{
@@ -652,37 +645,6 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 			assert.Equal(t, tt.want.response, string(response))
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
-		})
-	}
-}
-
-func TestBaseController_checkStorageHandler(t *testing.T) {
-	type fields struct {
-		config     config.Config
-		storage    memstorage.MemStorage
-		logger     logger.BaseLogger
-		compressor compressor.GzipHandler
-	}
-	type args struct {
-		w   http.ResponseWriter
-		in1 *http.Request
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &BaseController{
-				config:     tt.fields.config,
-				storage:    tt.fields.storage,
-				logger:     tt.fields.logger,
-				compressor: tt.fields.compressor,
-			}
-			c.checkStorageHandler(tt.args.w, tt.args.in1)
 		})
 	}
 }

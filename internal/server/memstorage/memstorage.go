@@ -1,7 +1,8 @@
 package memstorage
 
 import (
-	"errors"
+	"context"
+	"fmt"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
@@ -24,12 +25,16 @@ func Create(manager storagemngr.StorageManager) *MemStorage {
 	}
 }
 
-func (m *MemStorage) RestoreData() {
+func (m *MemStorage) RestoreData(ctx context.Context) {
 	if m.manager == nil {
 		return
 	}
 
-	gauges, counters := m.manager.RestoreDataFromStorage()
+	gauges, counters, err := m.manager.RestoreDataFromStorage(ctx)
+	if err != nil {
+		//TODO log.
+		return
+	}
 
 	for key, val := range gauges {
 		m.AddGauge(key, val)
@@ -40,16 +45,19 @@ func (m *MemStorage) RestoreData() {
 	}
 }
 
-func (m *MemStorage) IsAvailable() bool {
-	return m.manager.CheckConnection()
+func (m *MemStorage) IsAvailable(ctx context.Context) (bool, error) {
+	return m.manager.CheckConnection(ctx)
 }
 
-func (m *MemStorage) SaveData() {
+func (m *MemStorage) SaveData(ctx context.Context) error {
 	if m.manager == nil {
-		return
+		return fmt.Errorf("storage manager is not initialized")
 	}
 
-	m.manager.SaveMetricsInStorage(m.GetAllGauges(), m.GetAllCounters())
+	if err := m.manager.SaveMetricsInStorage(ctx, m.GetAllGauges(), m.GetAllCounters()); err != nil {
+		return fmt.Errorf("save data: %w", err)
+	}
+	return nil
 }
 
 func (m *MemStorage) AddCounter(name string, value counter) {
@@ -60,7 +68,7 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 	if value, inMap := m.counterMetrics[name]; inMap {
 		return value, nil
 	}
-	return -1, errors.New("invalid counter name")
+	return -1, fmt.Errorf("invalid counter name '%s'", name)
 }
 
 func (m *MemStorage) GetAllCounters() map[string]interface{} {
@@ -75,7 +83,7 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 	if value, inMap := m.gaugeMetrics[name]; inMap {
 		return value, nil
 	}
-	return -1.0, errors.New("invalid counter name")
+	return -1.0, fmt.Errorf("invalid gauge name '%s'", name)
 }
 
 func (m *MemStorage) GetAllGauges() map[string]interface{} {

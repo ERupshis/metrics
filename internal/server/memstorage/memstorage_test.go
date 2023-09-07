@@ -1,22 +1,15 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
-	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var testConfig = config.Config{
-	Host:          "",
-	Restore:       true,
-	StoragePath:   "/tmp/metrics-db.json",
-	StoreInterval: 300,
-}
 
 func TestCreateStorage(t *testing.T) {
 	storage := Create(nil)
@@ -235,8 +228,8 @@ func TestMemStorage_IsAvailable(t *testing.T) {
 
 	m := mocks.NewMockStorageManager(ctrl)
 	gomock.InOrder(
-		m.EXPECT().CheckConnection().Return(true),
-		m.EXPECT().CheckConnection().Return(false),
+		m.EXPECT().CheckConnection(gomock.Any()).Return(true, nil),
+		m.EXPECT().CheckConnection(gomock.Any()).Return(false, nil),
 	)
 
 	type fields struct {
@@ -275,7 +268,9 @@ func TestMemStorage_IsAvailable(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
-			assert.Equalf(t, tt.want, m.IsAvailable(), "IsAvailable()")
+			ok, err := m.IsAvailable(context.Background())
+			require.NoError(t, err)
+			assert.Equalf(t, tt.want, ok, "IsAvailable()")
 		})
 	}
 }
@@ -286,7 +281,7 @@ func TestMemStorage_SaveData(t *testing.T) {
 
 	m := mocks.NewMockStorageManager(ctrl)
 	gomock.InOrder(
-		m.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any()).Return(),
+		m.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 	)
 
 	type fields struct {
@@ -314,7 +309,7 @@ func TestMemStorage_SaveData(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
-			m.SaveData()
+			m.SaveData(context.Background())
 		})
 	}
 }
@@ -353,7 +348,7 @@ func TestMemStorage_RestoreData(t *testing.T) {
 		},
 	}
 
-	m.EXPECT().RestoreDataFromStorage().Return(map[string]float64{"gauge1": 1.1, "gauge2": 2.2}, map[string]int64{"counter1": 1, "counter3": 3})
+	m.EXPECT().RestoreDataFromStorage(context.Background()).Return(map[string]float64{"gauge1": 1.1, "gauge2": 2.2}, map[string]int64{"counter1": 1, "counter3": 3}, nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -363,7 +358,7 @@ func TestMemStorage_RestoreData(t *testing.T) {
 				manager:        tt.fields.manager,
 			}
 
-			m.RestoreData()
+			m.RestoreData(context.Background())
 
 			assert.Equal(t, tt.want.gaugeMetrics, m.gaugeMetrics)
 			assert.Equal(t, tt.want.counterMetrics, m.counterMetrics)

@@ -3,18 +3,15 @@ package storagemngr
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/retryer"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
-
-type DataBaseManager struct {
-	database *sql.DB
-	log      *logger.BaseLogger
-}
 
 const (
 	schemaName    = "metrics"
@@ -24,52 +21,103 @@ const (
 	insertStmt = "insert"
 	updateStmt = "update"
 	existStmt  = "exist"
+
+	createDatabaseError = "create db: %w"
+	createSchemaError   = "create db schema: %w"
+	createTableError    = "create db table: %w"
+
+	saveMetricsError           = "save metrics in db: %w"
+	saveMetricsCreateStmtError = "create stmt: %w"
+	saveMetricsUseStmtError    = "use stmt: %w"
+	saveMetricError            = "save metric: %w"
+
+	restoreMetricsError = "restore metrics from db: %w"
+	restoreDataError    = "restore data from db response: %w"
+
+	insertMetricError = "insert new metric name '%s', value '%s', table '%v': %w"
+	updateMetricError = "update metric name '%s', value '%s', table '%v': %w"
 )
 
-func CreateDataBaseManager(cfg *config.Config, log *logger.BaseLogger) (StorageManager, error) {
-	(*log).Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
+var DatabaseErrorsToRetry = []error{
+	errors.New(pgerrcode.UniqueViolation),
+	errors.New(pgerrcode.ConnectionException),
+	errors.New(pgerrcode.ConnectionDoesNotExist),
+	errors.New(pgerrcode.ConnectionFailure),
+	errors.New(pgerrcode.SQLClientUnableToEstablishSQLConnection),
+	errors.New(pgerrcode.SQLServerRejectedEstablishmentOfSQLConnection),
+	errors.New(pgerrcode.TransactionResolutionUnknown),
+	errors.New(pgerrcode.ProtocolViolation),
+}
+
+type DataBaseManager struct {
+	database *sql.DB
+	log      logger.BaseLogger
+}
+
+func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
+	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(createDatabaseError, err)
 	}
 
 	manager := &DataBaseManager{database: database, log: log}
-
-	if !manager.CheckConnection() {
-		return manager, fmt.Errorf("[storagemngr:CreateDataBaseManager] Database doesn't respond")
+	if _, err = manager.CheckConnection(ctx); err != nil {
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
-	if err = manager.createSchema(); err != nil {
-		return manager, err
+	if err = manager.createSchema(ctx); err != nil {
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
-	if err = manager.createTables(); err != nil {
-		return manager, err
-
+	if err = manager.createTables(ctx); err != nil {
+		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
 	return manager, nil
 }
 
-func (m *DataBaseManager) createSchema() error {
-	if _, err := m.database.Exec(`CREATE SCHEMA IF NOT EXISTS ` + schemaName + `;`); err != nil {
+func (m *DataBaseManager) createSchema(ctx context.Context) error {
+	createExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE SCHEMA IF NOT EXISTS `+schemaName+`;`)
 		return err
 	}
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createExec)
+	if err != nil {
+		return fmt.Errorf(createSchemaError, err)
+	}
 
-	if _, err := m.database.Exec(`SET search_path TO ` + schemaName); err != nil {
+	searchExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `SET search_path TO `+schemaName)
 		return err
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, searchExec)
+	if err != nil {
+		return fmt.Errorf(createSchemaError, err)
 	}
 
 	return nil
 }
 
-func (m *DataBaseManager) createTables() error {
-	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + gaugesTable + ` (id TEXT PRIMARY KEY, value float8);`); err != nil {
+func (m *DataBaseManager) createTables(ctx context.Context) error {
+	createGaugeExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+gaugesTable+
+			` (id TEXT PRIMARY KEY, value float8);`)
 		return err
 	}
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createGaugeExec)
+	if err != nil {
+		return fmt.Errorf(createTableError, err)
+	}
 
-	if _, err := m.database.Exec(`CREATE TABLE IF NOT EXISTS ` + countersTable + ` (id TEXT PRIMARY KEY, value int8);`); err != nil {
+	createCounterExec := func(context context.Context) error {
+		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+countersTable+
+			` (id TEXT PRIMARY KEY, value int8);`)
 		return err
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createCounterExec)
+	if err != nil {
+		return fmt.Errorf(createTableError, err)
 	}
 
 	return nil
@@ -79,68 +127,93 @@ func (m *DataBaseManager) Close() error {
 	return m.database.Close()
 }
 
-func (m *DataBaseManager) CheckConnection() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := m.database.PingContext(ctx); err != nil {
-		return false
+func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
+	exec := func(context context.Context) error {
+		return m.database.PingContext(context)
 	}
-	return true
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
-func (m *DataBaseManager) SaveMetricsInStorage(gaugesValues map[string]interface{}, countersValues map[string]interface{}) {
-	//TODO add error handling
-	tx, err := m.database.Begin()
+func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
+	m.log.Info("[DataBaseManager:SaveMetricsInStorage] start transaction")
+	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create transaction, error: %s", err)
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
-	if err = m.saveMetrics(tx, gaugesTable, gaugesValues); err != nil {
+	if err = m.saveMetrics(ctx, tx, gaugesTable, gaugesValues); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
-	if err = m.saveMetrics(tx, countersTable, countersValues); err != nil {
+	if err = m.saveMetrics(ctx, tx, countersTable, countersValues); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf(saveMetricsError, err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
+		return fmt.Errorf(saveMetricsError, err)
 	}
+
+	m.log.Info("[DataBaseManager:SaveMetricsInStorage] transaction completed")
+	return nil
 }
 
-func (m *DataBaseManager) RestoreDataFromStorage() (map[string]float64, map[string]int64) {
+func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 
-	tx, err := m.database.Begin()
+	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
+	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to create transaction, error: %s", err)
-		return gauges, counters
+		tx.Rollback()
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
-	if err := m.restoreDataInMap(tx, gaugesTable, gauges); err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (error: %s)", err)
+	if err = m.restoreDataInMap(ctx, tx, gaugesTable, gauges); err != nil {
+		tx.Rollback()
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
-	if err := m.restoreDataInMap(tx, countersTable, counters); err != nil {
-		(*m.log).Info("[DataBaseManager:RestoreDataFromStorage] Failed to get gauge metrics data from database (with error: %s)", err)
+	if err = m.restoreDataInMap(ctx, tx, countersTable, counters); err != nil {
+		tx.Rollback()
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to commit transaction, error: %s", err)
+		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
-	return gauges, counters
+
+	m.log.Info("[DataBaseManager:RestoreDataFromStorage] transaction completed")
+	return gauges, counters, nil
 }
 
-func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest interface{}) error {
-	rows, err := tx.Query(`SELECT * FROM ` + tableName)
-	if err != nil {
+func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
+	var err error
+	var rows *sql.Rows
+	if rows != nil {
+		//get rid of static check problem
+		err = rows.Err()
+	}
+
+	query := func(context context.Context) error {
+		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+		if rows != nil {
+			//get rid of static check problem
+			rows.Err()
+		}
 		return err
+	}
+
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
+	if err != nil {
+		return fmt.Errorf(restoreDataError, err)
 	}
 	defer rows.Close()
 
@@ -151,7 +224,7 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 			var value float64
 			err = rows.Scan(&name, &value)
 			if err != nil {
-				return err
+				return fmt.Errorf(restoreDataError, err)
 			}
 
 			dest[name] = value
@@ -160,7 +233,7 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 			var value int64
 			err = rows.Scan(&name, &value)
 			if err != nil {
-				return err
+				return fmt.Errorf(restoreDataError, err)
 			}
 
 			dest[name] = value
@@ -170,67 +243,102 @@ func (m *DataBaseManager) restoreDataInMap(tx *sql.Tx, tableName string, mapDest
 	}
 
 	err = rows.Err()
-	return err
+	if err != nil {
+		return fmt.Errorf(restoreDataError, err)
+	}
+	return nil
 }
 
-func (m *DataBaseManager) saveMetrics(tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
-	requestGaugeStmts, err := createDatabaseStmts(tx, metricTable)
+func (m *DataBaseManager) saveMetrics(ctx context.Context, tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
+	requestStmts, err := createDatabaseStmts(ctx, tx, metricTable)
 	if err != nil {
-		(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to create statements for requests, error: %s", err)
-		return err
+		return fmt.Errorf(saveMetricsCreateStmtError, err)
 	}
-	defer closeDatabaseStmts(requestGaugeStmts)
+	defer closeDatabaseStmts(requestStmts)
 
 	for key, value := range metricsValues {
-		if err := m.saveMetric(requestGaugeStmts, key, value); err != nil {
-			(*m.log).Info("[DataBaseManager:SaveMetricsInStorage] Failed to save gauge metric in database name: %s, value: %v, error: %s",
-				key, value, err)
-			return err
+		if err = m.saveMetric(ctx, requestStmts, key, value); err != nil {
+			return fmt.Errorf(saveMetricsUseStmtError, err)
 		}
 	}
 
 	return nil
 }
 
-func (m *DataBaseManager) saveMetric(stmts map[string]*sql.Stmt, name string, value interface{}) error {
-	exists, err := m.checkMetricExists(stmts[existStmt], name, value)
+func (m *DataBaseManager) saveMetric(ctx context.Context, stmts map[string]*sql.Stmt, name string, value interface{}) error {
+	exists, err := m.checkMetricExists(ctx, stmts[existStmt], name, value)
 	if err != nil {
-		return err
+		return fmt.Errorf(saveMetricError, err)
 	}
 
 	if exists {
-		err = m.updateMetric(stmts[updateStmt], name, value)
+		err = m.updateMetric(ctx, stmts[updateStmt], name, value)
 	} else {
-		err = m.insertMetric(stmts[insertStmt], name, value)
+		err = m.insertMetric(ctx, stmts[insertStmt], name, value)
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf(saveMetricError, err)
+	}
+	return nil
 }
 
-func (m *DataBaseManager) checkMetricExists(stmt *sql.Stmt, name string, value interface{}) (bool, error) {
+func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt, name string, _ interface{}) (bool, error) {
 	var exists bool
-	err := stmt.QueryRow(name).Scan(&exists)
+	var err error
+
+	query := func(context context.Context) error {
+		return stmt.QueryRowContext(ctx, name).Scan(&exists)
+	}
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
+
 	return exists, err
 }
 
-func (m *DataBaseManager) insertMetric(stmt *sql.Stmt, name string, value interface{}) error {
+func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
-	if getMetricsTableName(value) == gaugesTable {
-		_, err = stmt.Exec(name, value.(float64))
+	tableName := getMetricsTableName(value)
+	if tableName == gaugesTable {
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, name, value.(float64))
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
-		_, err = stmt.Exec(name, value.(int64))
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, name, value.(int64))
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
-	return err
+
+	if err != nil {
+		return fmt.Errorf(insertMetricError, name, value, tableName, err)
+	}
+	return nil
 }
 
-func (m *DataBaseManager) updateMetric(stmt *sql.Stmt, name string, value interface{}) error {
+func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
-	if getMetricsTableName(value) == gaugesTable {
-		_, err = stmt.Exec(value.(float64), name)
+	tableName := getMetricsTableName(value)
+	if tableName == gaugesTable {
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, value.(float64), name)
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
-		_, err = stmt.Exec(value.(int64), name)
+		exec := func(context context.Context) error {
+			_, err = stmt.ExecContext(context, value.(int64), name)
+			return err
+		}
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
-	return err
+
+	if err != nil {
+		return fmt.Errorf(updateMetricError, name, value, tableName, err)
+	}
+	return nil
 }
 
 func getMetricsTableName(value interface{}) string {
@@ -240,29 +348,28 @@ func getMetricsTableName(value interface{}) string {
 	case float64:
 		return gaugesTable
 	default:
-		//TODO is it correct or better to handle wrong type?
-		panic("[storagemngr:getMetricsTableName] Unknown value type")
+		panic("unknown value type")
 	}
 }
 
-func createDatabaseStmts(tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
+func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
 	existBody := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1);`, metricTable)
 	insertBody := fmt.Sprintf(`INSERT INTO %s (id, value) VALUES ($1, $2);`, metricTable)
 	updateBody := fmt.Sprintf(`UPDATE %s SET value = $1 WHERE id = $2;`, metricTable)
 
-	existStmtBody, err := tx.Prepare(existBody)
+	existStmtBody, err := tx.PrepareContext(ctx, existBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric exists statemnt: %w", err)
 	}
 
-	insertStmtBody, err := tx.Prepare(insertBody)
+	insertStmtBody, err := tx.PrepareContext(ctx, insertBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric insert statemnt: %w", err)
 	}
 
-	updateStmtBody, err := tx.Prepare(updateBody)
+	updateStmtBody, err := tx.PrepareContext(ctx, updateBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare metric update statemnt: %w", err)
 	}
 
 	return map[string]*sql.Stmt{

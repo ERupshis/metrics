@@ -2,24 +2,43 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/retryer"
 )
 
 type DefaultClient struct {
 	client *http.Client
+	log    logger.BaseLogger
 }
 
-func CreateDefault() BaseClient {
-	return &DefaultClient{&http.Client{}}
+func CreateDefault(log logger.BaseLogger) BaseClient {
+	return &DefaultClient{client: &http.Client{}, log: log}
 }
 
-func (c *DefaultClient) PostJSON(url string, body []byte) error {
-	compressedBody, _ := compressor.GzipCompress(body)
+func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
+	compressedBody, err := compressor.GzipCompress(body)
+	if err != nil {
+		return fmt.Errorf("postJSON request: %w", err)
+	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(compressedBody))
+	request := func(context context.Context) error {
+		return c.makeRequest(context, http.MethodPost, url, compressedBody)
+	}
+
+	err = retryer.RetryCallWithTimeout(ctx, c.log, nil, nil, request)
+	if err != nil {
+		err = fmt.Errorf("couldn't send post request")
+	}
+	return err
+}
+
+func (c *DefaultClient) makeRequest(ctx context.Context, method string, url string, data []byte) error {
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -30,10 +49,9 @@ func (c *DefaultClient) PostJSON(url string, body []byte) error {
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
 		return err
 	}
 	defer resp.Body.Close()
 
-	return err
+	return nil
 }

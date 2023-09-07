@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/go-resty/resty/v2"
 )
@@ -13,7 +15,7 @@ func CreateResty() BaseClient {
 	return &RestyClient{resty.New()}
 }
 
-func (c *RestyClient) PostJSON(url string, body []byte) error {
+func (c *RestyClient) PostJSON(context context.Context, url string, body []byte) error {
 	compressedBody, _ := compressor.GzipCompress(body)
 
 	_, err := c.client.R().
