@@ -38,7 +38,7 @@ const (
 	updateMetricError = "update metric name '%s', value '%s', table '%v': %w"
 )
 
-var databaseErrorsToRetry = []error{
+var DatabaseErrorsToRetry = []error{
 	errors.New(pgerrcode.UniqueViolation),
 	errors.New(pgerrcode.ConnectionException),
 	errors.New(pgerrcode.ConnectionDoesNotExist),
@@ -82,7 +82,7 @@ func (m *DataBaseManager) createSchema(ctx context.Context) error {
 		_, err := m.database.ExecContext(ctx, `CREATE SCHEMA IF NOT EXISTS `+schemaName+`;`)
 		return err
 	}
-	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createExec)
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createExec)
 	if err != nil {
 		return fmt.Errorf(createSchemaError, err)
 	}
@@ -91,7 +91,7 @@ func (m *DataBaseManager) createSchema(ctx context.Context) error {
 		_, err := m.database.ExecContext(ctx, `SET search_path TO `+schemaName)
 		return err
 	}
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, searchExec)
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, searchExec)
 	if err != nil {
 		return fmt.Errorf(createSchemaError, err)
 	}
@@ -105,7 +105,7 @@ func (m *DataBaseManager) createTables(ctx context.Context) error {
 			` (id TEXT PRIMARY KEY, value float8);`)
 		return err
 	}
-	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createGaugeExec)
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createGaugeExec)
 	if err != nil {
 		return fmt.Errorf(createTableError, err)
 	}
@@ -115,7 +115,7 @@ func (m *DataBaseManager) createTables(ctx context.Context) error {
 			` (id TEXT PRIMARY KEY, value int8);`)
 		return err
 	}
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, createCounterExec)
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createCounterExec)
 	if err != nil {
 		return fmt.Errorf(createTableError, err)
 	}
@@ -131,7 +131,7 @@ func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 	exec := func(context context.Context) error {
 		return m.database.PingContext(context)
 	}
-	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	if err != nil {
 		return false, err
 	}
@@ -211,7 +211,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 		return err
 	}
 
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, query)
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
 	if err != nil {
 		return fmt.Errorf(restoreDataError, err)
 	}
@@ -290,7 +290,7 @@ func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt,
 	query := func(context context.Context) error {
 		return stmt.QueryRowContext(ctx, name).Scan(&exists)
 	}
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, query)
+	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
 
 	return exists, err
 }
@@ -303,13 +303,13 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 			_, err = stmt.ExecContext(context, name, value.(float64))
 			return err
 		}
-		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, name, value.(int64))
 			return err
 		}
-		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
 
 	if err != nil {
@@ -326,13 +326,13 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 			_, err = stmt.ExecContext(context, value.(float64), name)
 			return err
 		}
-		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, value.(int64), name)
 			return err
 		}
-		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, databaseErrorsToRetry, exec)
+		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
 
 	if err != nil {

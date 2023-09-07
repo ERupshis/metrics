@@ -36,7 +36,7 @@ func main() {
 	//Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	log.Info("Server started with Host setting: %s", cfg.Host)
+	log.Info("server started with Host setting: %s", cfg.Host)
 	if err := http.ListenAndServe(cfg.Host, router); err != nil {
 		log.Info("server refused to start with error: %v", err)
 		panic(err)
@@ -65,7 +65,7 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 	if cfg.DataBaseDSN != "" {
 		manager, err := storagemngr.CreateDataBaseManager(ctx, cfg, log)
 		if err != nil {
-			log.Info("[main] failed to create connection to database: %s with error: %v", cfg.DataBaseDSN, err)
+			log.Info("[main:createStorageManager] failed to create connection to database: %s with error: %v", cfg.DataBaseDSN, err)
 		}
 		return manager
 	} else if cfg.StoragePath != "" {

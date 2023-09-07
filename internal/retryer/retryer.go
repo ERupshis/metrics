@@ -2,7 +2,6 @@ package retryer
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/erupshis/metrics/internal/logger"
@@ -46,7 +45,7 @@ func canRetryCall(err error, repeatableErrors []error) bool {
 
 	canRetry := false
 	for _, repeatableError := range repeatableErrors {
-		if errors.Is(err, repeatableError) {
+		if err.Error() == repeatableError.Error() {
 			canRetry = true
 		}
 	}

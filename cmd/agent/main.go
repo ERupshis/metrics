@@ -20,7 +20,7 @@ func main() {
 	defClient := client.CreateDefault(log)
 
 	agent := agentimpl.Create(cfg, log, defClient)
-	log.Info("Agent is started.")
+	log.Info("agent has started.")
 
 	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
 	defer pollTicker.Stop()
