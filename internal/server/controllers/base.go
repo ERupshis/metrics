@@ -33,9 +33,12 @@ func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLog
 	}
 
 	if !controller.config.Restore {
-		controller.logger.Info("[BaseController::restoreDataFromFileIfNeed] data restoring from file switched off.")
+		controller.logger.Info("[BaseController::CreateBase] data restoring from file switched off.")
 	} else {
-		controller.storage.RestoreData(ctx)
+		err := controller.storage.RestoreData(ctx)
+		if err != nil {
+			controller.logger.Info("[BaseController::CreateBase] data restoring: %v", err)
+		}
 	}
 
 	return controller

@@ -25,15 +25,14 @@ func Create(manager storagemngr.StorageManager) *MemStorage {
 	}
 }
 
-func (m *MemStorage) RestoreData(ctx context.Context) {
+func (m *MemStorage) RestoreData(ctx context.Context) error {
 	if m.manager == nil {
-		return
+		return fmt.Errorf("manager is not initialized")
 	}
 
 	gauges, counters, err := m.manager.RestoreDataFromStorage(ctx)
 	if err != nil {
-		//TODO log.
-		return
+		return fmt.Errorf("restore data: %w", err)
 	}
 
 	for key, val := range gauges {
@@ -43,6 +42,8 @@ func (m *MemStorage) RestoreData(ctx context.Context) {
 	for key, val := range counters {
 		m.AddCounter(key, val)
 	}
+
+	return nil
 }
 
 func (m *MemStorage) IsAvailable(ctx context.Context) (bool, error) {

@@ -9,6 +9,9 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/retryer"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -61,16 +64,23 @@ func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.B
 		return nil, fmt.Errorf(createDatabaseError, err)
 	}
 
+	driver, err := postgres.WithInstance(database, &postgres.Config{})
+	if err != nil {
+		return nil, fmt.Errorf(createDatabaseError, err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance("file://db/migrations", "postgres", driver)
+	if err != nil {
+		return nil, fmt.Errorf(createDatabaseError, err)
+	}
+
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return nil, fmt.Errorf(createDatabaseError, err)
+	}
+
 	manager := &DataBaseManager{database: database, log: log}
 	if _, err = manager.CheckConnection(ctx); err != nil {
-		return manager, fmt.Errorf(createDatabaseError, err)
-	}
-
-	if err = manager.createSchema(ctx); err != nil {
-		return manager, fmt.Errorf(createDatabaseError, err)
-	}
-
-	if err = manager.createTables(ctx); err != nil {
 		return manager, fmt.Errorf(createDatabaseError, err)
 	}
 
@@ -203,7 +213,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	}
 
 	query := func(context context.Context) error {
-		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+tableName)
+		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+schemaName+"."+tableName)
 		if rows != nil {
 			//get rid of static check problem
 			rows.Err()
@@ -353,21 +363,17 @@ func getMetricsTableName(value interface{}) string {
 }
 
 func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
-	existBody := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1);`, metricTable)
-	insertBody := fmt.Sprintf(`INSERT INTO %s (id, value) VALUES ($1, $2);`, metricTable)
-	updateBody := fmt.Sprintf(`UPDATE %s SET value = $1 WHERE id = $2;`, metricTable)
-
-	existStmtBody, err := tx.PrepareContext(ctx, existBody)
+	existStmtBody, err := tx.PrepareContext(ctx, `SELECT EXISTS (SELECT 1 FROM `+schemaName+"."+metricTable+` WHERE id = $1);`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric exists statemnt: %w", err)
 	}
 
-	insertStmtBody, err := tx.PrepareContext(ctx, insertBody)
+	insertStmtBody, err := tx.PrepareContext(ctx, `INSERT INTO `+schemaName+"."+metricTable+` (id, value) VALUES ($1, $2);`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric insert statemnt: %w", err)
 	}
 
-	updateStmtBody, err := tx.PrepareContext(ctx, updateBody)
+	updateStmtBody, err := tx.PrepareContext(ctx, `UPDATE `+schemaName+"."+metricTable+` SET value = $1 WHERE id = $2;`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare metric update statemnt: %w", err)
 	}
