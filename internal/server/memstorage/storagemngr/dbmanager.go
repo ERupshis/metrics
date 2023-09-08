@@ -26,8 +26,6 @@ const (
 	existStmt  = "exist"
 
 	createDatabaseError = "create db: %w"
-	createSchemaError   = "create db schema: %w"
-	createTableError    = "create db table: %w"
 
 	saveMetricsError           = "save metrics in db: %w"
 	saveMetricsCreateStmtError = "create stmt: %w"
@@ -85,52 +83,6 @@ func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.B
 	}
 
 	return manager, nil
-}
-
-func (m *DataBaseManager) createSchema(ctx context.Context) error {
-	createExec := func(context context.Context) error {
-		_, err := m.database.ExecContext(ctx, `CREATE SCHEMA IF NOT EXISTS `+schemaName+`;`)
-		return err
-	}
-	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createExec)
-	if err != nil {
-		return fmt.Errorf(createSchemaError, err)
-	}
-
-	searchExec := func(context context.Context) error {
-		_, err := m.database.ExecContext(ctx, `SET search_path TO `+schemaName)
-		return err
-	}
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, searchExec)
-	if err != nil {
-		return fmt.Errorf(createSchemaError, err)
-	}
-
-	return nil
-}
-
-func (m *DataBaseManager) createTables(ctx context.Context) error {
-	createGaugeExec := func(context context.Context) error {
-		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+gaugesTable+
-			` (id TEXT PRIMARY KEY, value float8);`)
-		return err
-	}
-	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createGaugeExec)
-	if err != nil {
-		return fmt.Errorf(createTableError, err)
-	}
-
-	createCounterExec := func(context context.Context) error {
-		_, err := m.database.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+countersTable+
-			` (id TEXT PRIMARY KEY, value int8);`)
-		return err
-	}
-	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, createCounterExec)
-	if err != nil {
-		return fmt.Errorf(createTableError, err)
-	}
-
-	return nil
 }
 
 func (m *DataBaseManager) Close() error {
