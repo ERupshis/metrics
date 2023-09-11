@@ -25,7 +25,7 @@ func RetryCallWithTimeout(ctx context.Context, log logger.BaseLogger, intervals 
 			return nil
 		}
 
-		sleep(ctxWithTime, interval)
+		<-ctxWithTime.Done()
 
 		attempt++
 		if log != nil {
@@ -40,21 +40,6 @@ func RetryCallWithTimeout(ctx context.Context, log logger.BaseLogger, intervals 
 	}
 
 	return err
-}
-
-func sleep(ctx context.Context, seconds int) {
-	currentTime := time.Now()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if time.Since(currentTime) > time.Duration(seconds)*time.Second {
-				return
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
 }
 
 func canRetryCall(err error, repeatableErrors []error) bool {
