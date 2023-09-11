@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/retryer"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -155,7 +156,12 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	}
 
 	query := func(context context.Context) error {
-		rows, err = tx.QueryContext(ctx, `SELECT * FROM `+schemaName+"."+tableName)
+		sqlSelect, _, err := sq.Select("*").From(schemaName + "." + tableName).ToSql()
+		if err != nil {
+			return err
+		}
+
+		rows, err = tx.QueryContext(ctx, sqlSelect)
 		if rows != nil {
 			//get rid of static check problem
 			rows.Err()
@@ -306,19 +312,19 @@ func getMetricsTableName(value interface{}) string {
 }
 
 func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
-	existStmtBody, err := tx.PrepareContext(ctx, `SELECT EXISTS (SELECT 1 FROM `+schemaName+"."+metricTable+` WHERE id = $1);`)
+	existStmtBody, err := createExistsStmt(ctx, tx, metricTable)
 	if err != nil {
-		return nil, fmt.Errorf("prepare metric exists statemnt: %w", err)
+		return nil, fmt.Errorf("prepare metric exists statement: %w", err)
 	}
 
-	insertStmtBody, err := tx.PrepareContext(ctx, `INSERT INTO `+schemaName+"."+metricTable+` (id, value) VALUES ($1, $2);`)
+	insertStmtBody, err := createInsertStmt(ctx, tx, metricTable)
 	if err != nil {
-		return nil, fmt.Errorf("prepare metric insert statemnt: %w", err)
+		return nil, fmt.Errorf("prepare metric insert statement: %w", err)
 	}
 
-	updateStmtBody, err := tx.PrepareContext(ctx, `UPDATE `+schemaName+"."+metricTable+` SET value = $1 WHERE id = $2;`)
+	updateStmtBody, err := createUpdateStmt(ctx, tx, metricTable)
 	if err != nil {
-		return nil, fmt.Errorf("prepare metric update statemnt: %w", err)
+		return nil, fmt.Errorf("prepare metric update statement: %w", err)
 	}
 
 	return map[string]*sql.Stmt{
@@ -326,6 +332,39 @@ func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (m
 		insertStmt: insertStmtBody,
 		updateStmt: updateStmtBody,
 	}, nil
+}
+
+func createExistsStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	sqlExist, _, err := psql.Select("1").From(schemaName + "." + metricTable).Where("id = ?").Limit(1).ToSql()
+	if err != nil {
+		return nil, err
+
+	}
+	return tx.PrepareContext(ctx, sqlExist)
+}
+
+func createInsertStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	sqlInsert, _, err := psql.Insert(schemaName+"."+metricTable).Columns("id", "value").Values("(?, ?)", "val").ToSql()
+	if err != nil {
+		return nil, err
+
+	}
+	return tx.PrepareContext(ctx, sqlInsert)
+}
+
+func createUpdateStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	sqlUpdate, _, err := psql.Update(schemaName+"."+metricTable).Set("value", "?").Where("id = ?").ToSql()
+	if err != nil {
+		return nil, err
+
+	}
+	return tx.PrepareContext(ctx, sqlUpdate)
 }
 
 func closeDatabaseStmts(stmts map[string]*sql.Stmt) {
