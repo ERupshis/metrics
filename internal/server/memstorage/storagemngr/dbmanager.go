@@ -133,7 +133,6 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
 	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
-		tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
