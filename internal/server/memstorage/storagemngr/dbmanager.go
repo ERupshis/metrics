@@ -153,6 +153,11 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	if rows != nil {
 		//get rid of static check problem
 		err = rows.Err()
+
+	}
+
+	if err != nil {
+		return err
 	}
 
 	query := func(context context.Context) error {
@@ -337,12 +342,12 @@ func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (m
 func createExistsStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
-	sqlExist, _, err := psql.Select("1").From(schemaName + "." + metricTable).Where("id = ?").Limit(1).ToSql()
+	sqlExist, _, err := psql.Select("1").From(schemaName + "." + metricTable).Where("id = ?").ToSql()
 	if err != nil {
 		return nil, err
 
 	}
-	return tx.PrepareContext(ctx, sqlExist)
+	return tx.PrepareContext(ctx, "SELECT EXISTS("+sqlExist+")")
 }
 
 func createInsertStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
