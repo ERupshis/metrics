@@ -268,13 +268,13 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, name, value.(float64))
-			return fmt.Errorf("insert gauge metric: %w", err)
+			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, name, value.(int64))
-			return fmt.Errorf("insert counter metric: %w", err)
+			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
@@ -291,13 +291,13 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, value.(float64), name)
-			return fmt.Errorf("update gauge metric: %w", err)
+			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, value.(int64), name)
-			return fmt.Errorf("update counter metric: %w", err)
+			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
