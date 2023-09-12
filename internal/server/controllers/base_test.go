@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,6 @@ import (
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,10 +47,9 @@ func TestJSONCounterBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -63,7 +62,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 					})),
@@ -78,7 +77,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -94,7 +93,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -110,7 +109,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -126,7 +125,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "counter",
 						Delta: &val1,
@@ -142,14 +141,14 @@ func TestJSONCounterBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asds",
 						MType: "counter",
 					})),
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid counter name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &counterTests, ts)
@@ -167,10 +166,9 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -182,7 +180,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 					})),
@@ -197,7 +195,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -213,7 +211,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -229,7 +227,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -245,7 +243,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/update/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asdf",
 						MType: "gauge",
 						Value: &float2,
@@ -261,7 +259,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asd",
 						MType: "gauge",
 						Value: &float1,
@@ -277,14 +275,14 @@ func TestJSONGaugeBaseController(t *testing.T) {
 				http.MethodPost,
 				"/value/",
 				string(networkmsg.CreatePostUpdateMessage(
-					networkmsg.Metrics{
+					networkmsg.Metric{
 						ID:    "asds",
 						MType: "gauge",
 					})),
 			},
 			wantJSON{
 				http.StatusNotFound, "text/plain; charset=utf-8",
-				"invalid counter name\n"},
+				"invalid gauge name 'asds'\n"},
 		},
 	}
 	runJSONTests(t, &gaugeTests, ts)
@@ -341,10 +339,9 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -379,10 +376,9 @@ func TestListHandlerBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -407,10 +403,9 @@ func TestMissingNameBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 	missingNameTests := []test{
 		{
@@ -468,10 +463,9 @@ func TestCounterBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -545,10 +539,9 @@ func TestGaugeBaseController(t *testing.T) {
 		panic(err)
 	}
 	//defer log.Sync()
-	storageManager := storagemanager.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(&storageManager)
+	storage := memstorage.Create(nil)
 
-	ts := httptest.NewServer(CreateBase(cfg, log, storage).Route())
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage).Route())
 	defer ts.Close()
 
 	gaugeTests := []test{

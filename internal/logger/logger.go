@@ -20,7 +20,7 @@ func CreateZapLogger(level string) (*Logger, error) {
 
 	log, err := cfg.Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create zap logger^ %w", err)
 	}
 
 	return &Logger{zap: log}, nil
@@ -36,7 +36,7 @@ func initConfig(level string) (zap.Config, error) {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
 		emptyConfig := zap.Config{}
-		return emptyConfig, err
+		return emptyConfig, fmt.Errorf("init zap logger config: %w", err)
 	}
 	cfg.Level = lvl
 	cfg.DisableCaller = true

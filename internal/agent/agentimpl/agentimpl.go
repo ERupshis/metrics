@@ -1,6 +1,8 @@
 package agentimpl
 
 import (
+	"context"
+	"encoding/json"
 	"math/rand"
 	"runtime"
 
@@ -25,7 +27,8 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 }
 
 func CreateDefault() *Agent {
-	return &Agent{client: client.CreateDefault(), config: config.Default(), logger: logger.CreateLogger("Info")}
+	log := logger.CreateLogger("Info")
+	return &Agent{client: client.CreateDefault(log), config: config.Default(), logger: log}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -37,29 +40,73 @@ func (a *Agent) GetReportInterval() int64 {
 }
 
 func (a *Agent) UpdateStats() {
-	a.logger.Info("agent trying to update stats.")
+	a.logger.Info("[Agent:UpdateStats] agent trying to update stats.")
 	runtime.ReadMemStats(&a.stats)
 	a.pollCount++
 
-	a.logger.Info("agent has completed stats posting. pollcount: %d", a.pollCount)
+	a.logger.Info("[Agent:UpdateStats] agent has completed stats posting. pollCount: %d", a.pollCount)
 }
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJSONStats() {
-	a.logger.Info("agent trying to update stats.")
+func (a *Agent) PostJSONStatsBatch(ctx context.Context) {
+	a.logger.Info("[Agent:PostJSONStatsBatch] agent is trying to update stats.")
+	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
-		a.postJSONStat(a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+		metrics = append(metrics, networkmsg.CreateGaugeMetrics(name, valueGetter(&a.stats)))
 	}
 
-	a.postJSONStat(a.createJSONGaugeMessage("RandomValue", rand.Float64()))
-	a.postJSONStat(a.createJSONCounterMessage("PollCount", a.pollCount))
+	metrics = append(metrics, networkmsg.CreateGaugeMetrics("RandomValue", rand.Float64()))
+	metrics = append(metrics, networkmsg.CreateCounterMetrics("PollCount", a.pollCount))
 
-	a.logger.Info("agent has completed stats updating.")
+	body, err := json.Marshal(&metrics)
+	if err != nil {
+		a.logger.Info("[Agent:PostJSONStatsBatch] failed to create request's JSON body.")
+		return
+	}
+
+	if err = a.postBatchJSON(ctx, body); err != nil {
+		a.logger.Info("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %v", err)
+		return
+	}
+	a.logger.Info("[Agent:PostJSONStatsBatch] stats was sent.")
 }
 
-func (a *Agent) postJSONStat(body []byte) {
-	a.client.PostJSON(a.config.Host+"/update/", body)
+func (a *Agent) PostJSONStats(ctx context.Context) {
+	a.logger.Info("[Agent:PostJSONStats] agent is trying to update stats.")
+
+	failedPostsCount := 0
+	var err error
+	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+		err = a.postJSON(ctx, a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+		if err != nil {
+			failedPostsCount++
+		}
+	}
+
+	err = a.postJSON(ctx, a.createJSONGaugeMessage("RandomValue", rand.Float64()))
+	if err != nil {
+		failedPostsCount++
+	}
+
+	err = a.postJSON(ctx, a.createJSONCounterMessage("PollCount", a.pollCount))
+	if err != nil {
+		failedPostsCount++
+	}
+
+	a.logger.Info("[Agent:PostJSONStats] stats was sent with failed posts: %d", failedPostsCount)
+}
+
+func (a *Agent) postBatchJSON(ctx context.Context, body []byte) error {
+	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body)
+}
+
+func (a *Agent) postJSON(ctx context.Context, body []byte) error {
+	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body)
+	if err != nil {
+		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
+	}
+	return err
 }
 func (a *Agent) createJSONGaugeMessage(name string, value float64) []byte {
 	return networkmsg.CreatePostUpdateMessage(networkmsg.CreateGaugeMetrics(name, value))

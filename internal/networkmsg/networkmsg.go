@@ -1,19 +1,22 @@
 package networkmsg
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/mailru/easyjson"
 )
 
 //go:generate easyjson -all networkmsg.go
-type Metrics struct {
+type Metric struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func CreateCounterMetrics(name string, value int64) Metrics {
-	return Metrics{
+func CreateCounterMetrics(name string, value int64) Metric {
+	return Metric{
 		ID:    name,
 		MType: "counter",
 		Delta: &value,
@@ -21,8 +24,8 @@ func CreateCounterMetrics(name string, value int64) Metrics {
 	}
 }
 
-func CreateGaugeMetrics(name string, value float64) Metrics {
-	return Metrics{
+func CreateGaugeMetrics(name string, value float64) Metric {
+	return Metric{
 		ID:    name,
 		MType: "gauge",
 		Delta: nil,
@@ -30,7 +33,7 @@ func CreateGaugeMetrics(name string, value float64) Metrics {
 	}
 }
 
-func CreatePostUpdateMessage(data Metrics) []byte {
+func CreatePostUpdateMessage(data Metric) []byte {
 	out, err := easyjson.Marshal(data)
 	if err != nil {
 		panic(err)
@@ -39,10 +42,19 @@ func CreatePostUpdateMessage(data Metrics) []byte {
 	return out
 }
 
-func ParsePostValueMessage(message []byte) (Metrics, error) {
-	var out Metrics
+func ParsePostValueMessage(message []byte) (Metric, error) {
+	var out Metric
 	if err := easyjson.Unmarshal(message, &out); err != nil {
-		return Metrics{}, err
+		return Metric{}, fmt.Errorf("parse metric: %w", err)
+	}
+
+	return out, nil
+}
+
+func ParsePostBatchValueMessage(message []byte) ([]Metric, error) {
+	var out []Metric
+	if err := json.Unmarshal(message, &out); err != nil {
+		return []Metric{}, fmt.Errorf("parse metrics batch: %w", err)
 	}
 
 	return out, nil

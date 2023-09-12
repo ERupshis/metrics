@@ -28,7 +28,7 @@ func (gz *GzipHandler) setGzipCompReader(r *http.Request) error {
 		var err error
 		gz.reader, err = newGzipCompressReader(r.Body)
 		if err != nil {
-			return err
+			return fmt.Errorf("set gzip reader: %w", err)
 		}
 	} else {
 		gz.reader.Reset(r.Body)

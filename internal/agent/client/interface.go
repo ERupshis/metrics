@@ -1,5 +1,7 @@
 package client
 
+import "context"
+
 type BaseClient interface {
-	PostJSON(url string, body []byte) error
+	PostJSON(context context.Context, url string, body []byte) error
 }
