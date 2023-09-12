@@ -255,8 +255,11 @@ func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt,
 		return stmt.QueryRowContext(ctx, name).Scan(&exists)
 	}
 	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
+	if err != nil {
+		err = fmt.Errorf("exists metric check: %w", err)
+	}
 
-	return exists, fmt.Errorf("exists metric check: %w", err)
+	return exists, err
 }
 
 func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
