@@ -84,7 +84,7 @@ func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 	}
 	err := retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("check connection: %w", err)
 	}
 	return true, nil
 }
@@ -163,7 +163,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	query := func(context context.Context) error {
 		sqlSelect, _, err := sq.Select("*").From(schemaName + "." + tableName).ToSql()
 		if err != nil {
-			return err
+			return fmt.Errorf("restore metrics: %w", err)
 		}
 
 		rows, err = tx.QueryContext(ctx, sqlSelect)
@@ -256,7 +256,7 @@ func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt,
 	}
 	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
 
-	return exists, err
+	return exists, fmt.Errorf("exists metric check: %w", err)
 }
 
 func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
@@ -265,13 +265,13 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, name, value.(float64))
-			return err
+			return fmt.Errorf("insert gauge metric: %w", err)
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, name, value.(int64))
-			return err
+			return fmt.Errorf("insert counter metric: %w", err)
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
@@ -288,13 +288,13 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, value.(float64), name)
-			return err
+			return fmt.Errorf("update gauge metric: %w", err)
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
 			_, err = stmt.ExecContext(context, value.(int64), name)
-			return err
+			return fmt.Errorf("update counter metric: %w", err)
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	}
@@ -344,7 +344,7 @@ func createExistsStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 
 	sqlExist, _, err := psql.Select("1").From(schemaName + "." + metricTable).Where("id = ?").ToSql()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("squirrel sql statement: %w", err)
 
 	}
 	return tx.PrepareContext(ctx, "SELECT EXISTS("+sqlExist+")")
@@ -355,7 +355,7 @@ func createInsertStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 
 	sqlInsert, _, err := psql.Insert(schemaName+"."+metricTable).Columns("id", "value").Values("(?, ?)", "val").ToSql()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("squirrel sql statement: %w", err)
 
 	}
 	return tx.PrepareContext(ctx, sqlInsert)
@@ -366,7 +366,7 @@ func createUpdateStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 
 	sqlUpdate, _, err := psql.Update(schemaName+"."+metricTable).Set("value", "?").Where("id = ?").ToSql()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("squirrel sql statement: %w", err)
 
 	}
 	return tx.PrepareContext(ctx, sqlUpdate)

@@ -272,7 +272,7 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, fmt.Sprintf("%d", value)); err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
 		c.logger.Info("[BaseController::getGaugeHandler] counter metric not found error: %v", err)
@@ -287,7 +287,7 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		if _, err := io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64)); err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
 		c.logger.Info("[BaseController::getGaugeHandler] gauge metric not found error: %v", err)
@@ -333,6 +333,6 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
-		panic(err)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

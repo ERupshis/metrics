@@ -2,6 +2,7 @@ package networkmsg
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mailru/easyjson"
 )
@@ -44,7 +45,7 @@ func CreatePostUpdateMessage(data Metric) []byte {
 func ParsePostValueMessage(message []byte) (Metric, error) {
 	var out Metric
 	if err := easyjson.Unmarshal(message, &out); err != nil {
-		return Metric{}, err
+		return Metric{}, fmt.Errorf("parse metric: %w", err)
 	}
 
 	return out, nil
@@ -53,7 +54,7 @@ func ParsePostValueMessage(message []byte) (Metric, error) {
 func ParsePostBatchValueMessage(message []byte) ([]Metric, error) {
 	var out []Metric
 	if err := json.Unmarshal(message, &out); err != nil {
-		return []Metric{}, err
+		return []Metric{}, fmt.Errorf("parse metrics batch: %w", err)
 	}
 
 	return out, nil
