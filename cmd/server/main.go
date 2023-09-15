@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/erupshis/metrics/internal/hasher"
 	"net/http"
 	"time"
 
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"

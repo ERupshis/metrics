@@ -32,7 +32,7 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, h
 	if hashKey != "" {
 		hashValue, err = c.hash.HashMsg(body, hashKey)
 		if err != nil {
-			return fmt.Errorf("defclient postJSON request: hash calculation: %w", err)
+			return fmt.Errorf("defclient postJSON request: hasher calculation: %w", err)
 		}
 	}
 

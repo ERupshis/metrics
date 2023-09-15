@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/erupshis/metrics/internal/hasher"
-	"github.com/erupshis/metrics/internal/logger"
 
 	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/logger"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -34,7 +34,7 @@ func (c *RestyClient) PostJSON(context context.Context, url string, body []byte,
 	if hashKey != "" {
 		hashValue, err := c.hash.HashMsg(body, hashKey)
 		if err != nil {
-			return fmt.Errorf("resty postJSON request: hash calculation: %w", err)
+			return fmt.Errorf("resty postJSON request: hasher calculation: %w", err)
 		}
 
 		request.SetHeader(c.hash.GetHeader(), hashValue)

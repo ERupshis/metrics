@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/erupshis/metrics/internal/hasher"
 	"time"
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
 )

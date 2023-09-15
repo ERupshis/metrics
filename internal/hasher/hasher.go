@@ -5,10 +5,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
-	"github.com/erupshis/metrics/internal/logger"
 	"hash"
 	"io"
 	"net/http"
+
+	"github.com/erupshis/metrics/internal/logger"
 )
 
 const (
@@ -77,7 +78,7 @@ func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey
 
 	hashValue, err := hr.HashMsg(responseBody, hashKey)
 	if err != nil {
-		hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hash in response: %v", err)
+		hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hasher in response: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -99,7 +100,7 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 	if key != "" {
 		h = hmac.New(hashFunc, []byte(key))
 	} else {
-		//hash sum w/o authentication.
+		//hasher sum w/o authentication.
 		h = hashFunc()
 	}
 
@@ -115,7 +116,7 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 func (hr *Hasher) isRequestValid(hashHeaderValue string, hashKey string, buffer bytes.Buffer) (bool, error) {
 	ok, err := hr.checkRequestHash(hashHeaderValue, hashKey, buffer.Bytes())
 	if err != nil {
-		return false, fmt.Errorf("hash validation: %w", err)
+		return false, fmt.Errorf("hasher validation: %w", err)
 	}
 
 	return ok, nil
@@ -132,7 +133,7 @@ func (hr *Hasher) checkRequestHash(hashHeaderValue string, hashKey string, body 
 
 	hashValue, err := hr.HashMsg(body, hashKey)
 	if err != nil {
-		return false, fmt.Errorf("check request hash with SHA256: %w", err)
+		return false, fmt.Errorf("check request hasher with SHA256: %w", err)
 	}
 
 	return hashHeaderValue == hashValue, nil

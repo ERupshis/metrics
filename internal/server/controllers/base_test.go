@@ -3,13 +3,13 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"github.com/erupshis/metrics/internal/hasher"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"

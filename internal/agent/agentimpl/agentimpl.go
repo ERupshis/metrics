@@ -3,13 +3,13 @@ package agentimpl
 import (
 	"context"
 	"encoding/json"
-	"github.com/erupshis/metrics/internal/hasher"
 	"math/rand"
 	"runtime"
 
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 )
