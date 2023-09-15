@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/erupshis/metrics/internal/hasher"
 	"io"
 	"net/http"
 	"strconv"
@@ -110,6 +111,12 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 
 	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
+	if !c.isRequestValid(r, buf) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var responseBody []byte
 	switch request {
 	case postRequest:
 		metric, err := networkmsg.ParsePostValueMessage(buf.Bytes())
@@ -117,7 +124,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		c.jsonPostHandler(w, &metric)
+		responseBody = c.jsonPostHandler(w, &metric)
 
 	case postBatchRequest:
 		data, err := networkmsg.ParsePostBatchValueMessage(buf.Bytes())
@@ -125,7 +132,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		c.jsonPostBatchHandler(w, data)
+		responseBody = c.jsonPostBatchHandler(w, data)
 
 	case getRequest:
 		metric, err := networkmsg.ParsePostValueMessage(buf.Bytes())
@@ -133,23 +140,38 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		c.jsonGetHandler(w, &metric)
+		responseBody = c.jsonGetHandler(w, &metric)
+	}
+
+	if responseBody == nil {
+		return
+	}
+
+	if c.config.Key != "" {
+		hashValue, err := hasher.HashMsg(hasher.AlgoSHA256, responseBody, c.config.Key)
+		if err != nil {
+			c.logger.Info("[BaseController::jsonHandler] failed to generate hashValue for response: %V", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add(hasher.HeaderSHA256, hashValue)
 	}
 }
 
-func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) {
+func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
 	for _, metric := range metrics {
 		c.addMetricFromMessage(&metric)
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write([]byte("{}"))
+	return []byte("{}")
 }
 
-func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) {
+func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
 	c.addMetricFromMessage(data)
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
+	return networkmsg.CreatePostUpdateMessage(*data)
 }
 
 func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
@@ -172,25 +194,25 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 	}
 }
 
-func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) {
+func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
 	if data.MType == gaugeType {
 		value, err := c.storage.GetGauge(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
-			return
+			return nil
 		}
 		data.Value = &value
 	} else if data.MType == counterType {
 		value, err := c.storage.GetCounter(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
-			return
+			return nil
 		}
 		data.Delta = &value
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	_, _ = w.Write(networkmsg.CreatePostUpdateMessage(*data))
+	return networkmsg.CreatePostUpdateMessage(*data)
 }
 
 // postHandler POST HTTP REQUEST HANDLING.
@@ -335,4 +357,15 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+// HELPERS.
+
+func (c *BaseController) isRequestValid(r *http.Request, buffer bytes.Buffer) bool {
+	ok, err := hasher.CheckRequestHash(r, hasher.HeaderSHA256, c.config.Key, buffer.Bytes())
+	if err != nil {
+		c.logger.Info("[BaseController::isRequestValid] failed to authenticate request by hash check: %v", err)
+	}
+
+	return ok
 }

@@ -29,7 +29,7 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, h
 
 	var hashValue string
 	if hashKey != "" {
-		hashValue, err = hasher.HashMsg(hasher.SHA256, body, hashKey)
+		hashValue, err = hasher.HashMsg(hasher.AlgoSHA256, body, hashKey)
 		if err != nil {
 			return fmt.Errorf("defclient postJSON request: hash calculation: %w", err)
 		}
@@ -57,7 +57,7 @@ func (c *DefaultClient) makeRequest(ctx context.Context, method string, url stri
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	if hashValue != "" {
-		req.Header.Set("HashSHA256", hashValue)
+		req.Header.Set(hasher.HeaderSHA256, hashValue)
 	}
 
 	resp, err := c.client.Do(req)

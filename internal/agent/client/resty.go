@@ -29,12 +29,12 @@ func (c *RestyClient) PostJSON(context context.Context, url string, body []byte,
 		SetHeader("Accept-Encoding", "gzip")
 
 	if hashKey != "" {
-		hashValue, err := hasher.HashMsg(hasher.SHA256, body, hashKey)
+		hashValue, err := hasher.HashMsg(hasher.AlgoSHA256, body, hashKey)
 		if err != nil {
 			return fmt.Errorf("resty postJSON request: hash calculation: %w", err)
 		}
 
-		request.SetHeader("HashSHA256", hashValue)
+		request.SetHeader(hasher.HeaderSHA256, hashValue)
 	}
 
 	_, err = request.SetBody(compressedBody).Post(url)
