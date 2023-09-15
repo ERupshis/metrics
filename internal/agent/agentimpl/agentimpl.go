@@ -98,11 +98,11 @@ func (a *Agent) PostJSONStats(ctx context.Context) {
 }
 
 func (a *Agent) postBatchJSON(ctx context.Context, body []byte) error {
-	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body)
+	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body, a.config.Key)
 }
 
 func (a *Agent) postJSON(ctx context.Context, body []byte) error {
-	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body)
+	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body, a.config.Key)
 	if err != nil {
 		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
 	}
