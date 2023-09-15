@@ -3,6 +3,7 @@ package agentimpl
 import (
 	"context"
 	"encoding/json"
+	"github.com/erupshis/metrics/internal/hasher"
 	"math/rand"
 	"runtime"
 
@@ -28,7 +29,7 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 
 func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
-	return &Agent{client: client.CreateDefault(log), config: config.Default(), logger: log}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hasher.SHA256, log)), config: config.Default(), logger: log}
 }
 
 func (a *Agent) GetPollInterval() int64 {

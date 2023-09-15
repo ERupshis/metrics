@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/logger"
 
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/go-resty/resty/v2"
@@ -11,10 +12,12 @@ import (
 
 type RestyClient struct {
 	client *resty.Client
+	log    logger.BaseLogger
+	hash   *hasher.Hasher
 }
 
-func CreateResty() BaseClient {
-	return &RestyClient{resty.New()}
+func CreateResty(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
+	return &RestyClient{resty.New(), log, hash}
 }
 
 func (c *RestyClient) PostJSON(context context.Context, url string, body []byte, hashKey string) error {
@@ -29,12 +32,12 @@ func (c *RestyClient) PostJSON(context context.Context, url string, body []byte,
 		SetHeader("Accept-Encoding", "gzip")
 
 	if hashKey != "" {
-		hashValue, err := hasher.HashMsg(hasher.AlgoSHA256, body, hashKey)
+		hashValue, err := c.hash.HashMsg(body, hashKey)
 		if err != nil {
 			return fmt.Errorf("resty postJSON request: hash calculation: %w", err)
 		}
 
-		request.SetHeader(hasher.HeaderSHA256, hashValue)
+		request.SetHeader(c.hash.GetHeader(), hashValue)
 	}
 
 	_, err = request.SetBody(compressedBody).Post(url)

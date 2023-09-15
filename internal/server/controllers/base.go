@@ -23,14 +23,16 @@ type BaseController struct {
 	storage    memstorage.MemStorage
 	logger     logger.BaseLogger
 	compressor compressor.GzipHandler
+	hash       *hasher.Hasher
 }
 
-func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage) *BaseController {
+func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher) *BaseController {
 	controller := &BaseController{
 		config:     config,
 		storage:    *storage,
 		logger:     logger,
 		compressor: compressor.GzipHandler{},
+		hash:       hash,
 	}
 
 	if !controller.config.Restore {
@@ -69,11 +71,12 @@ func (c *BaseController) Route() *chi.Mux {
 		})
 	})
 	r.NotFound(c.badRequestHandler)
+
 	return r
 }
 
 func (c *BaseController) HashCheckHandler(h http.Handler) http.Handler {
-	return hasher.Handler(h, c.config.Key)
+	return c.hash.Handler(h, c.config.Key)
 }
 
 func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
@@ -85,6 +88,11 @@ func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Reque
 }
 
 func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
+	err := c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	if err != nil {
+		c.logger.Info("[BaseController::checkStorageHandler] failed to add hash in response: %v", err)
+	}
+
 	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
 		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -147,15 +155,9 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c.config.Key != "" {
-		hashValue, err := hasher.HashMsg(hasher.AlgoSHA256, responseBody, c.config.Key)
-		if err != nil {
-			c.logger.Info("[BaseController::jsonHandler] failed to generate hashValue for response: %V", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Add(hasher.HeaderSHA256, hashValue)
+	err = c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, responseBody)
+	if err != nil {
+		c.logger.Info("[BaseController::jsonHandler] failed to add hash in response: %v", err)
 	}
 
 	_, _ = w.Write(responseBody)
@@ -241,7 +243,13 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
-	c.logger.Info("[BaseController::postCounterHandler] Handle url post request for: '%s'(%s) value", name, value)
+	c.logger.Info("[BaseController::postCounterHandler] handle url post request for: '%s'(%s) value", name, value)
+
+	err := c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	if err != nil {
+		c.logger.Info("[BaseController::postCounterHandler] failed to add hash in response header: %v", err)
+	}
+
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
 		c.storage.AddCounter(name, val)
 	} else {
@@ -256,7 +264,13 @@ func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Reque
 func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
-	c.logger.Info("[BaseController::postGaugeHandler] Handle url post request for: '%s'(%s) value", name, value)
+	c.logger.Info("[BaseController::postGaugeHandler] handle url post request for: '%s'(%s) value", name, value)
+
+	err := c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	if err != nil {
+		c.logger.Info("[BaseController::jsonHandler] failed to add hash in response header: %v", err)
+	}
+
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
 		c.storage.AddGauge(name, val)
 	} else {

@@ -15,10 +15,11 @@ import (
 type DefaultClient struct {
 	client *http.Client
 	log    logger.BaseLogger
+	hash   *hasher.Hasher
 }
 
-func CreateDefault(log logger.BaseLogger) BaseClient {
-	return &DefaultClient{client: &http.Client{}, log: log}
+func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
+	return &DefaultClient{client: &http.Client{}, log: log, hash: hash}
 }
 
 func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, hashKey string) error {
@@ -29,7 +30,7 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, h
 
 	var hashValue string
 	if hashKey != "" {
-		hashValue, err = hasher.HashMsg(hasher.AlgoSHA256, body, hashKey)
+		hashValue, err = c.hash.HashMsg(body, hashKey)
 		if err != nil {
 			return fmt.Errorf("defclient postJSON request: hash calculation: %w", err)
 		}
@@ -57,7 +58,7 @@ func (c *DefaultClient) makeRequest(ctx context.Context, method string, url stri
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	if hashValue != "" {
-		req.Header.Set(hasher.HeaderSHA256, hashValue)
+		req.Header.Set(c.hash.GetHeader(), hashValue)
 	}
 
 	resp, err := c.client.Do(req)

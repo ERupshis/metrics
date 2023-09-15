@@ -5,27 +5,41 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"github.com/erupshis/metrics/internal/logger"
 	"hash"
 	"io"
 	"net/http"
 )
 
 const (
-	HeaderSHA256 = "HashSHA256"
+	SHA256 = iota
 )
 
 const (
-	AlgoSHA256 = iota
+	headerSHA256 = "HashSHA256"
 )
 
-type ReadCloserWrapper struct {
+const (
+	algoSHA256 = iota
+)
+
+type readCloserWrapper struct {
 	io.Reader
 	io.Closer
 }
 
-func Handler(h http.Handler, hashKey string) http.Handler {
+type Hasher struct {
+	log      logger.BaseLogger
+	hashType int
+}
+
+func CreateHasher(hashType int, log logger.BaseLogger) *Hasher {
+	return &Hasher{hashType: hashType, log: log}
+}
+
+func (hr *Hasher) Handler(h http.Handler, hashKey string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hashHeaderValue := r.Header.Get(HeaderSHA256)
+		hashHeaderValue := r.Header.Get(hr.GetHeader())
 		if hashHeaderValue != "" {
 			var buf bytes.Buffer
 			_, err := io.Copy(&buf, r.Body)
@@ -34,7 +48,7 @@ func Handler(h http.Handler, hashKey string) http.Handler {
 				return
 			}
 
-			ok, err := isRequestValid(HeaderSHA256, hashHeaderValue, hashKey, buf)
+			ok, err := hr.isRequestValid(hashHeaderValue, hashKey, buf)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -45,7 +59,7 @@ func Handler(h http.Handler, hashKey string) http.Handler {
 				return
 			}
 
-			rc := &ReadCloserWrapper{
+			rc := &readCloserWrapper{
 				Reader: bytes.NewReader(buf.Bytes()),
 				Closer: r.Body,
 			}
@@ -56,9 +70,24 @@ func Handler(h http.Handler, hashKey string) http.Handler {
 	})
 }
 
-func HashMsg(algo uint, msg []byte, key string) (string, error) {
-	switch algo {
-	case AlgoSHA256:
+func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey string, responseBody []byte) error {
+	if hashKey == "" {
+		return nil
+	}
+
+	hashValue, err := hr.HashMsg(responseBody, hashKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return err
+	}
+
+	w.Header().Add(hr.GetHeader(), hashValue)
+	return nil
+}
+
+func (hr *Hasher) HashMsg(msg []byte, key string) (string, error) {
+	switch hr.getAlgo() {
+	case algoSHA256:
 		return hashMsg(sha256.New, msg, key)
 	default:
 		panic("unknown algorithm")
@@ -83,8 +112,8 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 	return fmt.Sprintf("%x", hashVal), nil
 }
 
-func isRequestValid(hashHeaderKey string, hashHeaderValue string, hashKey string, buffer bytes.Buffer) (bool, error) {
-	ok, err := CheckRequestHash(hashHeaderKey, hashHeaderValue, hashKey, buffer.Bytes())
+func (hr *Hasher) isRequestValid(hashHeaderValue string, hashKey string, buffer bytes.Buffer) (bool, error) {
+	ok, err := hr.checkRequestHash(hashHeaderValue, hashKey, buffer.Bytes())
 	if err != nil {
 		return false, fmt.Errorf("hash validation: %w", err)
 	}
@@ -92,7 +121,7 @@ func isRequestValid(hashHeaderKey string, hashHeaderValue string, hashKey string
 	return ok, nil
 }
 
-func CheckRequestHash(hashHeaderKey string, hashHeaderValue string, hashKey string, body []byte) (bool, error) {
+func (hr *Hasher) checkRequestHash(hashHeaderValue string, hashKey string, body []byte) (bool, error) {
 	if hashKey == "" {
 		return true, nil
 	}
@@ -101,17 +130,28 @@ func CheckRequestHash(hashHeaderKey string, hashHeaderValue string, hashKey stri
 		return true, nil
 	}
 
-	var hashValue string
-	var err error
-	switch hashHeaderKey {
-	case HeaderSHA256:
-		hashValue, err = HashMsg(AlgoSHA256, body, hashKey)
-		if err != nil {
-			return false, fmt.Errorf("check request hash with SHA256: %w", err)
-		}
-	default:
-		panic("unknown header key")
+	hashValue, err := hr.HashMsg(body, hashKey)
+	if err != nil {
+		return false, fmt.Errorf("check request hash with SHA256: %w", err)
 	}
 
 	return hashHeaderValue == hashValue, nil
+}
+
+func (hr *Hasher) GetHeader() string {
+	switch hr.hashType {
+	case SHA256:
+		return headerSHA256
+	default:
+		return headerSHA256
+	}
+}
+
+func (hr *Hasher) getAlgo() int {
+	switch hr.hashType {
+	case SHA256:
+		return algoSHA256
+	default:
+		return algoSHA256
+	}
 }
