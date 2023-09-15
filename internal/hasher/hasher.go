@@ -77,9 +77,7 @@ func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey
 
 	hashValue, err := hr.HashMsg(responseBody, hashKey)
 	if err != nil {
-		if err != nil {
-			hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hash in response: %v", err)
-		}
+		hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hash in response: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
