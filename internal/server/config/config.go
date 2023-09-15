@@ -47,7 +47,7 @@ func checkFlags(config *Config) {
 
 	//databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable"
 	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, "", "database DSN")
-	flag.StringVar(&config.Key, flagKey, "123", "Auth key")
+	flag.StringVar(&config.Key, flagKey, "", "Auth key")
 	flag.Parse()
 }
 

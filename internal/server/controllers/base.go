@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/erupshis/metrics/internal/hasher"
 	"io"
 	"net/http"
 	"strconv"
 	"text/template"
 
 	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -80,6 +80,19 @@ func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Reque
 }
 
 func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if !c.isRequestValid(r, buf) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
 		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -157,6 +170,8 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Add(hasher.HeaderSHA256, hashValue)
 	}
+
+	_, _ = w.Write(responseBody)
 }
 
 func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
@@ -220,6 +235,19 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if !c.isRequestValid(r, buf) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if request != postRequest {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -270,6 +298,19 @@ func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request
 func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
+
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if !c.isRequestValid(r, buf) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if request != getRequest {
 		w.WriteHeader(http.StatusBadRequest)
@@ -342,10 +383,23 @@ type tmplData struct {
 	Counters map[string]interface{}
 }
 
-func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
 		c.logger.Info("[BaseController:ListHandler] error parsing gauge template: %v", err)
+		return
+	}
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if !c.isRequestValid(r, buf) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
