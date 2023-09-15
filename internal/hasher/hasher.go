@@ -70,19 +70,21 @@ func (hr *Hasher) Handler(h http.Handler, hashKey string) http.Handler {
 	})
 }
 
-func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey string, responseBody []byte) error {
+func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey string, responseBody []byte) {
 	if hashKey == "" {
-		return nil
+		return
 	}
 
 	hashValue, err := hr.HashMsg(responseBody, hashKey)
 	if err != nil {
+		if err != nil {
+			hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hash in response: %v", err)
+		}
 		w.WriteHeader(http.StatusInternalServerError)
-		return err
+		return
 	}
 
 	w.Header().Add(hr.GetHeader(), hashValue)
-	return nil
 }
 
 func (hr *Hasher) HashMsg(msg []byte, key string) (string, error) {
