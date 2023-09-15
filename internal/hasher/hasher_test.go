@@ -396,6 +396,7 @@ func TestHasher_Handler(t *testing.T) {
 
 			req := httptest.NewRequest("GET", "/", nil)
 			req.Header.Add(hr.GetHeader(), tt.args.hashHeaderValue)
+			defer req.Body.Close()
 
 			var buf bytes.Buffer
 			buf.Write(tt.args.body)
