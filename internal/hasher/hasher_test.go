@@ -416,6 +416,7 @@ func TestHasher_Handler(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.want.statusCode, rr.Result().StatusCode)
+			defer rr.Result().Body.Close()
 		})
 	}
 }
