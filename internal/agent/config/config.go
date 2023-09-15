@@ -48,7 +48,7 @@ func checkFlags(config *Config) {
 	flag.Int64Var(&config.ReportInterval, flagReportInterval, 10, "report interval val (sec)")
 	flag.Int64Var(&config.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
-	flag.StringVar(&config.Key, flagKey, "", "auth key")
+	flag.StringVar(&config.Key, flagKey, "123", "auth key")
 	flag.Parse()
 }
 
