@@ -47,6 +47,9 @@ func (m *MemStorage) RestoreData(ctx context.Context) error {
 }
 
 func (m *MemStorage) IsAvailable(ctx context.Context) (bool, error) {
+	if m.manager == nil {
+		return false, fmt.Errorf("storage manager is not initialized")
+	}
 	return m.manager.CheckConnection(ctx)
 }
 

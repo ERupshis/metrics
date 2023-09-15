@@ -9,6 +9,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 )
@@ -28,7 +29,7 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 
 func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
-	return &Agent{client: client.CreateDefault(log), config: config.Default(), logger: log}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hasher.SHA256, log)), config: config.Default(), logger: log}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -98,11 +99,11 @@ func (a *Agent) PostJSONStats(ctx context.Context) {
 }
 
 func (a *Agent) postBatchJSON(ctx context.Context, body []byte) error {
-	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body)
+	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body, a.config.Key)
 }
 
 func (a *Agent) postJSON(ctx context.Context, body []byte) error {
-	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body)
+	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body, a.config.Key)
 	if err != nil {
 		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/erupshis/metrics/internal/compressor"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/retryer"
 )
@@ -14,20 +15,29 @@ import (
 type DefaultClient struct {
 	client *http.Client
 	log    logger.BaseLogger
+	hash   *hasher.Hasher
 }
 
-func CreateDefault(log logger.BaseLogger) BaseClient {
-	return &DefaultClient{client: &http.Client{}, log: log}
+func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
+	return &DefaultClient{client: &http.Client{}, log: log, hash: hash}
 }
 
-func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
+func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, hashKey string) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
-		return fmt.Errorf("postJSON request: %w", err)
+		return fmt.Errorf("defclient postJSON request: %w", err)
+	}
+
+	var hashValue string
+	if hashKey != "" {
+		hashValue, err = c.hash.HashMsg(body, hashKey)
+		if err != nil {
+			return fmt.Errorf("defclient postJSON request: hasher calculation: %w", err)
+		}
 	}
 
 	request := func(context context.Context) error {
-		return c.makeRequest(context, http.MethodPost, url, compressedBody)
+		return c.makeRequest(context, http.MethodPost, url, compressedBody, hashValue)
 	}
 
 	err = retryer.RetryCallWithTimeout(ctx, c.log, nil, nil, request)
@@ -37,7 +47,7 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) e
 	return err
 }
 
-func (c *DefaultClient) makeRequest(ctx context.Context, method string, url string, data []byte) error {
+func (c *DefaultClient) makeRequest(ctx context.Context, method string, url string, data []byte, hashValue string) error {
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(data))
 	if err != nil {
 		return err
@@ -46,6 +56,10 @@ func (c *DefaultClient) makeRequest(ctx context.Context, method string, url stri
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
+
+	if hashValue != "" {
+		req.Header.Set(c.hash.GetHeader(), hashValue)
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {

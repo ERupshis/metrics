@@ -13,6 +13,7 @@ type Config struct {
 	PollInterval   int64
 	ReportInterval int64
 	LogLevel       string
+	Key            string
 }
 
 func Default() Config {
@@ -21,6 +22,7 @@ func Default() Config {
 		PollInterval:   2,
 		ReportInterval: 10,
 		LogLevel:       "Info",
+		Key:            "123",
 	}
 }
 
@@ -38,6 +40,7 @@ const (
 	flagReportInterval = "r"
 	flagPollInterval   = "p"
 	flagLogLevel       = "l"
+	flagKey            = "k"
 )
 
 func checkFlags(config *Config) {
@@ -45,6 +48,7 @@ func checkFlags(config *Config) {
 	flag.Int64Var(&config.ReportInterval, flagReportInterval, 10, "report interval val (sec)")
 	flag.Int64Var(&config.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
+	flag.StringVar(&config.Key, flagKey, "", "auth key")
 	flag.Parse()
 }
 
@@ -54,6 +58,7 @@ type envConfig struct {
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
 	LogLevel       string `env:"LOG_LEVEL"`
+	Key            string `env:"KEY"`
 }
 
 func checkEnvironments(config *Config) {
@@ -67,4 +72,5 @@ func checkEnvironments(config *Config) {
 	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
 	confighelper.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
 	confighelper.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
+	confighelper.SetEnvToParamIfNeed(&config.Key, envs.Key)
 }

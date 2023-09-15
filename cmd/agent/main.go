@@ -7,6 +7,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
 )
@@ -17,7 +18,8 @@ func main() {
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
 
-	defClient := client.CreateDefault(log)
+	hash := hasher.CreateHasher(hasher.SHA256, log)
+	defClient := client.CreateDefault(log, hash)
 
 	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("agent has started.")
