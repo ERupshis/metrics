@@ -89,7 +89,7 @@ func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Requ
 	defer r.Body.Close()
 
 	if !c.isRequestValid(r, buf) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to check message hash", http.StatusBadRequest)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
 	if !c.isRequestValid(r, buf) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to check message hash", http.StatusBadRequest)
 		return
 	}
 
@@ -244,7 +244,7 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !c.isRequestValid(r, buf) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to check message hash", http.StatusBadRequest)
 		return
 	}
 
@@ -308,7 +308,7 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !c.isRequestValid(r, buf) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to check message hash", http.StatusBadRequest)
 		return
 	}
 
@@ -399,7 +399,7 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !c.isRequestValid(r, buf) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to check message hash", http.StatusBadRequest)
 		return
 	}
 
