@@ -1,10 +1,12 @@
 package hasher
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
 	"hash"
+	"io"
 	"net/http"
 )
 
@@ -15,6 +17,44 @@ const (
 const (
 	AlgoSHA256 = iota
 )
+
+type ReadCloserWrapper struct {
+	io.Reader
+	io.Closer
+}
+
+func Handler(h http.Handler, hashKey string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hashHeaderValue := r.Header.Get(HeaderSHA256)
+		if hashHeaderValue != "" {
+			var buf bytes.Buffer
+			_, err := io.Copy(&buf, r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			ok, err := isRequestValid(HeaderSHA256, hashHeaderValue, hashKey, buf)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if !ok {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			rc := &ReadCloserWrapper{
+				Reader: bytes.NewReader(buf.Bytes()),
+				Closer: r.Body,
+			}
+			r.Body = rc
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
 
 func HashMsg(algo uint, msg []byte, key string) (string, error) {
 	switch algo {
@@ -43,13 +83,21 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 	return fmt.Sprintf("%x", hashVal), nil
 }
 
-func CheckRequestHash(r *http.Request, hashHeaderKey string, hashKey string, body []byte) (bool, error) {
+func isRequestValid(hashHeaderKey string, hashHeaderValue string, hashKey string, buffer bytes.Buffer) (bool, error) {
+	ok, err := CheckRequestHash(hashHeaderKey, hashHeaderValue, hashKey, buffer.Bytes())
+	if err != nil {
+		return false, fmt.Errorf("hash validation: %w", err)
+	}
+
+	return ok, nil
+}
+
+func CheckRequestHash(hashHeaderKey string, hashHeaderValue string, hashKey string, body []byte) (bool, error) {
 	if hashKey == "" {
 		return true, nil
 	}
 
-	reqHashValue := r.Header.Get(hashHeaderKey)
-	if reqHashValue == "" {
+	if hashHeaderValue == "" {
 		return true, nil
 	}
 
@@ -65,5 +113,5 @@ func CheckRequestHash(r *http.Request, hashHeaderKey string, hashKey string, bod
 		panic("unknown header key")
 	}
 
-	return reqHashValue == hashValue, nil
+	return hashHeaderValue == hashValue, nil
 }

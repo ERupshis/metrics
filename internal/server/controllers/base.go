@@ -54,6 +54,7 @@ func (c *BaseController) Route() *chi.Mux {
 
 	r.Use(c.logger.LogHandler)
 	r.Use(c.compressor.GzipHandle)
+	r.Use(c.HashCheckHandler)
 
 	r.Get("/", c.ListHandler)
 	r.Get("/ping", c.checkStorageHandler)
@@ -71,6 +72,10 @@ func (c *BaseController) Route() *chi.Mux {
 	return r
 }
 
+func (c *BaseController) HashCheckHandler(h http.Handler) http.Handler {
+	return hasher.Handler(h, c.config.Key)
+}
+
 func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
@@ -80,19 +85,6 @@ func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Reque
 }
 
 func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
-	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	if !c.isRequestValid(r, buf) {
-		http.Error(w, "failed to check message hash", http.StatusBadRequest)
-		return
-	}
-
 	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
 		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -123,11 +115,6 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
-
-	if !c.isRequestValid(r, buf) {
-		http.Error(w, "failed to check message hash", http.StatusBadRequest)
-		return
-	}
 
 	var responseBody []byte
 	switch request {
@@ -235,19 +222,6 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
-	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	if !c.isRequestValid(r, buf) {
-		http.Error(w, "failed to check message hash", http.StatusBadRequest)
-		return
-	}
-
 	if request != postRequest {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -298,19 +272,6 @@ func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request
 func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
-
-	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	if !c.isRequestValid(r, buf) {
-		http.Error(w, "failed to check message hash", http.StatusBadRequest)
-		return
-	}
 
 	if request != getRequest {
 		w.WriteHeader(http.StatusBadRequest)
@@ -390,19 +351,6 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	if !c.isRequestValid(r, buf) {
-		http.Error(w, "failed to check message hash", http.StatusBadRequest)
-		return
-	}
-
 	gaugesMap := c.storage.GetAllGauges()
 	countersMap := c.storage.GetAllCounters()
 
@@ -411,15 +359,4 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.Execute(w, tmplData{gaugesMap, countersMap}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-}
-
-// HELPERS.
-
-func (c *BaseController) isRequestValid(r *http.Request, buffer bytes.Buffer) bool {
-	ok, err := hasher.CheckRequestHash(r, hasher.HeaderSHA256, c.config.Key, buffer.Bytes())
-	if err != nil {
-		c.logger.Info("[BaseController::isRequestValid] failed to authenticate request by hash check: %v", err)
-	}
-
-	return ok
 }

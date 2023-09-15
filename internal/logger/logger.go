@@ -65,6 +65,7 @@ func (l *Logger) LogHandler(h http.Handler) http.Handler {
 			zap.Int("status", loggingWriter.getResponseData().status),
 			zap.String("content-type", loggingWriter.Header().Get("Content-Type")),
 			zap.String("content-encoding", loggingWriter.Header().Get("Content-Encoding")),
+			zap.String("HashSHA256", loggingWriter.Header().Get("Hashsha256")),
 			zap.Duration("duration", duration),
 			zap.Int("size", loggingWriter.getResponseData().size),
 		)
