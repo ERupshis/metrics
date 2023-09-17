@@ -3,8 +3,11 @@ package agentimpl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
+	"sync/atomic"
 
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
@@ -15,21 +18,28 @@ import (
 )
 
 type Agent struct {
-	stats  runtime.MemStats
+	stats      runtime.MemStats
+	statsMutex sync.RWMutex
+
+	pollCount atomic.Int64
+
+	extraStats      metricsgetter.ExtraStats
+	extraStatsMutex sync.RWMutex
+
 	client client.BaseClient
 	logger logger.BaseLogger
-
-	config    config.Config
-	pollCount int64
+	config config.Config
 }
 
 func Create(config config.Config, logger logger.BaseLogger, client client.BaseClient) *Agent {
-	return &Agent{client: client, config: config, logger: logger}
+	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
+	return &Agent{client: client, config: config, logger: logger, extraStats: extraStats}
 }
 
 func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
-	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hasher.SHA256, log)), config: config.Default(), logger: log}
+	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hasher.SHA256, log)), config: config.Default(), logger: log, extraStats: extraStats}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -42,35 +52,60 @@ func (a *Agent) GetReportInterval() int64 {
 
 func (a *Agent) UpdateStats() {
 	a.logger.Info("[Agent:UpdateStats] agent trying to update stats.")
-	runtime.ReadMemStats(&a.stats)
-	a.pollCount++
 
-	a.logger.Info("[Agent:UpdateStats] agent has completed stats posting. pollCount: %d", a.pollCount)
+	a.statsMutex.Lock()
+	runtime.ReadMemStats(&a.stats)
+	a.statsMutex.Unlock()
+
+	a.pollCount.Add(1)
+
+	a.logger.Info("[Agent:UpdateStats] agent has completed stats updating. pollCount: %d", a.pollCount.Load())
+}
+
+func (a *Agent) UpdateExtraStats() {
+	a.logger.Info("[Agent:UpdateExtraStats] agent trying to update stats.")
+	for key, funcVal := range metricsgetter.AdditionalGaugeMetricsGetter {
+		var err error
+		a.extraStatsMutex.Lock()
+		a.extraStats.Data[key], err = funcVal()
+		a.extraStatsMutex.Unlock()
+		if err != nil {
+			a.logger.Info("[Agent:UpdateExtraStats] agent failed to update extra metric '%s': %v", key, err)
+		}
+	}
+	a.logger.Info("[Agent:UpdateExtraStats] agent has completed stats posting.")
 }
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJSONStatsBatch(ctx context.Context) {
+func (a *Agent) PostJSONStatsBatch(ctx context.Context) error {
 	a.logger.Info("[Agent:PostJSONStatsBatch] agent is trying to update stats.")
 	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+		a.statsMutex.Lock()
 		metrics = append(metrics, networkmsg.CreateGaugeMetrics(name, valueGetter(&a.stats)))
+		a.statsMutex.Unlock()
+	}
+
+	for name, value := range a.extraStats.Data {
+		a.extraStatsMutex.RLock()
+		metrics = append(metrics, networkmsg.CreateGaugeMetrics(name, value))
+		a.extraStatsMutex.RUnlock()
 	}
 
 	metrics = append(metrics, networkmsg.CreateGaugeMetrics("RandomValue", rand.Float64()))
-	metrics = append(metrics, networkmsg.CreateCounterMetrics("PollCount", a.pollCount))
+	metrics = append(metrics, networkmsg.CreateCounterMetrics("PollCount", a.pollCount.Load()))
 
 	body, err := json.Marshal(&metrics)
 	if err != nil {
-		a.logger.Info("[Agent:PostJSONStatsBatch] failed to create request's JSON body.")
-		return
+		return fmt.Errorf("[Agent:PostJSONStatsBatch] failed to create request's JSON body: %w", err)
 	}
 
 	if err = a.postBatchJSON(ctx, body); err != nil {
-		a.logger.Info("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %v", err)
-		return
+		return fmt.Errorf("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %w", err)
 	}
 	a.logger.Info("[Agent:PostJSONStatsBatch] stats was sent.")
+	return nil
 }
 
 func (a *Agent) PostJSONStats(ctx context.Context) {
@@ -79,7 +114,18 @@ func (a *Agent) PostJSONStats(ctx context.Context) {
 	failedPostsCount := 0
 	var err error
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
+		a.statsMutex.RLock()
 		err = a.postJSON(ctx, a.createJSONGaugeMessage(name, valueGetter(&a.stats)))
+		a.statsMutex.RUnlock()
+		if err != nil {
+			failedPostsCount++
+		}
+	}
+
+	for name, value := range a.extraStats.Data {
+		a.extraStatsMutex.RLock()
+		err = a.postJSON(ctx, a.createJSONGaugeMessage(name, value))
+		a.extraStatsMutex.RUnlock()
 		if err != nil {
 			failedPostsCount++
 		}
@@ -90,7 +136,7 @@ func (a *Agent) PostJSONStats(ctx context.Context) {
 		failedPostsCount++
 	}
 
-	err = a.postJSON(ctx, a.createJSONCounterMessage("PollCount", a.pollCount))
+	err = a.postJSON(ctx, a.createJSONCounterMessage("PollCount", a.pollCount.Load()))
 	if err != nil {
 		failedPostsCount++
 	}
