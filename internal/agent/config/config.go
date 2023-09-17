@@ -12,7 +12,7 @@ type Config struct {
 	Host           string
 	PollInterval   int64
 	ReportInterval int64
-	LogLevel       string
+	RateLimit      int64
 	Key            string
 }
 
@@ -21,7 +21,7 @@ func Default() Config {
 		Host:           "http://localhost:8080",
 		PollInterval:   2,
 		ReportInterval: 10,
-		LogLevel:       "Info",
+		RateLimit:      1,
 		Key:            "123",
 	}
 }
@@ -39,7 +39,7 @@ const (
 	flagAddress        = "a"
 	flagReportInterval = "r"
 	flagPollInterval   = "p"
-	flagLogLevel       = "l"
+	flagRateLimit      = "l"
 	flagKey            = "k"
 )
 
@@ -47,7 +47,7 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.Host, flagAddress, "http://localhost:8080", "server endpoint")
 	flag.Int64Var(&config.ReportInterval, flagReportInterval, 10, "report interval val (sec)")
 	flag.Int64Var(&config.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
-	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
+	flag.Int64Var(&config.RateLimit, flagRateLimit, 1, "rate limit")
 	flag.StringVar(&config.Key, flagKey, "", "auth key")
 	flag.Parse()
 }
@@ -57,7 +57,7 @@ type envConfig struct {
 	Host           string `env:"ADDRESS"`
 	ReportInterval string `env:"REPORT_INTERVAL"`
 	PollInterval   string `env:"POLL_INTERVAL"`
-	LogLevel       string `env:"LOG_LEVEL"`
+	RateLimit      string `env:"RATE_LIMIT"`
 	Key            string `env:"KEY"`
 }
 
@@ -69,7 +69,7 @@ func checkEnvironments(config *Config) {
 	}
 
 	confighelper.SetEnvToParamIfNeed(&config.Host, envs.Host)
-	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
+	confighelper.SetEnvToParamIfNeed(&config.RateLimit, envs.RateLimit)
 	confighelper.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
 	confighelper.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
 	confighelper.SetEnvToParamIfNeed(&config.Key, envs.Key)

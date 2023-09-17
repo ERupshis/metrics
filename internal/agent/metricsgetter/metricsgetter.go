@@ -1,6 +1,12 @@
 package metricsgetter
 
-import "runtime"
+import (
+	"runtime"
+	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+)
 
 var GaugeMetricsGetter = map[string]func(stats *runtime.MemStats) float64{
 	"Alloc":         func(stats *runtime.MemStats) float64 { return float64(stats.Alloc) },
@@ -30,4 +36,36 @@ var GaugeMetricsGetter = map[string]func(stats *runtime.MemStats) float64{
 	"StackSys":      func(stats *runtime.MemStats) float64 { return float64(stats.StackSys) },
 	"Sys":           func(stats *runtime.MemStats) float64 { return float64(stats.Sys) },
 	"TotalAlloc":    func(stats *runtime.MemStats) float64 { return float64(stats.TotalAlloc) },
+}
+
+type ExtraStats struct {
+	Data map[string]float64
+}
+
+var AdditionalGaugeMetricsGetter = map[string]func() (float64, error){
+	"TotalMemory": func() (float64, error) {
+		vm, err := mem.VirtualMemory()
+		if err != nil {
+			return 0., err
+		}
+
+		totalMemory := vm.Total
+		return float64(totalMemory), nil
+	},
+	"FreeMemory": func() (float64, error) {
+		vm, err := mem.VirtualMemory()
+		if err != nil {
+			return 0., err
+		}
+
+		freeMemory := vm.Free
+		return float64(freeMemory), nil
+	},
+	"CPUutilization1": func() (float64, error) {
+		cpuPercentages, err := cpu.Percent(time.Second, false)
+		if err != nil {
+			return 0., err
+		}
+		return cpuPercentages[0], nil
+	},
 }

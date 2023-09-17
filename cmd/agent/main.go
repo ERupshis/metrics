@@ -15,7 +15,7 @@ import (
 func main() {
 	cfg := config.Parse()
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateLogger("info")
 	defer log.Sync()
 
 	hash := hasher.CreateHasher(hasher.SHA256, log)
@@ -32,6 +32,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
+	go ticker.Run(pollTicker, ctx, func() { agent.UpdateExtraStats() })
 	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStatsBatch(ctx) })
 
 	waitCh := make(chan struct{})
