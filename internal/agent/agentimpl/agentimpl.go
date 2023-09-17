@@ -3,6 +3,7 @@ package agentimpl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -77,7 +78,7 @@ func (a *Agent) UpdateExtraStats() {
 
 //JSON POST REQUESTS.
 
-func (a *Agent) PostJSONStatsBatch(ctx context.Context) {
+func (a *Agent) PostJSONStatsBatch(ctx context.Context) error {
 	a.logger.Info("[Agent:PostJSONStatsBatch] agent is trying to update stats.")
 	metrics := make([]networkmsg.Metric, 0)
 	for name, valueGetter := range metricsgetter.GaugeMetricsGetter {
@@ -97,15 +98,14 @@ func (a *Agent) PostJSONStatsBatch(ctx context.Context) {
 
 	body, err := json.Marshal(&metrics)
 	if err != nil {
-		a.logger.Info("[Agent:PostJSONStatsBatch] failed to create request's JSON body.")
-		return
+		return fmt.Errorf("[Agent:PostJSONStatsBatch] failed to create request's JSON body: %w", err)
 	}
 
 	if err = a.postBatchJSON(ctx, body); err != nil {
-		a.logger.Info("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %v", err)
-		return
+		return fmt.Errorf("[Agent:PostJSONStatsBatch] postBatchJSON couldn't complete sending with error: %w", err)
 	}
 	a.logger.Info("[Agent:PostJSONStatsBatch] stats was sent.")
+	return nil
 }
 
 func (a *Agent) PostJSONStats(ctx context.Context) {

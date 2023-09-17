@@ -7,6 +7,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/agent/workers"
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
@@ -31,10 +32,18 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	workersPool := workers.CreateWorkersPool(cfg.RateLimit, log)
+	defer workersPool.CloseJobsChan()
+	defer workersPool.CloseResultsChan()
+
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateExtraStats() })
-	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStatsBatch(ctx) })
+	go ticker.Run(repeatTicker, ctx, func() { go workersPool.AddJob(func() error { return agent.PostJSONStatsBatch(ctx) }) })
 
-	waitCh := make(chan struct{})
-	<-waitCh
+	for res := range workersPool.GetResultChan() {
+		if res != nil {
+			log.Info("[WorkersPool] failed work: %v", res)
+		}
+	}
 }
