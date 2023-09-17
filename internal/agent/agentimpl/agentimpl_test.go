@@ -62,9 +62,9 @@ func TestAgent_UpdateStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := CreateDefault()
 			agent.UpdateStats()
-			pollCountOld := agent.pollCount
+			pollCountOld := agent.pollCount.Load()
 			agent.UpdateStats()
-			assert.NotEqual(t, pollCountOld, agent.pollCount)
+			assert.NotEqual(t, pollCountOld, agent.pollCount.Load())
 		})
 	}
 }
