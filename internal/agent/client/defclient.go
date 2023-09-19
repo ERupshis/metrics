@@ -22,15 +22,15 @@ func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
 	return &DefaultClient{client: &http.Client{}, log: log, hash: hash}
 }
 
-func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte, hashKey string) error {
+func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
 		return fmt.Errorf("defclient postJSON request: %w", err)
 	}
 
 	var hashValue string
-	if hashKey != "" {
-		hashValue, err = c.hash.HashMsg(body, hashKey)
+	if c.hash.GetKey() != "" {
+		hashValue, err = c.hash.HashMsg(compressedBody)
 		if err != nil {
 			return fmt.Errorf("defclient postJSON request: hasher calculation: %w", err)
 		}

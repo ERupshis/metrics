@@ -19,7 +19,7 @@ func main() {
 	log := logger.CreateLogger("info")
 	defer log.Sync()
 
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 	defClient := client.CreateDefault(log, hash)
 
 	agent := agentimpl.Create(cfg, log, defClient)

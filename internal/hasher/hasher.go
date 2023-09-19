@@ -32,13 +32,14 @@ type readCloserWrapper struct {
 type Hasher struct {
 	log      logger.BaseLogger
 	hashType int
+	key      string
 }
 
-func CreateHasher(hashType int, log logger.BaseLogger) *Hasher {
-	return &Hasher{hashType: hashType, log: log}
+func CreateHasher(hashKey string, hashType int, log logger.BaseLogger) *Hasher {
+	return &Hasher{key: hashKey, hashType: hashType, log: log}
 }
 
-func (hr *Hasher) Handler(h http.Handler, hashKey string) http.Handler {
+func (hr *Hasher) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hashHeaderValue := r.Header.Get(hr.GetHeader())
 		if hashHeaderValue != "" {
@@ -49,7 +50,7 @@ func (hr *Hasher) Handler(h http.Handler, hashKey string) http.Handler {
 				return
 			}
 
-			ok, err := hr.isRequestValid(hashHeaderValue, hashKey, buf)
+			ok, err := hr.isRequestValid(hashHeaderValue, buf)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -71,12 +72,12 @@ func (hr *Hasher) Handler(h http.Handler, hashKey string) http.Handler {
 	})
 }
 
-func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey string, responseBody []byte) {
-	if hashKey == "" {
+func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, responseBody []byte) {
+	if hr.key == "" {
 		return
 	}
 
-	hashValue, err := hr.HashMsg(responseBody, hashKey)
+	hashValue, err := hr.HashMsg(responseBody)
 	if err != nil {
 		hr.log.Info("[Hasher::WriteHashHeaderInResponseIfNeed] failed to add hasher in response: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -86,10 +87,10 @@ func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, hashKey
 	w.Header().Add(hr.GetHeader(), hashValue)
 }
 
-func (hr *Hasher) HashMsg(msg []byte, key string) (string, error) {
+func (hr *Hasher) HashMsg(msg []byte) (string, error) {
 	switch hr.getAlgo() {
 	case algoSHA256:
-		return hashMsg(sha256.New, msg, key)
+		return hashMsg(sha256.New, msg, hr.key)
 	default:
 		panic("unknown algorithm")
 	}
@@ -113,8 +114,8 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 	return fmt.Sprintf("%x", hashVal), nil
 }
 
-func (hr *Hasher) isRequestValid(hashHeaderValue string, hashKey string, buffer bytes.Buffer) (bool, error) {
-	ok, err := hr.checkRequestHash(hashHeaderValue, hashKey, buffer.Bytes())
+func (hr *Hasher) isRequestValid(hashHeaderValue string, buffer bytes.Buffer) (bool, error) {
+	ok, err := hr.checkRequestHash(hashHeaderValue, buffer.Bytes())
 	if err != nil {
 		return false, fmt.Errorf("hasher validation: %w", err)
 	}
@@ -122,8 +123,8 @@ func (hr *Hasher) isRequestValid(hashHeaderValue string, hashKey string, buffer 
 	return ok, nil
 }
 
-func (hr *Hasher) checkRequestHash(hashHeaderValue string, hashKey string, body []byte) (bool, error) {
-	if hashKey == "" {
+func (hr *Hasher) checkRequestHash(hashHeaderValue string, body []byte) (bool, error) {
+	if hr.key == "" {
 		return true, nil
 	}
 
@@ -131,7 +132,7 @@ func (hr *Hasher) checkRequestHash(hashHeaderValue string, hashKey string, body 
 		return true, nil
 	}
 
-	hashValue, err := hr.HashMsg(body, hashKey)
+	hashValue, err := hr.HashMsg(body)
 	if err != nil {
 		return false, fmt.Errorf("check request hasher with SHA256: %w", err)
 	}
@@ -155,4 +156,8 @@ func (hr *Hasher) getAlgo() int {
 	default:
 		return algoSHA256
 	}
+}
+
+func (hr *Hasher) GetKey() string {
+	return hr.key
 }

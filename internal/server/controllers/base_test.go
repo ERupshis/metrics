@@ -40,6 +40,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -49,7 +50,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	//defer log.Sync()
 
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -161,6 +162,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -169,7 +171,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -335,6 +337,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -343,7 +346,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -373,6 +376,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -381,7 +385,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -401,6 +405,7 @@ func TestMissingNameBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -409,7 +414,7 @@ func TestMissingNameBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -462,6 +467,7 @@ func TestCounterBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -470,7 +476,7 @@ func TestCounterBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()
@@ -539,6 +545,7 @@ func TestGaugeBaseController(t *testing.T) {
 	cfg := config.Config{
 		Host:     "localhost:8080",
 		LogLevel: "Info",
+		Key:      "",
 	}
 
 	log, err := logger.CreateZapLogger(cfg.LogLevel)
@@ -547,7 +554,7 @@ func TestGaugeBaseController(t *testing.T) {
 	}
 	//defer log.Sync()
 	storage := memstorage.Create(nil)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
 	defer ts.Close()

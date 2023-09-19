@@ -38,8 +38,9 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 
 func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
+	hashKey := ""
 	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
-	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hasher.SHA256, log)), config: config.Default(), logger: log, extraStats: extraStats}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log)), config: config.Default(), logger: log, extraStats: extraStats}
 }
 
 func (a *Agent) GetPollInterval() int64 {
@@ -145,11 +146,11 @@ func (a *Agent) PostJSONStats(ctx context.Context) {
 }
 
 func (a *Agent) postBatchJSON(ctx context.Context, body []byte) error {
-	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body, a.config.Key)
+	return a.client.PostJSON(ctx, a.config.Host+"/updates/", body)
 }
 
 func (a *Agent) postJSON(ctx context.Context, body []byte) error {
-	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body, a.config.Key)
+	err := a.client.PostJSON(ctx, a.config.Host+"/update/", body)
 	if err != nil {
 		a.logger.Info("[Agent:postBatchJSON] finished with error: %v", err)
 	}

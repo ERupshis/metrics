@@ -29,7 +29,7 @@ func main() {
 		defer storageManager.Close()
 	}
 	storage := memstorage.Create(storageManager)
-	hash := hasher.CreateHasher(hasher.SHA256, log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash)
 
 	router := chi.NewRouter()

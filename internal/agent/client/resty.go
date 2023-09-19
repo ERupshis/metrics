@@ -20,19 +20,20 @@ func CreateResty(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
 	return &RestyClient{resty.New(), log, hash}
 }
 
-func (c *RestyClient) PostJSON(context context.Context, url string, body []byte, hashKey string) error {
+func (c *RestyClient) PostJSON(context context.Context, url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
 		return fmt.Errorf("resty postJSON request: %w", err)
 	}
 
 	request := c.client.R().
+		SetContext(context).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip")
 
-	if hashKey != "" {
-		hashValue, err := c.hash.HashMsg(body, hashKey)
+	if c.hash.GetKey() != "" {
+		hashValue, err := c.hash.HashMsg(body)
 		if err != nil {
 			return fmt.Errorf("resty postJSON request: hasher calculation: %w", err)
 		}

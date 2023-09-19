@@ -45,8 +45,9 @@ func TestHasher_HashMsg(t *testing.T) {
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
+				key:      tt.args.key,
 			}
-			got, err := hr.HashMsg(tt.args.msg, tt.args.key)
+			got, err := hr.HashMsg(tt.args.msg)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HashMsg() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -137,8 +138,9 @@ func TestHasher_checkRequestHash(t *testing.T) {
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
+				key:      tt.args.hashKey,
 			}
-			got, err := hr.checkRequestHash(tt.args.hashHeaderValue, tt.args.hashKey, tt.args.body)
+			got, err := hr.checkRequestHash(tt.args.hashHeaderValue, tt.args.body)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkRequestHash() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -229,11 +231,12 @@ func TestHasher_isRequestValid(t *testing.T) {
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
+				key:      tt.args.hashKey,
 			}
 			buf := bytes.Buffer{}
 			buf.Write(tt.args.buffer)
 
-			got, err := hr.isRequestValid(tt.args.hashHeaderValue, tt.args.hashKey, buf)
+			got, err := hr.isRequestValid(tt.args.hashHeaderValue, buf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isRequestValid() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -300,8 +303,9 @@ func TestHasher_WriteHashHeaderInResponseIfNeed(t *testing.T) {
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
+				key:      tt.args.hashKey,
 			}
-			hr.WriteHashHeaderInResponseIfNeed(tt.args.w, tt.args.hashKey, tt.args.responseBody)
+			hr.WriteHashHeaderInResponseIfNeed(tt.args.w, tt.args.responseBody)
 			assert.Equal(t, tt.args.w.Header().Get(hr.GetHeader()), tt.want.headerValue)
 		})
 	}
@@ -392,6 +396,7 @@ func TestHasher_Handler(t *testing.T) {
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
+				key:      tt.args.hashKey,
 			}
 
 			req := httptest.NewRequest("GET", "/", nil)
@@ -411,7 +416,7 @@ func TestHasher_Handler(t *testing.T) {
 			handler := hr.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("correct"))
-			}), tt.args.hashKey)
+			}))
 
 			handler.ServeHTTP(rr, req)
 

@@ -56,8 +56,8 @@ func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(c.logger.LogHandler)
-	r.Use(c.compressor.GzipHandle)
 	r.Use(c.HashCheckHandler)
+	r.Use(c.compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
 	r.Get("/ping", c.checkStorageHandler)
@@ -77,7 +77,7 @@ func (c *BaseController) Route() *chi.Mux {
 }
 
 func (c *BaseController) HashCheckHandler(h http.Handler) http.Handler {
-	return c.hash.Handler(h, c.config.Key)
+	return c.hash.Handler(h)
 }
 
 func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
@@ -89,7 +89,7 @@ func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Reque
 }
 
 func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
-	c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
 		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
@@ -153,7 +153,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, responseBody)
+	c.hash.WriteHashHeaderInResponseIfNeed(w, responseBody)
 	_, _ = w.Write(responseBody)
 }
 
@@ -238,7 +238,7 @@ func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Reque
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	c.logger.Info("[BaseController::postCounterHandler] handle url post request for: '%s'(%s) value", name, value)
-	c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
 		c.storage.AddCounter(name, val)
@@ -255,7 +255,7 @@ func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
 	c.logger.Info("[BaseController::postGaugeHandler] handle url post request for: '%s'(%s) value", name, value)
-	c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
 		c.storage.AddGauge(name, val)
@@ -296,13 +296,13 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := fmt.Sprintf("%d", value)
-		c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte(responseBody))
+		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
 		if _, err := io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
 		c.logger.Info("[BaseController::getGaugeHandler] counter metric not found error: %v", err)
-		c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
@@ -314,13 +314,13 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := strconv.FormatFloat(value, 'f', -1, 64)
-		c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte(responseBody))
+		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
 		if _, err := io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
 		c.logger.Info("[BaseController::getGaugeHandler] gauge metric not found error: %v", err)
-		c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, []byte{})
+		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
@@ -350,7 +350,7 @@ type tmplData struct {
 	Counters map[string]interface{}
 }
 
-func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
+func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
 		c.logger.Info("[BaseController:ListHandler] error parsing gauge template: %v", err)
@@ -374,7 +374,7 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, r *http.Request) {
 		c.logger.Info("[BaseController:ListHandler] flush writer failed: %v", err)
 	}
 
-	c.hash.WriteHashHeaderInResponseIfNeed(w, c.config.Key, buf.Bytes())
+	c.hash.WriteHashHeaderInResponseIfNeed(w, buf.Bytes())
 	_, err = w.Write(buf.Bytes())
 	if err != nil {
 		c.logger.Info("[BaseController:ListHandler] failed to write body: %v", err)
