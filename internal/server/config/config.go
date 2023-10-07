@@ -15,6 +15,7 @@ type Config struct {
 	StoreInterval int64
 	StoragePath   string
 	DataBaseDSN   string
+	Key           string
 }
 
 func Parse() Config {
@@ -32,6 +33,7 @@ const (
 	flagStoragePath   = "f"
 	flagStoreInterval = "i"
 	flagDataBaseDSN   = "d"
+	flagKey           = "k"
 )
 
 func checkFlags(config *Config) {
@@ -45,6 +47,7 @@ func checkFlags(config *Config) {
 
 	//databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable"
 	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, "", "database DSN")
+	flag.StringVar(&config.Key, flagKey, "", "Auth key")
 	flag.Parse()
 }
 
@@ -56,6 +59,7 @@ type envConfig struct {
 	StoragePath   string `env:"FILE_STORAGE_PATH"`
 	StoreInterval string `env:"STORE_INTERVAL"`
 	DataBaseDSN   string `env:"DATABASE_DSN"`
+	Key           string `env:"KEY"`
 }
 
 func checkEnvironments(config *Config) {
@@ -70,6 +74,7 @@ func checkEnvironments(config *Config) {
 	confighelper.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
 	confighelper.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
 	confighelper.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
+	confighelper.SetEnvToParamIfNeed(&config.Key, envs.Key)
 
 	config.Restore = envs.Restore || config.Restore
 }

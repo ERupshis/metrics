@@ -7,6 +7,8 @@ import (
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/agent/workers"
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
 )
@@ -14,10 +16,11 @@ import (
 func main() {
 	cfg := config.Parse()
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateLogger("info")
 	defer log.Sync()
 
-	defClient := client.CreateDefault(log)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
+	defClient := client.CreateDefault(log, hash)
 
 	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("agent has started.")
@@ -29,9 +32,18 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
-	go ticker.Run(repeatTicker, ctx, func() { agent.PostJSONStatsBatch(ctx) })
 
-	waitCh := make(chan struct{})
-	<-waitCh
+	workersPool := workers.CreateWorkersPool(cfg.RateLimit, log)
+	defer workersPool.CloseJobsChan()
+	defer workersPool.CloseResultsChan()
+
+	go ticker.Run(pollTicker, ctx, func() { agent.UpdateStats() })
+	go ticker.Run(pollTicker, ctx, func() { agent.UpdateExtraStats() })
+	go ticker.Run(repeatTicker, ctx, func() { go workersPool.AddJob(func() error { return agent.PostJSONStatsBatch(ctx) }) })
+
+	for res := range workersPool.GetResultChan() {
+		if res != nil {
+			log.Info("[WorkersPool] failed work: %v", res)
+		}
+	}
 }

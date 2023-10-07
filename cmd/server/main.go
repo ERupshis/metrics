@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
@@ -28,7 +29,8 @@ func main() {
 		defer storageManager.Close()
 	}
 	storage := memstorage.Create(storageManager)
-	baseController := controllers.CreateBase(ctx, cfg, log, storage)
+	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
+	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
