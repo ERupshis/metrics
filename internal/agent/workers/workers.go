@@ -1,6 +1,8 @@
 package workers
 
 import (
+	"fmt"
+
 	"github.com/erupshis/metrics/internal/logger"
 )
 
@@ -13,10 +15,13 @@ type Pool struct {
 	log logger.BaseLogger
 }
 
-func CreateWorkersPool(count int64, log logger.BaseLogger) *Pool {
+func CreateWorkersPool(count int64, log logger.BaseLogger) (*Pool, error) {
+	if count == 0 {
+		return nil, fmt.Errorf("[CreateWorkersPool] no workers")
+	}
 	pool := &Pool{jobs: make(chan func() error, count), results: make(chan error, count), log: log}
 	pool.createWorkers(count)
-	return pool
+	return pool, nil
 }
 
 func (p *Pool) AddJob(job Job) {
