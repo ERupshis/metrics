@@ -28,8 +28,8 @@ func main() {
 	if err := pprof.StartCPUProfile(fcpu); err != nil {
 		panic(err)
 	}
-	defer pprof.StopCPUProfile()
-	*/
+	defer pprof.StopCPUProfile()*/
+
 	cfg := config.Parse()
 
 	log := logger.CreateLogger(cfg.LogLevel)
