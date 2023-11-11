@@ -84,8 +84,8 @@ func isMetricValid(m Metric) (bool, error) {
 		errMsg += "missing type "
 	}
 
-	if (m.Delta != nil) == (m.Value != nil) {
-		errMsg += " both values exists or missing "
+	if (m.Delta != nil) && (m.Value != nil) {
+		errMsg += " both values exists"
 	}
 
 	if len(errMsg) != 0 {

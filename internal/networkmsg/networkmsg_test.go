@@ -146,7 +146,7 @@ func TestParsePostValueMessage(t *testing.T) {
 				ID:    "gauge_metric",
 				MType: "gauge",
 			},
-			wantErr: assert.Error,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "without type",
@@ -244,8 +244,8 @@ func Test_isMetricValid(t *testing.T) {
 					MType: "counter",
 				},
 			},
-			want:    false,
-			wantErr: assert.Error,
+			want:    true,
+			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
