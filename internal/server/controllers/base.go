@@ -120,7 +120,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
+	//c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
 	var responseBody []byte
 	switch request {

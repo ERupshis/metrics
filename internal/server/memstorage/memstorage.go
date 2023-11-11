@@ -97,7 +97,7 @@ func (m *MemStorage) GetAllGauges() map[string]interface{} {
 func copyMap[V any](m map[string]V) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range m {
-		result[k] = v
+		result[k] = &v
 	}
 	return result
 }

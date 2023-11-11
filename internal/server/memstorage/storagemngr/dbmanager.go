@@ -290,13 +290,13 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 	tableName := getMetricsTableName(value)
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, value.(float64), name)
+			_, err = stmt.ExecContext(context, *value.(*float64), name)
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, value.(int64), name)
+			_, err = stmt.ExecContext(context, *value.(*int64), name)
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
@@ -310,9 +310,9 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 
 func getMetricsTableName(value interface{}) string {
 	switch value.(type) {
-	case int64:
+	case *int64:
 		return countersTable
-	case float64:
+	case *float64:
 		return gaugesTable
 	default:
 		panic("unknown value type")
