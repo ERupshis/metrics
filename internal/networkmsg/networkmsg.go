@@ -45,17 +45,52 @@ func CreatePostUpdateMessage(data Metric) []byte {
 func ParsePostValueMessage(message []byte) (Metric, error) {
 	var out Metric
 	if err := easyjson.Unmarshal(message, &out); err != nil {
-		return Metric{}, fmt.Errorf("parse metric: %w", err)
+		return out, fmt.Errorf("parse metric: %w", err)
 	}
 
-	return out, nil
+	_, err := isMetricValid(out)
+	return out, err
 }
 
+// TODO: need add bench.
 func ParsePostBatchValueMessage(message []byte) ([]Metric, error) {
 	var out []Metric
 	if err := json.Unmarshal(message, &out); err != nil {
 		return []Metric{}, fmt.Errorf("parse metrics batch: %w", err)
 	}
 
+	err := fmt.Errorf("found invalid metrics in message: ")
+	for i, metric := range out {
+		if _, errMetric := isMetricValid(metric); errMetric != nil {
+			err = fmt.Errorf("%w %d: %w |", err, i, errMetric)
+		}
+	}
+
+	if err.Error() != "found invalid metrics in message: " {
+		return out, err
+	}
+
 	return out, nil
+}
+
+// TODO: need add bench.
+func isMetricValid(m Metric) (bool, error) {
+	errMsg := ""
+	if m.ID == "" {
+		errMsg += "missing name "
+	}
+
+	if m.MType == "" {
+		errMsg += "missing type "
+	}
+
+	if (m.Delta != nil) == (m.Value != nil) {
+		errMsg += " both values exists or missing "
+	}
+
+	if len(errMsg) != 0 {
+		return false, fmt.Errorf("%s", errMsg)
+	}
+
+	return true, nil
 }

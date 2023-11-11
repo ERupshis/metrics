@@ -1,77 +1,284 @@
 package networkmsg
 
 import (
-	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMetricSerialization(t *testing.T) {
-	counterMetric := CreateCounterMetrics("counter_metric", 42)
-	gaugeMetric := CreateGaugeMetrics("gauge_metric", 3.14)
+func TestParsePostBatchValueMessage(t *testing.T) {
+	delta := int64(42)
+	value := 1.42
 
-	// Test CreateCounterMetrics serialization
-	counterJSON, err := json.Marshal(counterMetric)
-	if err != nil {
-		t.Errorf("Error marshalling counter metric: %v", err)
+	type args struct {
+		message []byte
 	}
-
-	// Test CreateGaugeMetrics serialization
-	gaugeJSON, err := json.Marshal(gaugeMetric)
-	if err != nil {
-		t.Errorf("Error marshalling gauge metric: %v", err)
+	tests := []struct {
+		name    string
+		args    args
+		want    []Metric
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "valid",
+			args: args{
+				message: []byte(`[{"id":"counter_metric","type":"counter","delta":42}, {"id":"gauge_metric","type":"gauge","value":1.42}]`),
+			},
+			want: []Metric{
+				CreateCounterMetrics("counter_metric", 42),
+				CreateGaugeMetrics("gauge_metric", 1.42),
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "empty message",
+			args: args{
+				message: []byte(``),
+			},
+			want:    []Metric{},
+			wantErr: assert.Error,
+		},
+		{
+			name: "incorrect message",
+			args: args{
+				message: []byte(`{"id":"counter_metric","]`),
+			},
+			want:    []Metric{},
+			wantErr: assert.Error,
+		},
+		{
+			name: "error during validation",
+			args: args{
+				message: []byte(`[{"id":"counter_metric","type":"counter","delta":42}, {"id":"gauge_metric","type":"gauge","delta":42,"value":1.42}]`),
+			},
+			want: []Metric{
+				CreateCounterMetrics("counter_metric", 42),
+				{
+					ID:    "gauge_metric",
+					MType: "gauge",
+					Value: &value,
+					Delta: &delta,
+				},
+			},
+			wantErr: assert.Error,
+		},
 	}
-
-	// Test CreatePostUpdateMessage
-	counterPostMessage := CreatePostUpdateMessage(counterMetric)
-	assert.Equal(t, counterJSON, counterPostMessage)
-
-	gaugePostMessage := CreatePostUpdateMessage(gaugeMetric)
-	assert.Equal(t, gaugeJSON, gaugePostMessage)
-
-	// Test ParsePostValueMessage
-	parsedCounterMetric, err := ParsePostValueMessage(counterPostMessage)
-	if err != nil {
-		t.Errorf("Error parsing counter post message: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParsePostBatchValueMessage(tt.args.message)
+			if !tt.wantErr(t, err, fmt.Sprintf("ParsePostBatchValueMessage(%v)", tt.args.message)) {
+				return
+			}
+			assert.Equalf(t, tt.want, got, "ParsePostBatchValueMessage(%v)", tt.args.message)
+		})
 	}
-
-	parsedGaugeMetric, err := ParsePostValueMessage(gaugePostMessage)
-	if err != nil {
-		t.Errorf("Error parsing gauge post message: %v", err)
-	}
-
-	// Compare original and parsed metrics
-	if !isMetricsEqual(&counterMetric, &parsedCounterMetric) {
-		t.Errorf("Original and parsed counter metrics do not match")
-	}
-
-	if !isMetricsEqual(&gaugeMetric, &parsedGaugeMetric) {
-		t.Errorf("Original and parsed gauge metrics do not match")
-	}
-
 }
 
-func isMetricsEqual(m1 *Metric, m2 *Metric) bool {
-	if m1.ID != m1.ID {
-		return false
-	}
+func TestParsePostValueMessage(t *testing.T) {
+	delta := int64(42)
+	value := 1.42
 
-	if m1.MType != m1.MType {
-		return false
+	type args struct {
+		message []byte
+		delta   int64
 	}
-
-	if m1.Value != nil && m2.Value == nil ||
-		m1.Value == nil && m2.Value != nil ||
-		m1.Value != nil && m2.Value != nil && *m1.Value != *m2.Value {
-		return false
+	tests := []struct {
+		name    string
+		args    args
+		want    Metric
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "valid",
+			args: args{
+				message: []byte(`{"id":"counter_metric","type":"counter","delta":42}`),
+			},
+			want: Metric{
+				ID:    "counter_metric",
+				MType: "counter",
+				Delta: &delta,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "valid",
+			args: args{
+				message: []byte(`{"id":"gauge_metric","type":"gauge","value":1.42}`),
+			},
+			want: Metric{
+				ID:    "gauge_metric",
+				MType: "gauge",
+				Value: &value,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "incorrect json",
+			args: args{
+				message: []byte(`{"id":"counter_metr}`),
+			},
+			want: Metric{
+				ID:    "",
+				MType: "",
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "two values at hte same time",
+			args: args{
+				message: []byte(`{"id":"gauge_metric","type":"gauge","delta":42,"value":1.42}`),
+			},
+			want: Metric{
+				ID:    "gauge_metric",
+				MType: "gauge",
+				Value: &value,
+				Delta: &delta,
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "without values",
+			args: args{
+				message: []byte(`{"id":"gauge_metric","type":"gauge"}`),
+			},
+			want: Metric{
+				ID:    "gauge_metric",
+				MType: "gauge",
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "without type",
+			args: args{
+				message: []byte(`{"id":"gauge_metric"}`),
+			},
+			want: Metric{
+				ID: "gauge_metric",
+			},
+			wantErr: assert.Error,
+		},
 	}
-
-	if m1.Delta != nil && m2.Delta == nil ||
-		m1.Delta == nil && m2.Delta != nil ||
-		m1.Delta != nil && m2.Delta != nil && *m1.Delta != *m2.Delta {
-		return false
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParsePostValueMessage(tt.args.message)
+			if !tt.wantErr(t, err, fmt.Sprintf("ParsePostValueMessage(%v)", tt.args.message)) {
+				return
+			}
+			assert.Equalf(t, tt.want, got, "ParsePostValueMessage(%v)", tt.args.message)
+		})
 	}
+}
 
-	return true
+func Test_isMetricValid(t *testing.T) {
+	delta := int64(42)
+	value := 1.42
+
+	type args struct {
+		m Metric
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "valid counter",
+			args: args{
+				m: CreateCounterMetrics("counter_metric", 42),
+			},
+			want:    true,
+			wantErr: assert.NoError,
+		},
+		{
+			name: "valid gauge",
+			args: args{
+				m: CreateGaugeMetrics("gauge_metric", 1.42),
+			},
+			want:    true,
+			wantErr: assert.NoError,
+		},
+		{
+			name: "missing name",
+			args: args{
+				m: Metric{
+					ID:    "",
+					MType: "counter",
+					Delta: &delta,
+				},
+			},
+			want:    false,
+			wantErr: assert.Error,
+		},
+		{
+			name: "missing name",
+			args: args{
+				m: Metric{
+					ID:    "counter_metric",
+					MType: "",
+					Delta: &delta,
+				},
+			},
+			want:    false,
+			wantErr: assert.Error,
+		},
+		{
+			name: "two values",
+			args: args{
+				m: Metric{
+					ID:    "counter_metric",
+					MType: "counter",
+					Delta: &delta,
+					Value: &value,
+				},
+			},
+			want:    false,
+			wantErr: assert.Error,
+		},
+		{
+			name: "without values",
+			args: args{
+				m: Metric{
+					ID:    "counter_metric",
+					MType: "counter",
+				},
+			},
+			want:    false,
+			wantErr: assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := isMetricValid(tt.args.m)
+			if !tt.wantErr(t, err, fmt.Sprintf("isMetricValid(%v)", tt.args.m)) {
+				return
+			}
+			assert.Equalf(t, tt.want, got, "isMetricValid(%v)", tt.args.m)
+		})
+	}
+}
+
+func TestCreatePostUpdateMessage(t *testing.T) {
+	type args struct {
+		data Metric
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{
+			name: "valid",
+			args: args{
+				data: CreateCounterMetrics("counter_metric", 42),
+			},
+			want: []byte(`{"id":"counter_metric","type":"counter","delta":42}`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, CreatePostUpdateMessage(tt.args.data), "CreatePostUpdateMessage(%v)", tt.args.data)
+		})
+	}
 }
