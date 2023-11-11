@@ -2,36 +2,50 @@ package confighelper
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSetEnvToParamIfNeed(t *testing.T) {
-	var intVal int64
-	var intWant int64
-	tests := []struct {
-		name string
-		arg  string
-		want string
-	}{
-		{
-			name: "valid int64",
-			arg:  "123",
-			want: "123",
-		},
+	// Test case 1: Set int64 parameter
+	var intValue int64
+	SetEnvToParamIfNeed(&intValue, "123")
+	if intValue != 123 {
+		t.Errorf("Expected intValue to be 123, got %d", intValue)
 	}
-	for _, tt := range tests {
-		intVal = 0
-		intRes, _ := strconv.Atoi(tt.want)
-		intWant = int64(intRes)
 
-		t.Run(tt.name, func(t *testing.T) {
-			SetEnvToParamIfNeed(&intVal, tt.arg)
-			assert.Equal(t, intVal, intWant)
-		})
+	// Test case 2: Set string parameter
+	var stringValue string
+	SetEnvToParamIfNeed(&stringValue, "testString")
+	if stringValue != "testString" {
+		t.Errorf("Expected stringValue to be 'testString', got '%s'", stringValue)
 	}
+
+	// Test case 3: Empty value, should not modify parameters
+	SetEnvToParamIfNeed(&intValue, "")
+	if intValue != 123 {
+		t.Errorf("Expected intValue to remain 123, got %d", intValue)
+	}
+
+	SetEnvToParamIfNeed(&stringValue, "")
+	if stringValue != "testString" {
+		t.Errorf("Expected stringValue to remain 'testString', got '%s'", stringValue)
+	}
+
+	// Test case 4: Wrong input type, should panic with an error message
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic for wrong input type, but no panic occurred")
+		} else {
+			errMsg, ok := r.(error)
+			if !ok || errMsg.Error() != "wrong input param type" {
+				t.Errorf("Unexpected panic message: %v", r)
+			}
+		}
+	}()
+
+	SetEnvToParamIfNeed(42, "test")
 }
 
 func TestAtoi64(t *testing.T) {
