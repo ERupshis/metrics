@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCompressWriter(t *testing.T) {
@@ -164,7 +166,8 @@ func TestCompressReaderReset(t *testing.T) {
 	// Call Reset with a new fake io.ReadCloser
 	newCompressedData := compressString("new test data")
 	newFakeCloserEntity := &fakeCloser{Reader: bytes.NewReader(newCompressedData)}
-	cr.Reset(newFakeCloserEntity)
+	err = cr.Reset(newFakeCloserEntity)
+	require.NoError(t, err)
 
 	// Read data again
 	newBuf := bytes.Buffer{}
