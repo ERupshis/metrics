@@ -5,8 +5,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
-	"runtime/pprof"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/erupshis/metrics/internal/hasher"
@@ -17,10 +17,19 @@ import (
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
+	/*fcpu, err := os.Create(`profiles/cpu_optimized_logger_removed_from_SaveMetrics.pprof`)
+	if err != nil {
+		panic(err)
+	}
+	defer fcpu.Close()
+	if err := pprof.StartCPUProfile(fcpu); err != nil {
+		panic(err)
+	}
+	defer pprof.StopCPUProfile()
+	*/
 	cfg := config.Parse()
 
 	log := logger.CreateLogger(cfg.LogLevel)
@@ -44,7 +53,7 @@ func main() {
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
 	//heap profiling.
-	router.Mount("/debug", middleware.Profiler())
+	//router.Mount("/debug", middleware.Profiler())
 
 	//server launch.
 	go func() {
@@ -54,10 +63,11 @@ func main() {
 		}
 	}()
 
-	memProfile()
-	//sigCh := make(chan os.Signal, 1)
-	//signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	//<-sigCh
+	//time.Sleep(300 * time.Second)
+	//memProfile()
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
@@ -92,8 +102,7 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 	}
 }
 
-func memProfile() {
-	time.Sleep(300 * time.Second)
+/*func memProfile() {
 	// создаём файл журнала профилирования памяти
 	fmem, err := os.Create(`profiles/result.pprof`)
 	if err != nil {
@@ -104,4 +113,4 @@ func memProfile() {
 	if err := pprof.WriteHeapProfile(fmem); err != nil {
 		panic(err)
 	}
-}
+}*/

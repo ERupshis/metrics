@@ -25,6 +25,15 @@ const (
 	insertStmt = "insert"
 	updateStmt = "update"
 	existStmt  = "exist"
+
+	createDatabaseError = "create db: %w"
+	saveMetricError     = "save metric: %w"
+	saveMetricsError    = "save metrics in db: %w"
+	restoreMetricsError = "restore metrics from db: %w"
+	restoreDataError    = "restore data from db response: %w"
+
+	logSaveMetricsInStorageStart     = "[DataBaseManager:SaveMetricsInStorage] start transaction"
+	logSaveMetricsInStorageCompleted = "[DataBaseManager:SaveMetricsInStorage] transaction completed"
 )
 
 var DatabaseErrorsToRetry = []error{
@@ -45,7 +54,6 @@ type DataBaseManager struct {
 
 func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
 	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
-	createDatabaseError := "create db: %w"
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
 		return nil, fmt.Errorf(createDatabaseError, err)
@@ -90,8 +98,8 @@ func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 }
 
 func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
-	m.log.Info("[DataBaseManager:SaveMetricsInStorage] start transaction")
-	saveMetricsError := "save metrics in db: %w"
+	//m.log.Info(logSaveMetricsInStorageStart)
+
 	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf(saveMetricsError, err)
@@ -112,7 +120,7 @@ func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues
 		return fmt.Errorf(saveMetricsError, err)
 	}
 
-	m.log.Info("[DataBaseManager:SaveMetricsInStorage] transaction completed")
+	//m.log.Info(logSaveMetricsInStorageCompleted)
 	return nil
 }
 
@@ -121,7 +129,6 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 	counters := map[string]int64{}
 
 	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
-	restoreMetricsError := "restore metrics from db: %w"
 	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
@@ -147,7 +154,6 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 }
 
 func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
-	restoreDataError := "restore data from db response: %w"
 	var err error
 	var rows *sql.Rows
 	if rows != nil {
@@ -229,7 +235,6 @@ func (m *DataBaseManager) saveMetrics(ctx context.Context, tx *sql.Tx, metricTab
 }
 
 func (m *DataBaseManager) saveMetric(ctx context.Context, stmts map[string]*sql.Stmt, name string, value interface{}) error {
-	saveMetricError := "save metric: %w"
 	exists, err := m.checkMetricExists(ctx, stmts[existStmt], name, value)
 	if err != nil {
 		return fmt.Errorf(saveMetricError, err)

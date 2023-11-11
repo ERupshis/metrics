@@ -76,7 +76,7 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 }
 
 func (m *MemStorage) GetAllCounters() map[string]interface{} {
-	return copyMap(m.counterMetrics)
+	return copyMapPredefinedSizePointers(m.counterMetrics)
 }
 
 func (m *MemStorage) AddGauge(name string, value gauge) {
@@ -91,10 +91,34 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 }
 
 func (m *MemStorage) GetAllGauges() map[string]interface{} {
-	return copyMap(m.gaugeMetrics)
+	return copyMapPredefinedSizePointers(m.gaugeMetrics)
 }
 
 func copyMap[V any](m map[string]V) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
+}
+
+func copyMapPredefinedSize[V any](m map[string]V) map[string]interface{} {
+	result := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
+}
+
+func copyMapPredefinedSizePointers[V any](m map[string]V) map[string]interface{} {
+	result := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		result[k] = &v
+	}
+	return result
+}
+
+func copyMapPointers[V any](m map[string]V) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range m {
 		result[k] = &v

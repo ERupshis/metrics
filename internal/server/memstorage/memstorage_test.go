@@ -2,7 +2,10 @@ package memstorage
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr/mocks"
@@ -364,4 +367,84 @@ func TestMemStorage_RestoreData(t *testing.T) {
 			assert.Equal(t, tt.want.counterMetrics, m.counterMetrics)
 		})
 	}
+}
+
+func BenchmarkMemstorage_copyMapFloat(b *testing.B) {
+	size := 1000
+	testMap := generateRandomMapFloat(size)
+
+	b.Run("copy values", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMap(testMap)
+		}
+	})
+	b.Run("copy values predefined size", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSize(testMap)
+		}
+	})
+	b.Run("copy pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPointers(testMap)
+		}
+	})
+	b.Run("copy values predefined size pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSizePointers(testMap)
+		}
+	})
+}
+
+func generateRandomMapFloat(size int) map[string]float64 {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	randomMap := make(map[string]float64, size)
+
+	for i := 0; i < size; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := rand.Float64() * 100 // Adjust the multiplier based on your needs
+		randomMap[key] = value
+	}
+
+	return randomMap
+}
+
+func BenchmarkMemstorage_copyMapInt64(b *testing.B) {
+	size := 1000
+	testMap := generateRandomMapInt64(size)
+
+	b.Run("copy values", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMap(testMap)
+		}
+	})
+	b.Run("copy values predefined size", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSize(testMap)
+		}
+	})
+	b.Run("copy pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPointers(testMap)
+		}
+	})
+	b.Run("copy values predefined size pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSizePointers(testMap)
+		}
+	})
+}
+
+func generateRandomMapInt64(size int) map[string]int64 {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	randomMap := make(map[string]int64, size)
+
+	for i := 0; i < size; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := rand.Float64() * 100 // Adjust the multiplier based on your needs
+		randomMap[key] = int64(value)
+	}
+
+	return randomMap
 }
