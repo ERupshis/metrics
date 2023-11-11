@@ -16,18 +16,21 @@ type GzipHandler struct {
 	wrOnce sync.Once
 
 	reader *compressReader
-	rdOnce sync.Once
+	rdmux  sync.Mutex
 }
 
 func (gz *GzipHandler) setGzipCompWriter(w http.ResponseWriter) {
-	if gz.writer == nil {
+	gz.wrOnce.Do(func() {
 		gz.writer = newGzipCompressWriter(w)
-	} else {
-		gz.writer.Reset(w)
-	}
+	})
+
+	gz.writer.Reset(w)
 }
 
 func (gz *GzipHandler) setGzipCompReader(r *http.Request) error {
+	gz.rdmux.Lock()
+	defer gz.rdmux.Unlock()
+
 	if gz.reader == nil {
 		var err error
 		gz.reader, err = newGzipCompressReader(r.Body)
@@ -35,7 +38,7 @@ func (gz *GzipHandler) setGzipCompReader(r *http.Request) error {
 			return fmt.Errorf("set gzip reader: %w", err)
 		}
 	} else {
-		gz.reader.Reset(r.Body)
+		return gz.reader.Reset(r.Body)
 	}
 
 	return nil

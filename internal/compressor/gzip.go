@@ -71,15 +71,15 @@ func newGzipCompressReader(r io.ReadCloser) (*compressReader, error) {
 	}, nil
 }
 
-func (c *compressReader) Reset(r io.ReadCloser) {
+func (c *compressReader) Reset(r io.ReadCloser) error {
 	if c.zr == nil {
-		return
+		return nil
 	}
 	c.r = r
-	_ = c.zr.Reset(r)
+	return c.zr.Reset(r)
 }
 
-func (c compressReader) Read(p []byte) (n int, err error) {
+func (c *compressReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
