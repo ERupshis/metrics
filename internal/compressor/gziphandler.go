@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 var availableContentTypes = []string{"application/json", "html/text"}
 
 type GzipHandler struct {
 	writer *compressWriter
+	wrOnce sync.Once
+
 	reader *compressReader
+	rdOnce sync.Once
 }
 
 func (gz *GzipHandler) setGzipCompWriter(w http.ResponseWriter) {
