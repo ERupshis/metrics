@@ -9,8 +9,10 @@ import (
 	"sync"
 )
 
+// availableContentTypes types allowed to handle by compressor
 var availableContentTypes = []string{"application/json", "html/text"}
 
+// GzipHandler stores compressWriter & compressReader entities.
 type GzipHandler struct {
 	writer *compressWriter
 	wrOnce sync.Once
@@ -19,6 +21,8 @@ type GzipHandler struct {
 	rdmux  sync.Mutex
 }
 
+// setGzipCompWriter assigns compress writer.
+// Creates new one if it was not created before, otherwise Reset existing by new responseWriter.
 func (gz *GzipHandler) setGzipCompWriter(w http.ResponseWriter) {
 	gz.wrOnce.Do(func() {
 		gz.writer = newGzipCompressWriter(w)
@@ -27,6 +31,8 @@ func (gz *GzipHandler) setGzipCompWriter(w http.ResponseWriter) {
 	gz.writer.Reset(w)
 }
 
+// setGzipCompReader assigns compress reader.
+// Creates new one if it was not created before, otherwise Reset existing by new responseReader.
 func (gz *GzipHandler) setGzipCompReader(r *http.Request) error {
 	gz.rdmux.Lock()
 	defer gz.rdmux.Unlock()
@@ -44,6 +50,9 @@ func (gz *GzipHandler) setGzipCompReader(r *http.Request) error {
 	return nil
 }
 
+// GzipHandle middleware handler.
+// Performs compression response and decompression request if Content-Type corresponds to availableContentTypes
+// and Accept-Encoding allows to use gzip compression.
 func (gz *GzipHandler) GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
@@ -73,6 +82,7 @@ func (gz *GzipHandler) GzipHandle(next http.Handler) http.Handler {
 	})
 }
 
+// canCompress support method. Checks if Content-Typ value allows to use compressor.
 func canCompress(req *http.Request) bool {
 	for _, contType := range availableContentTypes {
 		for _, value := range req.Header.Values("Accept") {
@@ -90,6 +100,7 @@ func canCompress(req *http.Request) bool {
 	return false
 }
 
+// GzipCompress provides data's gzip compression.
 func GzipCompress(data []byte) ([]byte, error) {
 	var b bytes.Buffer
 
@@ -111,6 +122,7 @@ func GzipCompress(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// GzipDecompress provides data's gzip decompression.
 func GzipDecompress(data []byte) ([]byte, error) {
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
