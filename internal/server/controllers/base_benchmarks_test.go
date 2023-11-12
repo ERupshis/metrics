@@ -117,10 +117,10 @@ func postJSON(metrics []networkmsg.Metric) {
 		var req *http.Request
 		if metrics[i].MType == "gauge" {
 			buf := bytes.NewReader(networkmsg.CreatePostUpdateMessage(metrics[i]))
-			req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/"), buf)
+			req = httptest.NewRequest(http.MethodPost, "/update/", buf)
 		} else {
 			buf := bytes.NewReader(networkmsg.CreatePostUpdateMessage(metrics[i]))
-			req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/"), buf)
+			req = httptest.NewRequest(http.MethodPost, "/update/", buf)
 		}
 
 		w := httptest.NewRecorder()
@@ -145,7 +145,7 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 
 	var req *http.Request
 	body, _ := json.Marshal(&metrics)
-	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/updates/"), bytes.NewBuffer(body))
+	req = httptest.NewRequest(http.MethodPost, "/updates/", bytes.NewBuffer(body))
 
 	w := httptest.NewRecorder()
 
@@ -171,7 +171,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 
 	var req *http.Request
 	body, _ := json.Marshal(testSlice)
-	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/updates/"), bytes.NewBuffer(body))
+	req = httptest.NewRequest(http.MethodPost, "/updates/", bytes.NewBuffer(body))
 	w := httptest.NewRecorder()
 	baseController.Route().ServeHTTP(w, req)
 
@@ -191,8 +191,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 func getURI(controller *controllers.BaseController, metrics []networkmsg.Metric) {
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
-		var req *http.Request
-		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/value/%s/%s", metrics[i].MType, metrics[i].ID), nil)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/value/%s/%s", metrics[i].MType, metrics[i].ID), nil)
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.
@@ -205,7 +204,7 @@ func getJSON(controller *controllers.BaseController, metrics []networkmsg.Metric
 		// Customize the request based on the metric type.
 		var req *http.Request
 		body, _ := json.Marshal(metrics[i])
-		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/value"), bytes.NewBuffer(body))
+		req = httptest.NewRequest(http.MethodPost, "/value", bytes.NewBuffer(body))
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.
