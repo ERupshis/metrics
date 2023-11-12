@@ -12,7 +12,7 @@ import (
 )
 
 func TestRestyClient_PostJSON(t *testing.T) {
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 
 	type fields struct {
 		client *resty.Client

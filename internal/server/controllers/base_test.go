@@ -43,7 +43,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 
 	storage := memstorage.Create(nil)
@@ -162,7 +162,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -334,7 +334,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -370,7 +370,7 @@ func TestListHandlerBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -396,7 +396,7 @@ func TestMissingNameBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -455,7 +455,7 @@ func TestCounterBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -530,7 +530,7 @@ func TestGaugeBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log := logger.CreateLogger(cfg.LogLevel)
+	log := logger.CreateMock()
 	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)

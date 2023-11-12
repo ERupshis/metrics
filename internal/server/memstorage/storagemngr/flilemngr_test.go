@@ -24,7 +24,7 @@ func createFileManagerTest(dataPath string, logger logger.BaseLogger) *FileManag
 
 func TestFileManager_IsFileOpen(t *testing.T) {
 	cfg := config.Parse()
-	log := logger.CreateLogger("Info")
+	log := logger.CreateMock()
 
 	fm := createFileManagerTest(cfg.StoragePath, log)
 	if fm.IsFileOpen() {
@@ -63,7 +63,7 @@ func TestFileManager_OpenFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			log := logger.CreateLogger("Info")
+			log := logger.CreateMock()
 
 			fm := createFileManagerTest(testConfig.StoragePath, log)
 
@@ -75,8 +75,8 @@ func TestFileManager_OpenFile(t *testing.T) {
 }
 
 func TestFileManager_CloseFile(t *testing.T) {
-	//test close on missing file.
-	log := logger.CreateLogger("Info")
+	// test close on missing file.
+	log := logger.CreateMock()
 
 	fm := createFileManagerTest(testConfig.StoragePath, log)
 	if err := fm.CloseFile(); err != nil {
@@ -115,7 +115,7 @@ func TestFileManager_CloseFile(t *testing.T) {
 
 func TestFileManager_initWriterAndScanner(t *testing.T) {
 	var path = testFolder + "/dd"
-	log := logger.CreateLogger("Info")
+	log := logger.CreateMock()
 
 	fm := createFileManagerTest(path, log)
 	fm.OpenFile(path, false)
@@ -160,7 +160,7 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 
 func TestFileManager_WriteAndReadMetric(t *testing.T) {
 	os.RemoveAll(testFolder)
-	log := logger.CreateLogger("Info")
+	log := logger.CreateMock()
 
 	fm := createFileManagerTest(testConfig.StoragePath, log)
 
@@ -201,7 +201,7 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 		})
 	}
 
-	//check trunc
+	// check trunc
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fm.OpenFile(tt.fields.path, false)

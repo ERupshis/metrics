@@ -7,8 +7,8 @@ import (
 type logMock struct {
 }
 
-func CreateMock() (BaseLogger, error) {
-	return &logMock{}, nil
+func CreateMock() BaseLogger {
+	return &logMock{}
 }
 
 func (t *logMock) Info(_ string, _ ...interface{}) {

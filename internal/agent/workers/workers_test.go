@@ -14,7 +14,7 @@ import (
 
 func Example() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	var log logger.BaseLogger = logger.CreateLogger("info")
+	var log logger.BaseLogger = logger.CreateMock()
 
 	workersPool, err := CreateWorkersPool(3, log)
 	if err != nil {
@@ -84,7 +84,7 @@ func TestCreateWorkersPool(t *testing.T) {
 			name: "valid",
 			args: args{
 				count: 3,
-				log:   logger.CreateLogger("info"),
+				log:   logger.CreateMock(),
 				jobs: []func() error{
 					func() error {
 						return nil
@@ -109,7 +109,7 @@ func TestCreateWorkersPool(t *testing.T) {
 			name: "valid",
 			args: args{
 				count: 0,
-				log:   logger.CreateLogger("info"),
+				log:   logger.CreateMock(),
 			},
 			want: want{
 				createErr: true,

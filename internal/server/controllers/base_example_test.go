@@ -38,7 +38,7 @@ func ExampleBaseController_ListHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -69,7 +69,7 @@ func ExampleBaseController_checkStorageHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -99,7 +99,7 @@ func ExampleBaseController_jsonHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -150,7 +150,7 @@ func ExampleBaseController_missingNameHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -184,7 +184,7 @@ func ExampleBaseController_getHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -224,7 +224,7 @@ func ExampleBaseController_postHandler() {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -313,7 +313,7 @@ func postURI(metrics []networkmsg.Metric) {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log, _ := logger.CreateMock()
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -342,7 +342,7 @@ func postJSON(metrics []networkmsg.Metric) {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log, _ := logger.CreateMock()
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -373,7 +373,7 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 	cfg := createExampleConfig()
 
 	// Create a log, memstorage, and hasher.
-	log, _ := logger.CreateMock()
+	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)

@@ -29,7 +29,7 @@ func TestHasher_HashMsg(t *testing.T) {
 		{
 			name: "common case",
 			fields: fields{
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 				hashType: SHA256,
 			},
 			args: args{
@@ -79,7 +79,7 @@ func TestHasher_checkRequestHash(t *testing.T) {
 		{
 			name: "common case",
 			fields: fields{
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 				hashType: SHA256,
 			},
 			args: args{
@@ -93,7 +93,7 @@ func TestHasher_checkRequestHash(t *testing.T) {
 		{
 			name: "empty hashKey",
 			fields: fields{
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 				hashType: SHA256,
 			},
 			args: args{
@@ -107,7 +107,7 @@ func TestHasher_checkRequestHash(t *testing.T) {
 		{
 			name: "empty hashHeaderValue",
 			fields: fields{
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 				hashType: SHA256,
 			},
 			args: args{
@@ -121,7 +121,7 @@ func TestHasher_checkRequestHash(t *testing.T) {
 		{
 			name: "incorrect hashHeaderValue",
 			fields: fields{
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 				hashType: SHA256,
 			},
 			args: args{
@@ -173,7 +173,7 @@ func TestHasher_isRequestValid(t *testing.T) {
 			name: "common case",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
@@ -187,7 +187,7 @@ func TestHasher_isRequestValid(t *testing.T) {
 			name: "empty hashHeaderValue",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "",
@@ -201,7 +201,7 @@ func TestHasher_isRequestValid(t *testing.T) {
 			name: "empty hashKey",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
@@ -215,7 +215,7 @@ func TestHasher_isRequestValid(t *testing.T) {
 			name: "incorrect hash",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "wrong",
@@ -271,7 +271,7 @@ func TestHasher_WriteHashHeaderInResponseIfNeed(t *testing.T) {
 			name: "common case",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				w:            httptest.NewRecorder(),
@@ -286,7 +286,7 @@ func TestHasher_WriteHashHeaderInResponseIfNeed(t *testing.T) {
 			name: "empty key",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				w:            httptest.NewRecorder(),
@@ -334,7 +334,7 @@ func TestHasher_Handler(t *testing.T) {
 			name: "common case",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
@@ -349,7 +349,7 @@ func TestHasher_Handler(t *testing.T) {
 			name: "empty key",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
@@ -364,7 +364,7 @@ func TestHasher_Handler(t *testing.T) {
 			name: "empty hash",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "",
@@ -379,7 +379,7 @@ func TestHasher_Handler(t *testing.T) {
 			name: "invalid hash",
 			fields: fields{
 				hashType: SHA256,
-				log:      logger.CreateLogger("info"),
+				log:      logger.CreateMock(),
 			},
 			args: args{
 				hashHeaderValue: "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb2726c",

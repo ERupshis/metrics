@@ -151,7 +151,7 @@ func TestAgent_UpdateExtraStats(t *testing.T) {
 			name: "valid",
 			fields: fields{
 				extraStats: metricsgetter.ExtraStats{Data: make(map[string]float64)},
-				logger:     logger.CreateLogger("info"),
+				logger:     logger.CreateMock(),
 			},
 		},
 	}
@@ -196,7 +196,7 @@ func TestAgent_postJSON(t *testing.T) {
 		{
 			name: "valid",
 			fields: fields{
-				logger: logger.CreateLogger("info"),
+				logger: logger.CreateMock(),
 				config: config.Config{
 					Host: "/",
 				},
@@ -211,7 +211,7 @@ func TestAgent_postJSON(t *testing.T) {
 		{
 			name: "client returns err",
 			fields: fields{
-				logger: logger.CreateLogger("info"),
+				logger: logger.CreateMock(),
 				config: config.Config{
 					Host: "/",
 				},
@@ -267,7 +267,7 @@ func TestAgent_postBatchJSON(t *testing.T) {
 		{
 			name: "valid",
 			fields: fields{
-				logger: logger.CreateLogger("info"),
+				logger: logger.CreateMock(),
 				config: config.Config{
 					Host: "/",
 				},
@@ -282,7 +282,7 @@ func TestAgent_postBatchJSON(t *testing.T) {
 		{
 			name: "client returns err",
 			fields: fields{
-				logger: logger.CreateLogger("info"),
+				logger: logger.CreateMock(),
 				config: config.Config{
 					Host: "/",
 				},
