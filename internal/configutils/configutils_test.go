@@ -1,4 +1,4 @@
-package confighelper
+package configutils
 
 import (
 	"fmt"

@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/caarlos0/env"
-	"github.com/erupshis/metrics/internal/confighelper"
+	"github.com/erupshis/metrics/internal/configutils"
 )
 
 type Config struct {
@@ -41,7 +41,7 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
 	flag.BoolVar(&config.Restore, flagRestore, true, "restore values from file")
 
-	//storagePathDef := "/tmp/metrics-db.json"
+	// storagePathDef := "/tmp/metrics-db.json"
 	flag.StringVar(&config.StoragePath, flagStoragePath, "", "file storage path")
 	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 5, "store interval val (sec)")
 
@@ -69,12 +69,12 @@ func checkEnvironments(config *Config) {
 		log.Fatal(err)
 	}
 
-	confighelper.SetEnvToParamIfNeed(&config.Host, envs.Host)
-	confighelper.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
-	confighelper.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
-	confighelper.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
-	confighelper.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
-	confighelper.SetEnvToParamIfNeed(&config.Key, envs.Key)
+	configutils.SetEnvToParamIfNeed(&config.Host, envs.Host)
+	configutils.SetEnvToParamIfNeed(&config.LogLevel, envs.LogLevel)
+	configutils.SetEnvToParamIfNeed(&config.StoragePath, envs.StoragePath)
+	configutils.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
+	configutils.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
+	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 
 	config.Restore = envs.Restore || config.Restore
 }
