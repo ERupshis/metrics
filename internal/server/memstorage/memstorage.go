@@ -113,6 +113,7 @@ func copyMapPredefinedSize[V any](m map[string]V) map[string]interface{} {
 func copyMapPredefinedSizePointers[V any](m map[string]V) map[string]interface{} {
 	result := make(map[string]interface{}, len(m))
 	for k, v := range m {
+		v := v
 		result[k] = &v
 	}
 	return result

@@ -124,6 +124,9 @@ func TestMemStorage_GetGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetAllCounters(t *testing.T) {
+	int1 := int64(1)
+	int2 := int64(2)
+
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
@@ -141,7 +144,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric2": int64(1)},
+			want: map[string]interface{}{"metric2": &int1},
 		},
 		{
 			name: "valid empty",
@@ -159,7 +162,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1, "metric3": 2},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric2": int64(1), "metric3": int64(2)},
+			want: map[string]interface{}{"metric2": &int1, "metric3": &int2},
 		},
 	}
 	for _, tt := range tests {
@@ -169,12 +172,16 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
+
 			assert.Equalf(t, tt.want, m.GetAllCounters(), "GetAllCounters()")
 		})
 	}
 }
 
 func TestMemStorage_GetAllGauges(t *testing.T) {
+	float1 := 1.1
+	float2 := 2.2
+
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
@@ -192,7 +199,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric1": 1.1},
+			want: map[string]interface{}{"metric1": &float1},
 		},
 		{
 			name: "valid empty",
@@ -210,7 +217,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric1": 1.1, "metric3": 2.2},
+			want: map[string]interface{}{"metric1": &float1, "metric3": &float2},
 		},
 	}
 	for _, tt := range tests {
