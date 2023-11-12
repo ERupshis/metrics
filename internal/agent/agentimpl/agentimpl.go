@@ -1,3 +1,4 @@
+// Package agentimpl collects runtime application's metrics and sends them on server via http requests.
 package agentimpl
 
 import (
@@ -31,11 +32,13 @@ type Agent struct {
 	config config.Config
 }
 
+// Create defines agent with assigned fields from params.
 func Create(config config.Config, logger logger.BaseLogger, client client.BaseClient) *Agent {
 	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
 	return &Agent{client: client, config: config, logger: logger, extraStats: extraStats}
 }
 
+// CreateDefault agent with predefined fields. Recommended to use for debug only clauses.
 func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
 	hashKey := ""
@@ -43,14 +46,17 @@ func CreateDefault() *Agent {
 	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log)), config: config.Default(), logger: log, extraStats: extraStats}
 }
 
+// GetPollInterval returns collecting poll interval (seconds).
 func (a *Agent) GetPollInterval() int64 {
 	return a.config.PollInterval
 }
 
+// GetReportInterval returns send stats to server interval.
 func (a *Agent) GetReportInterval() int64 {
 	return a.config.ReportInterval
 }
 
+// UpdateStats reads runtime stats and increments pollCount.
 func (a *Agent) UpdateStats() {
 	a.logger.Info("[Agent:UpdateStats] agent trying to update stats.")
 
@@ -63,6 +69,7 @@ func (a *Agent) UpdateStats() {
 	a.logger.Info("[Agent:UpdateStats] agent has completed stats updating. pollCount: %d", a.pollCount.Load())
 }
 
+// UpdateExtraStats reads additional extra stats not included in runtime.
 func (a *Agent) UpdateExtraStats() {
 	a.logger.Info("[Agent:UpdateExtraStats] agent trying to update stats.")
 	for key, funcVal := range metricsgetter.AdditionalGaugeMetricsGetter {
@@ -77,8 +84,7 @@ func (a *Agent) UpdateExtraStats() {
 	a.logger.Info("[Agent:UpdateExtraStats] agent has completed stats posting.")
 }
 
-//JSON POST REQUESTS.
-
+// PostJSONStatsBatch sends all stats in one http post request.
 func (a *Agent) PostJSONStatsBatch(ctx context.Context) error {
 	a.logger.Info("[Agent:PostJSONStatsBatch] agent is trying to update stats.")
 	metrics := make([]networkmsg.Metric, 0)
@@ -109,6 +115,7 @@ func (a *Agent) PostJSONStatsBatch(ctx context.Context) error {
 	return nil
 }
 
+// PostJSONStats sends all stats in split http posts request(1 request = 1 stat).
 func (a *Agent) PostJSONStats(ctx context.Context) {
 	a.logger.Info("[Agent:PostJSONStats] agent is trying to update stats.")
 

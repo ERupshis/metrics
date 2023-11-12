@@ -1,6 +1,9 @@
 package workers
 
 import (
+	"fmt"
+	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -8,6 +11,56 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func Example() {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+	var log logger.BaseLogger = logger.CreateLogger("info")
+
+	workersPool, err := CreateWorkersPool(3, log)
+	if err != nil {
+		log.Info("failed to create workers.")
+		return
+	}
+	defer workersPool.CloseJobsChan()
+	defer workersPool.CloseResultsChan()
+
+	jobsCount := 10
+	wg := sync.WaitGroup{} // for test purpose
+	wg.Add(10)
+
+	jobClean := func() error {
+		time.Sleep(time.Duration(rand.Intn(4)) * time.Second)
+		return nil
+	}
+
+	jobWithError := func() error {
+		time.Sleep(time.Duration(rand.Intn(4)) * time.Second)
+		return fmt.Errorf("unexpected error")
+	}
+
+	jobs := []func() error{jobClean, jobWithError}
+
+	go func() {
+		for i := 0; i < jobsCount; i++ {
+			workersPool.AddJob(jobs[rand.Intn(2)])
+		}
+	}()
+
+	go func() {
+		for res := range workersPool.GetResultChan() {
+			if res != nil {
+				log.Info("[WorkersPool] failed work: %v", res)
+			}
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	fmt.Println("1") // trigger for launch via go test
+	// Output:
+	// 1
+}
 
 func TestCreateWorkersPool(t *testing.T) {
 	type args struct {
