@@ -14,7 +14,7 @@ import (
 
 func Example() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	var log logger.BaseLogger = logger.CreateMock()
+	log := logger.CreateMock()
 
 	workersPool, err := CreateWorkersPool(3, log)
 	if err != nil {
