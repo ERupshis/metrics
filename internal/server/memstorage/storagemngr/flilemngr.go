@@ -22,16 +22,19 @@ const (
 	openFileError = "open file: %w"
 )
 
+// fileWriter is responsible for writing metric data to a file.
 type fileWriter struct {
 	file   *os.File
 	writer *bufio.Writer
 }
 
+// fileScanner is responsible for scanning metric data from a file.
 type fileScanner struct {
 	file    *os.File
 	scanner *bufio.Scanner
 }
 
+// FileManager provides functionality to manage metric storage in a file.
 type FileManager struct {
 	path    string
 	logger  logger.BaseLogger
@@ -39,22 +42,23 @@ type FileManager struct {
 	scanner *fileScanner
 }
 
+// CreateFileManager creates a new instance of FileManager with the specified data path and logger.
 func CreateFileManager(dataPath string, logger logger.BaseLogger) StorageManager {
 	logger.Info("[FileManager::CreateFileManager] create with file path: '%s'", dataPath)
 	return &FileManager{path: dataPath, logger: logger}
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// INTERFACE FOR STORAGE.
-
+// Close closes the underlying file if open.
 func (fm *FileManager) Close() error {
 	return nil
 }
 
+// CheckConnection checks the file connection status and always returns true for FileManager.
 func (fm *FileManager) CheckConnection(_ context.Context) (bool, error) {
 	return true, nil
 }
 
+// SaveMetricsInStorage saves gauge and counter metric values in the file.
 func (fm *FileManager) SaveMetricsInStorage(_ context.Context, gaugeValues map[string]interface{}, counterValues map[string]interface{}) error {
 	if !fm.IsFileOpen() {
 		if err := fm.OpenFile(fm.path, true); err != nil {
@@ -79,6 +83,7 @@ func (fm *FileManager) SaveMetricsInStorage(_ context.Context, gaugeValues map[s
 	return nil
 }
 
+// RestoreDataFromStorage reads metric data from the file and restores it.
 func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
@@ -115,6 +120,7 @@ func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]flo
 	return gauges, counters, err
 }
 
+// parseMetric parses the MetricData and updates the provided gauge and counter maps accordingly.
 func (fm *FileManager) parseMetric(metric *MetricData, gauges *map[string]float64, counters *map[string]int64) {
 	switch metric.ValueType {
 	case "gauge":
@@ -136,13 +142,12 @@ func (fm *FileManager) parseMetric(metric *MetricData, gauges *map[string]float6
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// FILE HANDLING.
-
+// IsFileOpen checks if the file is open.
 func (fm *FileManager) IsFileOpen() bool {
 	return fm.writer != nil && fm.scanner != nil
 }
 
+// OpenFile opens or creates a file for writing or reading metrics.
 func (fm *FileManager) OpenFile(path string, withTrunc bool) error {
 	fm.path = path
 
@@ -161,6 +166,7 @@ func (fm *FileManager) OpenFile(path string, withTrunc bool) error {
 	return nil
 }
 
+// CloseFile closes the file if open.
 func (fm *FileManager) CloseFile() error {
 	if !fm.IsFileOpen() {
 		return nil
@@ -174,8 +180,7 @@ func (fm *FileManager) CloseFile() error {
 	return err
 }
 
-// WRITER.
-
+// initWriter initializes the file writer.
 func (fm *FileManager) initWriter(withTrunc bool) error {
 	var flag int
 	flag = os.O_WRONLY | os.O_CREATE
@@ -192,6 +197,7 @@ func (fm *FileManager) initWriter(withTrunc bool) error {
 	return nil
 }
 
+// WriteMetric writes a metric to the file.
 func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	if !fm.IsFileOpen() {
 		return fmt.Errorf("failed writing metric. file is not open")
@@ -239,16 +245,17 @@ func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	return nil
 }
 
+// write writes data to the file.
 func (fm *FileManager) write(data []byte) (int, error) {
 	return fm.writer.writer.Write(data)
 }
 
+// flushWriter flushes the writer buffer.
 func (fm *FileManager) flushWriter() error {
 	return fm.writer.writer.Flush()
 }
 
-// SCANNER.
-
+// initScanner initializes the file scanner.
 func (fm *FileManager) initScanner() error {
 	file, err := os.OpenFile(fm.path, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -259,6 +266,7 @@ func (fm *FileManager) initScanner() error {
 	return nil
 }
 
+// ScanMetric scans and returns a metric from the file.
 func (fm *FileManager) ScanMetric() (*MetricData, error) {
 	var metric MetricData
 	if !fm.IsFileOpen() {
@@ -277,6 +285,7 @@ func (fm *FileManager) ScanMetric() (*MetricData, error) {
 	return &metric, nil
 }
 
+// scan scans the file for the next line.
 func (fm *FileManager) scan() (bool, error) {
 	if !fm.scanner.scanner.Scan() {
 		if err := fm.scanner.scanner.Err(); err != nil {
@@ -289,6 +298,7 @@ func (fm *FileManager) scan() (bool, error) {
 	return true, nil
 }
 
+// scannedBytes returns the scanned bytes from the scanner.
 func (fm *FileManager) scannedBytes() []byte {
 	return fm.scanner.scanner.Bytes()
 }

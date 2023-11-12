@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr/mocks"
+	"github.com/erupshis/metrics/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

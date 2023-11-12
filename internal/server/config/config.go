@@ -1,3 +1,11 @@
+// Package config provides configuration management for the metrics server.
+// It defines a Config struct to hold various configuration parameters
+// such as server address, log level, data restoration setting, storage path,
+// store interval, database DSN, and authentication key.
+// The package includes functions for parsing configuration from command line flags
+// and environment variables, allowing flexibility in configuration.
+// Additionally, utility functions from the internal configutils package are used
+// to handle default values and set environment variables if needed.
 package config
 
 import (
@@ -8,16 +16,18 @@ import (
 	"github.com/erupshis/metrics/internal/configutils"
 )
 
+// Config represents the configuration parameters for the metrics server.
 type Config struct {
-	Host          string
-	LogLevel      string
-	Restore       bool
-	StoreInterval int64
-	StoragePath   string
-	DataBaseDSN   string
-	Key           string
+	Host          string // Host is the server endpoint (default: localhost:8080).
+	LogLevel      string // LogLevel is the log level for the metrics server (default: Info).
+	Restore       bool   // Restore enables or disables restoring values from a file (default: true).
+	StoreInterval int64  // StoreInterval is the interval at which metrics are stored (default: 5 seconds).
+	StoragePath   string // StoragePath is the file storage path for metrics data.
+	DataBaseDSN   string // DataBaseDSN is the DSN for connecting to the metrics database.
+	Key           string // Key is the authentication key for the metrics server.
 }
 
+// Parse reads and parses command line flags, updating the provided Config.
 func Parse() Config {
 	var config = Config{}
 	checkFlags(&config)
@@ -26,16 +36,19 @@ func Parse() Config {
 }
 
 // FLAGS PARSING.
+
+// Constants representing command line flags.
 const (
-	flagAddress       = "a"
-	flagLogLevel      = "l"
-	flagRestore       = "r"
-	flagStoragePath   = "f"
-	flagStoreInterval = "i"
-	flagDataBaseDSN   = "d"
-	flagKey           = "k"
+	flagAddress       = "a" // flagAddress represents the server endpoint.
+	flagLogLevel      = "l" // flagLogLevel represents the log level.
+	flagRestore       = "r" // flagRestore represents the data restoration setting.
+	flagStoragePath   = "f" // flagStoragePath represents the file storage path.
+	flagStoreInterval = "i" // flagStoreInterval represents the store interval.
+	flagDataBaseDSN   = "d" // flagDataBaseDSN represents the database DSN.
+	flagKey           = "k" // flagKey represents the hash key.
 )
 
+// checkFlags initializes and parses command line flags, updating the provided Config.
 func checkFlags(config *Config) {
 	flag.StringVar(&config.Host, flagAddress, "localhost:8080", "server endpoint")
 	flag.StringVar(&config.LogLevel, flagLogLevel, "Info", "log level")
@@ -52,16 +65,19 @@ func checkFlags(config *Config) {
 }
 
 // ENVIRONMENTS PARSING.
+
+// envConfig represents the configuration parameters read from environment variables.
 type envConfig struct {
-	Host          string `env:"ADDRESS"`
-	LogLevel      string `env:"LOG_LEVEL"`
-	Restore       bool   `env:"RESTORE"`
-	StoragePath   string `env:"FILE_STORAGE_PATH"`
-	StoreInterval string `env:"STORE_INTERVAL"`
-	DataBaseDSN   string `env:"DATABASE_DSN"`
-	Key           string `env:"KEY"`
+	Host          string `env:"ADDRESS"`           // Host is the server endpoint.
+	LogLevel      string `env:"LOG_LEVEL"`         // LogLevel is the log level.
+	Restore       bool   `env:"RESTORE"`           // Restore is the data restoration setting.
+	StoragePath   string `env:"FILE_STORAGE_PATH"` // StoragePath is the file storage path.
+	StoreInterval string `env:"STORE_INTERVAL"`    // StoreInterval is the store interval.
+	DataBaseDSN   string `env:"DATABASE_DSN"`      // DataBaseDSN is the database DSN.
+	Key           string `env:"KEY"`               // Key is the hash key.
 }
 
+// checkEnvironments reads and parses environment variables, updating the provided Config.
 func checkEnvironments(config *Config) {
 	var envs = envConfig{}
 	err := env.Parse(&envs)
