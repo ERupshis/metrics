@@ -1,3 +1,5 @@
+// Package networkmsg implements struct for REST message.
+// Provides support messages to parse incoming messages in JSON and create them.
 package networkmsg
 
 import (
@@ -7,14 +9,17 @@ import (
 	"github.com/mailru/easyjson"
 )
 
+// Metric definition of transferred data.
+//
 //go:generate easyjson -all networkmsg.go
 type Metric struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string   `json:"id"`              // name
+	MType string   `json:"type"`            // defines type of metric (gauge/counter)
+	Delta *int64   `json:"delta,omitempty"` // value for counter type
+	Value *float64 `json:"value,omitempty"` // value for gauge type
 }
 
+// CreateCounterMetrics creates counter Metric entity.
 func CreateCounterMetrics(name string, value int64) Metric {
 	return Metric{
 		ID:    name,
@@ -24,6 +29,7 @@ func CreateCounterMetrics(name string, value int64) Metric {
 	}
 }
 
+// CreateGaugeMetrics creates gauge Metric entity.
 func CreateGaugeMetrics(name string, value float64) Metric {
 	return Metric{
 		ID:    name,
@@ -33,6 +39,7 @@ func CreateGaugeMetrics(name string, value float64) Metric {
 	}
 }
 
+// CreatePostUpdateMessage converts Metric entity into JSON format.
 func CreatePostUpdateMessage(data Metric) []byte {
 	out, err := easyjson.Marshal(data)
 	if err != nil {
@@ -42,20 +49,57 @@ func CreatePostUpdateMessage(data Metric) []byte {
 	return out
 }
 
+// ParsePostValueMessage converts JSON definition into Metric entity.
 func ParsePostValueMessage(message []byte) (Metric, error) {
 	var out Metric
 	if err := easyjson.Unmarshal(message, &out); err != nil {
-		return Metric{}, fmt.Errorf("parse metric: %w", err)
+		return out, fmt.Errorf("parse metric: %w", err)
 	}
 
-	return out, nil
+	_, err := isMetricValid(out)
+	return out, err
 }
 
+// ParsePostBatchValueMessage converts JSON definition of several Metric entities into []Metric.
 func ParsePostBatchValueMessage(message []byte) ([]Metric, error) {
 	var out []Metric
 	if err := json.Unmarshal(message, &out); err != nil {
 		return []Metric{}, fmt.Errorf("parse metrics batch: %w", err)
 	}
 
+	err := fmt.Errorf("found invalid metrics in message: ")
+	for i, metric := range out {
+		if _, errMetric := isMetricValid(metric); errMetric != nil {
+			err = fmt.Errorf("%w %d: %w |", err, i, errMetric)
+		}
+	}
+
+	if err.Error() != "found invalid metrics in message: " {
+		return out, err
+	}
+
 	return out, nil
+}
+
+// isMetricValid validates that Metric data is correct.
+// Checks name and type on empty, check two delta and value fields filling at the same time.
+func isMetricValid(m Metric) (bool, error) {
+	errMsg := ""
+	if m.ID == "" {
+		errMsg += "missing name "
+	}
+
+	if m.MType == "" {
+		errMsg += "missing type "
+	}
+
+	if (m.Delta != nil) && (m.Value != nil) {
+		errMsg += " both values exists"
+	}
+
+	if len(errMsg) != 0 {
+		return false, fmt.Errorf("%s", errMsg)
+	}
+
+	return true, nil
 }

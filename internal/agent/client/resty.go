@@ -10,16 +10,22 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
+// RestyClient object.
 type RestyClient struct {
 	client *resty.Client
 	log    logger.BaseLogger
 	hash   *hasher.Hasher
 }
 
+// CreateResty creates resty http client. Receives logger and hasher in params.
 func CreateResty(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
 	return &RestyClient{resty.New(), log, hash}
 }
 
+// PostJSON sends data via http post request.
+//
+// Performs gzip compression and add hash sum for message validation if hashKey is set in hasher.
+// Uses retryer to repeat call in case of connection error.
 func (c *RestyClient) PostJSON(context context.Context, url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {

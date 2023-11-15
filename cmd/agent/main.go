@@ -33,7 +33,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	workersPool := workers.CreateWorkersPool(cfg.RateLimit, log)
+	workersPool, err := workers.CreateWorkersPool(cfg.RateLimit, log)
+	if err != nil {
+		log.Info("failed to create workers.")
+		return
+	}
 	defer workersPool.CloseJobsChan()
 	defer workersPool.CloseResultsChan()
 

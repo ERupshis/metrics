@@ -1,3 +1,8 @@
+// Package controllers provides HTTP request handling functionality for metrics management.
+// It includes a BaseController struct that serves as the foundation for handling various HTTP endpoints
+// related to metrics, such as adding, retrieving, and displaying gauge and counter values.
+// The package also contains middleware and utility functions for configuring and managing
+// logging, data compression, hashing, and storage operations.
 package controllers
 
 import (
@@ -19,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// BaseController represents the base controller for handling HTTP requests and managing metrics.
 type BaseController struct {
 	config     config.Config
 	storage    memstorage.MemStorage
@@ -27,6 +33,9 @@ type BaseController struct {
 	hash       *hasher.Hasher
 }
 
+// CreateBase initializes and returns a new instance of BaseController.
+// It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
+// If data restoration is enabled, it attempts to restore data from a file.
 func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher) *BaseController {
 	controller := &BaseController{
 		config:     config,
@@ -48,10 +57,12 @@ func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLog
 	return controller
 }
 
+// GetConfig returns a pointer to the configuration of the BaseController.
 func (c *BaseController) GetConfig() *config.Config {
 	return &c.config
 }
 
+// Route returns a new chi.Mux router configured with middleware and handlers for BaseController.
 func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
@@ -76,18 +87,22 @@ func (c *BaseController) Route() *chi.Mux {
 	return r
 }
 
+// HashCheckHandler is a middleware that adds hashing functionality to HTTP requests.
 func (c *BaseController) HashCheckHandler(h http.Handler) http.Handler {
 	return c.hash.Handler(h)
 }
 
+// badRequestHandler handles HTTP requests with a status of BadRequest (400).
 func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
+// missingNameHandler handles HTTP requests with a status of NotFound (404).
 func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
+// checkStorageHandler handles the "/ping" endpoint to check the availability of storage.
 func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
 	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
@@ -108,7 +123,7 @@ const (
 	counterType = "counter"
 )
 
-// JSON HANDLER
+// jsonHandler handles JSON requests and delegates to specific handlers based on the request type.
 func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 
@@ -120,7 +135,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
+	// c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
 	var responseBody []byte
 	switch request {
@@ -157,6 +172,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(responseBody)
 }
 
+// jsonPostBatchHandler handles batch JSON requests and adds metrics to storage.
 func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
 	for _, metric := range metrics {
 		c.addMetricFromMessage(&metric)
@@ -166,12 +182,14 @@ func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 	return []byte("{}")
 }
 
+// jsonPostHandler handles single JSON requests and adds a metric to storage.
 func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
 	c.addMetricFromMessage(data)
 	w.Header().Add("Content-Type", "application/json")
 	return networkmsg.CreatePostUpdateMessage(*data)
 }
 
+// addMetricFromMessage adds a metric to storage based on the metric type.
 func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 	if data.MType == gaugeType {
 		valueIn := new(float64)
@@ -192,6 +210,7 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 	}
 }
 
+// jsonGetHandler handles JSON GET requests and retrieves metrics from storage.
 func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
 	if data.MType == gaugeType {
 		value, err := c.storage.GetGauge(data.ID)
@@ -213,7 +232,7 @@ func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.
 	return networkmsg.CreatePostUpdateMessage(*data)
 }
 
-// postHandler POST HTTP REQUEST HANDLING.
+// postHandler handles HTTP POST requests based on the request and type.
 func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
@@ -234,6 +253,7 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
+// postCounterHandler handles HTTP POST requests for counter metrics.
 func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
@@ -251,6 +271,7 @@ func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 }
 
+// postGaugeHandler handles HTTP POST requests for gauge metrics.
 func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
@@ -268,7 +289,7 @@ func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-// getHandler GET HTTP REQUEST HANDLING.
+// getHandler handles HTTP GET requests based on the request and type.
 func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
@@ -289,6 +310,7 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
+// getCounterHandler handles HTTP GET requests for counter metrics.
 func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -307,6 +329,7 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// getGaugeHandler handles HTTP GET requests for gauge metrics.
 func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -350,6 +373,7 @@ type tmplData struct {
 	Counters map[string]interface{}
 }
 
+// ListHandler handles HTTP requests to display a list of gauges and counters in HTML format.
 func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {

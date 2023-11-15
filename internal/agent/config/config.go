@@ -1,3 +1,5 @@
+// Package config implements agent's flags and environments parsing.
+// Includes default param's for flags. Environments are more prioritized than flags.
 package config
 
 import (
@@ -5,17 +7,19 @@ import (
 	"log"
 
 	"github.com/caarlos0/env"
-	"github.com/erupshis/metrics/internal/confighelper"
+	"github.com/erupshis/metrics/internal/configutils"
 )
 
+// Config stores agent's settings
 type Config struct {
-	Host           string
-	PollInterval   int64
-	ReportInterval int64
-	RateLimit      int64
-	Key            string
+	Host           string // server's address
+	PollInterval   int64  // stats collection interval
+	ReportInterval int64  // sending stats on server interval
+	RateLimit      int64  // number of simultaneous agent's connections to server
+	Key            string // hash key for message check-su
 }
 
+// Default create default settings config. For debug use only.
 func Default() Config {
 	return Config{
 		Host:           "http://localhost:8080",
@@ -26,15 +30,16 @@ func Default() Config {
 	}
 }
 
+// Parse handling and reading settings from agent's launch flags and then environments,
+// validates Host param and adds 'http://' prefix if missing.
 func Parse() Config {
 	var config = Config{}
 	checkFlags(&config)
 	checkEnvironments(&config)
-	config.Host = confighelper.AddHTTPPrefixIfNeed(config.Host)
+	config.Host = configutils.AddHTTPPrefixIfNeed(config.Host)
 	return config
 }
 
-// FLAGS PARSING.
 const (
 	flagAddress        = "a"
 	flagReportInterval = "r"
@@ -68,9 +73,9 @@ func checkEnvironments(config *Config) {
 		log.Fatal(err)
 	}
 
-	confighelper.SetEnvToParamIfNeed(&config.Host, envs.Host)
-	confighelper.SetEnvToParamIfNeed(&config.RateLimit, envs.RateLimit)
-	confighelper.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
-	confighelper.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
-	confighelper.SetEnvToParamIfNeed(&config.Key, envs.Key)
+	configutils.SetEnvToParamIfNeed(&config.Host, envs.Host)
+	configutils.SetEnvToParamIfNeed(&config.RateLimit, envs.RateLimit)
+	configutils.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
+	configutils.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
+	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 }

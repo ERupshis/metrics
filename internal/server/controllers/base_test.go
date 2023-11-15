@@ -43,11 +43,8 @@ func TestJSONCounterBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -56,7 +53,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	defer ts.Close()
 
 	var val1 int64 = 123
-	//var val2 int64 = 456
+	// var val2 int64 = 456
 
 	counterTests := []testJSON{
 		{
@@ -165,11 +162,8 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -309,7 +303,7 @@ func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
-			//assert.Equal(t, tt.req.method, )
+			// assert.Equal(t, tt.req.method, )
 			assert.Equal(t, tt.want.body, string(respBody))
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
@@ -340,11 +334,8 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -352,7 +343,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	defer ts.Close()
 
 	badRequestTests := []test{
-		//badRequestHandler
+		// badRequestHandler
 		{
 			"post invalid path",
 			req{http.MethodPost, "/update/count/fg/dfgdfg/dfg"},
@@ -379,11 +370,8 @@ func TestListHandlerBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -391,7 +379,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	defer ts.Close()
 
 	badRequestTests := []test{
-		//badRequestHandler
+		// badRequestHandler
 		{
 			"list of params valid",
 			req{http.MethodGet, "/"},
@@ -408,11 +396,8 @@ func TestMissingNameBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -470,11 +455,8 @@ func TestCounterBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -548,11 +530,8 @@ func TestGaugeBaseController(t *testing.T) {
 		Key:      "",
 	}
 
-	log, err := logger.CreateZapLogger(cfg.LogLevel)
-	if err != nil {
-		panic(err)
-	}
-	//defer log.Sync()
+	log := logger.CreateMock()
+	// defer log.Sync()
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 

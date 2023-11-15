@@ -2,34 +2,42 @@ package logger
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-type Logger struct {
+var (
+	_ BaseLogger = (*zapLogger)(nil)
+)
+
+// zapLogger BaseLogger implementation based on Zap.
+type zapLogger struct {
 	zap *zap.Logger
 }
 
-func CreateZapLogger(level string) (*Logger, error) {
+// CreateZapLogger returns base logger
+func CreateZapLogger(level string) (BaseLogger, error) {
 	cfg, err := initConfig(level)
 	if err != nil {
 		return nil, err
 	}
 
-	log, err := cfg.Build()
+	logTmp, err := cfg.Build()
 	if err != nil {
-		return nil, fmt.Errorf("create zap logger^ %w", err)
+		return nil, fmt.Errorf("create zap logger %w", err)
 	}
 
-	return &Logger{zap: log}, nil
+	return &zapLogger{zap: logTmp}, nil
 }
 
-func (l *Logger) Info(msg string, fields ...interface{}) {
+func (l *zapLogger) Info(msg string, fields ...interface{}) {
 	l.zap.Info(fmt.Sprintf(msg, fields...))
 }
 
+// initConfig config generator.
 func initConfig(level string) (zap.Config, error) {
 	cfg := zap.NewProductionConfig()
 
@@ -44,14 +52,14 @@ func initConfig(level string) (zap.Config, error) {
 	return cfg, nil
 }
 
-func (l *Logger) Sync() {
+func (l *zapLogger) Sync() {
 	err := l.zap.Sync()
 	if err != nil {
-		panic(err)
+		log.Printf("[loggerZap:Sync] error occured: %v\n", err)
 	}
 }
 
-func (l *Logger) LogHandler(h http.Handler) http.Handler {
+func (l *zapLogger) LogHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

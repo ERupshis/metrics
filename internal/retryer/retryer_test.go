@@ -81,7 +81,7 @@ func TestRetryCallWithTimeout(t *testing.T) {
 			name: "valid",
 			args: args{
 				ctx:              context.Background(),
-				log:              logger.CreateLogger("Info"),
+				log:              logger.CreateMock(),
 				intervals:        []int{1, 1, 1},
 				repeatableErrors: nil,
 				callback: func(ctx context.Context) error {
@@ -105,7 +105,7 @@ func TestRetryCallWithTimeout(t *testing.T) {
 			name: "valid with success",
 			args: args{
 				ctx:              context.Background(),
-				log:              logger.CreateLogger("Info"),
+				log:              logger.CreateMock(),
 				intervals:        nil,
 				repeatableErrors: nil,
 				callback: func(ctx context.Context) error {
@@ -118,7 +118,7 @@ func TestRetryCallWithTimeout(t *testing.T) {
 			name: "valid should retry",
 			args: args{
 				ctx:              context.Background(),
-				log:              logger.CreateLogger("Info"),
+				log:              logger.CreateMock(),
 				intervals:        []int{1, 1, 1},
 				repeatableErrors: databaseErrorsToRetry,
 				callback: func(ctx context.Context) error {
@@ -142,7 +142,7 @@ func TestRetryCallWithTimeout(t *testing.T) {
 			name: "valid shouldn't retry",
 			args: args{
 				ctx:              context.Background(),
-				log:              logger.CreateLogger("Info"),
+				log:              logger.CreateMock(),
 				intervals:        []int{1, 1, 1},
 				repeatableErrors: databaseErrorsToRetry,
 				callback: func(ctx context.Context) error {

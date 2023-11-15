@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/erupshis/metrics/internal/hasher"
@@ -16,6 +20,16 @@ import (
 )
 
 func main() {
+	/*fcpu, err := os.Create(`profiles/cpu_optimized_logger_removed_from_SaveMetrics.pprof`)
+	if err != nil {
+		panic(err)
+	}
+	defer fcpu.Close()
+	if err := pprof.StartCPUProfile(fcpu); err != nil {
+		panic(err)
+	}
+	defer pprof.StopCPUProfile()*/
+
 	cfg := config.Parse()
 
 	log := logger.CreateLogger(cfg.LogLevel)
@@ -38,11 +52,22 @@ func main() {
 	//Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	log.Info("server started with Host setting: %s", cfg.Host)
-	if err := http.ListenAndServe(cfg.Host, router); err != nil {
-		log.Info("server refused to start with error: %v", err)
-		panic(err)
-	}
+	//heap profiling.
+	//router.Mount("/debug", middleware.Profiler())
+
+	//server launch.
+	go func() {
+		log.Info("server is launching with Host setting: %s", cfg.Host)
+		if err := http.ListenAndServe(cfg.Host, router); err != nil {
+			log.Info("server refused to start with error: %v", err)
+		}
+	}()
+
+	//time.Sleep(300 * time.Second)
+	//memProfile()
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
@@ -76,3 +101,16 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 		return nil
 	}
 }
+
+/*func memProfile() {
+	// создаём файл журнала профилирования памяти
+	fmem, err := os.Create(`profiles/result.pprof`)
+	if err != nil {
+		panic(err)
+	}
+	defer fmem.Close()
+	runtime.GC() // получаем статистику по использованию памяти
+	if err := pprof.WriteHeapProfile(fmem); err != nil {
+		panic(err)
+	}
+}*/

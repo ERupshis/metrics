@@ -1,3 +1,6 @@
+// Package metricsgetter provides functionality to get  application's runtime and extra stats.
+//
+// Consists of maps with callback functions.
 package metricsgetter
 
 import (
@@ -8,6 +11,22 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
+// GaugeMetricsGetter is map with callback functions as values.
+// Callbacks return float64 value.
+//
+// Example of use:
+//
+//	 type Metric struct {
+//			name string
+//			value float64
+//		}
+//
+//		var stats runtime.MemStats
+//		runtime.ReadMemStats(&stats)
+//		var metrics []Metric
+//		for name, valueGetter := range GaugeMetricsGetter {
+//			metrics = append(metrics, Metric{name, valueGetter(&a.stats)})
+//		}
 var GaugeMetricsGetter = map[string]func(stats *runtime.MemStats) float64{
 	"Alloc":         func(stats *runtime.MemStats) float64 { return float64(stats.Alloc) },
 	"BuckHashSys":   func(stats *runtime.MemStats) float64 { return float64(stats.BuckHashSys) },
@@ -38,10 +57,29 @@ var GaugeMetricsGetter = map[string]func(stats *runtime.MemStats) float64{
 	"TotalAlloc":    func(stats *runtime.MemStats) float64 { return float64(stats.TotalAlloc) },
 }
 
+// ExtraStats stores extra stats.
 type ExtraStats struct {
 	Data map[string]float64
 }
 
+// AdditionalGaugeMetricsGetter is map with callback functions as values.
+// Callbacks return float64 value and error.
+//
+// Example of use:
+//
+//	 type Metric struct {
+//			name string
+//			value float64
+//		}
+//
+//		var metrics []Metric
+//		for name, valueGetter := range AdditionalGaugeMetricsGetter {
+//			metricVal,err := valueGetter()
+//			if err != nil {
+//				//Handle error
+//			}
+//			metrics = append(metrics, Metric{name, metricVal})
+//		}
 var AdditionalGaugeMetricsGetter = map[string]func() (float64, error){
 	"TotalMemory": func() (float64, error) {
 		vm, err := mem.VirtualMemory()

@@ -2,10 +2,13 @@ package memstorage
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
-	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr/mocks"
+	"github.com/erupshis/metrics/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -121,6 +124,9 @@ func TestMemStorage_GetGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetAllCounters(t *testing.T) {
+	int1 := int64(1)
+	int2 := int64(2)
+
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
@@ -138,7 +144,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric2": int64(1)},
+			want: map[string]interface{}{"metric2": &int1},
 		},
 		{
 			name: "valid empty",
@@ -156,7 +162,7 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1, "metric3": 2},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric2": int64(1), "metric3": int64(2)},
+			want: map[string]interface{}{"metric2": &int1, "metric3": &int2},
 		},
 	}
 	for _, tt := range tests {
@@ -166,12 +172,16 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
+
 			assert.Equalf(t, tt.want, m.GetAllCounters(), "GetAllCounters()")
 		})
 	}
 }
 
 func TestMemStorage_GetAllGauges(t *testing.T) {
+	float1 := 1.1
+	float2 := 2.2
+
 	type fields struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
@@ -189,7 +199,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric1": 1.1},
+			want: map[string]interface{}{"metric1": &float1},
 		},
 		{
 			name: "valid empty",
@@ -207,7 +217,7 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 				counterMetrics: map[string]counter{"metric2": 1},
 				manager:        nil,
 			},
-			want: map[string]interface{}{"metric1": 1.1, "metric3": 2.2},
+			want: map[string]interface{}{"metric1": &float1, "metric3": &float2},
 		},
 	}
 	for _, tt := range tests {
@@ -364,4 +374,84 @@ func TestMemStorage_RestoreData(t *testing.T) {
 			assert.Equal(t, tt.want.counterMetrics, m.counterMetrics)
 		})
 	}
+}
+
+func BenchmarkMemstorage_copyMapFloat(b *testing.B) {
+	size := 1000
+	testMap := generateRandomMapFloat(size)
+
+	b.Run("copy values", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMap(testMap)
+		}
+	})
+	b.Run("copy values predefined size", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSize(testMap)
+		}
+	})
+	b.Run("copy pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPointers(testMap)
+		}
+	})
+	b.Run("copy values predefined size pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSizePointers(testMap)
+		}
+	})
+}
+
+func generateRandomMapFloat(size int) map[string]float64 {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	randomMap := make(map[string]float64, size)
+
+	for i := 0; i < size; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := rand.Float64() * 100 // Adjust the multiplier based on your needs
+		randomMap[key] = value
+	}
+
+	return randomMap
+}
+
+func BenchmarkMemstorage_copyMapInt64(b *testing.B) {
+	size := 1000
+	testMap := generateRandomMapInt64(size)
+
+	b.Run("copy values", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMap(testMap)
+		}
+	})
+	b.Run("copy values predefined size", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSize(testMap)
+		}
+	})
+	b.Run("copy pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPointers(testMap)
+		}
+	})
+	b.Run("copy values predefined size pointers", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			copyMapPredefinedSizePointers(testMap)
+		}
+	})
+}
+
+func generateRandomMapInt64(size int) map[string]int64 {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	randomMap := make(map[string]int64, size)
+
+	for i := 0; i < size; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := rand.Float64() * 100 // Adjust the multiplier based on your needs
+		randomMap[key] = int64(value)
+	}
+
+	return randomMap
 }

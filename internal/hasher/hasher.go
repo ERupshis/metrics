@@ -1,3 +1,4 @@
+// Package hasher provides hasher for message hash-sum calculation and verification.
 package hasher
 
 import (
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	SHA256 = iota
+	SHA256 = iota // type of used hash algorithm
 )
 
 const (
@@ -29,16 +30,20 @@ type readCloserWrapper struct {
 	io.Closer
 }
 
+// Hasher stores hash related config data.
 type Hasher struct {
 	log      logger.BaseLogger
-	hashType int
-	key      string
+	hashType int    // type of algorithm
+	key      string // hash key
 }
 
+// CreateHasher create method.
 func CreateHasher(hashKey string, hashType int, log logger.BaseLogger) *Hasher {
 	return &Hasher{key: hashKey, hashType: hashType, log: log}
 }
 
+// Handler middleware handler.
+// Validates incoming messages and check hash-sum.
 func (hr *Hasher) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hashHeaderValue := r.Header.Get(hr.GetHeader())
@@ -72,6 +77,7 @@ func (hr *Hasher) Handler(h http.Handler) http.Handler {
 	})
 }
 
+// WriteHashHeaderInResponseIfNeed calculates hash for responseBody if hashKey was assigned.
 func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, responseBody []byte) {
 	if hr.key == "" {
 		return
@@ -87,6 +93,7 @@ func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, respons
 	w.Header().Add(hr.GetHeader(), hashValue)
 }
 
+// HashMsg returns hash for message.
 func (hr *Hasher) HashMsg(msg []byte) (string, error) {
 	switch hr.getAlgo() {
 	case algoSHA256:
@@ -96,12 +103,13 @@ func (hr *Hasher) HashMsg(msg []byte) (string, error) {
 	}
 }
 
+// hashMsg returns hash for message.
 func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) {
 	var h hash.Hash
 	if key != "" {
 		h = hmac.New(hashFunc, []byte(key))
 	} else {
-		//hasher sum w/o authentication.
+		// hasher sum w/o authentication.
 		h = hashFunc()
 	}
 
@@ -114,6 +122,7 @@ func hashMsg(hashFunc func() hash.Hash, msg []byte, key string) (string, error) 
 	return fmt.Sprintf("%x", hashVal), nil
 }
 
+// isRequestValid validates incoming message and compare incoming and calculated hashes.
 func (hr *Hasher) isRequestValid(hashHeaderValue string, buffer bytes.Buffer) (bool, error) {
 	ok, err := hr.checkRequestHash(hashHeaderValue, buffer.Bytes())
 	if err != nil {
@@ -123,6 +132,7 @@ func (hr *Hasher) isRequestValid(hashHeaderValue string, buffer bytes.Buffer) (b
 	return ok, nil
 }
 
+// checkRequestHash validates incoming message and compare incoming and calculated hashes.
 func (hr *Hasher) checkRequestHash(hashHeaderValue string, body []byte) (bool, error) {
 	if hr.key == "" {
 		return true, nil
@@ -140,6 +150,7 @@ func (hr *Hasher) checkRequestHash(hashHeaderValue string, body []byte) (bool, e
 	return hashHeaderValue == hashValue, nil
 }
 
+// GetHeader returns http Header key of used hash type.
 func (hr *Hasher) GetHeader() string {
 	switch hr.hashType {
 	case SHA256:
@@ -149,6 +160,7 @@ func (hr *Hasher) GetHeader() string {
 	}
 }
 
+// getAlgo returns used algo.
 func (hr *Hasher) getAlgo() int {
 	switch hr.hashType {
 	case SHA256:
@@ -158,6 +170,7 @@ func (hr *Hasher) getAlgo() int {
 	}
 }
 
+// GetKey returns hash key.
 func (hr *Hasher) GetKey() string {
 	return hr.key
 }

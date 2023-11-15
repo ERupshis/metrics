@@ -6,13 +6,13 @@ import (
 	"net/http"
 )
 
-// WRITER
-
+// compressWriter http.ResponseWriter's decorator.
 type compressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
 }
 
+// newGzipCompressWriter create method.
 func newGzipCompressWriter(w http.ResponseWriter) *compressWriter {
 	gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 	if err != nil {
@@ -25,6 +25,7 @@ func newGzipCompressWriter(w http.ResponseWriter) *compressWriter {
 	}
 }
 
+// Reset overwrites base inner http.ResponseWriter entity.
 func (c *compressWriter) Reset(w http.ResponseWriter) {
 	if c.zw == nil {
 		return
@@ -33,14 +34,18 @@ func (c *compressWriter) Reset(w http.ResponseWriter) {
 	c.zw.Reset(c.w)
 }
 
+// Header returns inner http.ResponseWriter header.
 func (c *compressWriter) Header() http.Header {
 	return c.w.Header()
 }
 
+// Write writes compressed data in inner http.ResponseWriter body.
 func (c *compressWriter) Write(p []byte) (int, error) {
 	return c.zw.Write(p)
 }
 
+// WriteHeader writes header in inner http.ResponseWriter header.
+// If statusCode < 300 - adds Content-Encoding = gzip.
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")
@@ -48,17 +53,18 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 	c.w.WriteHeader(statusCode)
 }
 
+// Close closes gzip.Writer with flushing any unwritten data + gzip footer.
 func (c *compressWriter) Close() error {
 	return c.zw.Close()
 }
 
-// READER
-
+// compressWriter io.ReadCloser's decorator.
 type compressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
 }
 
+// newGzipCompressWriter create method.
 func newGzipCompressReader(r io.ReadCloser) (*compressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -71,18 +77,21 @@ func newGzipCompressReader(r io.ReadCloser) (*compressReader, error) {
 	}, nil
 }
 
-func (c *compressReader) Reset(r io.ReadCloser) {
+// Reset overwrites base inner io.ReadCloser entity.
+func (c *compressReader) Reset(r io.ReadCloser) error {
 	if c.zr == nil {
-		return
+		return nil
 	}
 	c.r = r
-	_ = c.zr.Reset(r)
+	return c.zr.Reset(r)
 }
 
-func (c compressReader) Read(p []byte) (n int, err error) {
+// Read reads uncompressed data from inner io.ReadCloser.
+func (c *compressReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
+// Close closes reader.
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err

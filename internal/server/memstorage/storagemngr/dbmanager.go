@@ -1,3 +1,6 @@
+// Package storagemngr implements the StorageManager interface and provides functionality
+// for managing metric data storage in a PostgreSQL database. It includes methods for saving metrics,
+// restoring data, checking connection status, and closing the database connection.
 package storagemngr
 
 import (
@@ -17,6 +20,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
+// Constants defining schema and table names.
 const (
 	schemaName    = "metrics"
 	gaugesTable   = "gauges"
@@ -25,8 +29,18 @@ const (
 	insertStmt = "insert"
 	updateStmt = "update"
 	existStmt  = "exist"
+
+	createDatabaseError = "create db: %w"
+	saveMetricError     = "save metric: %w"
+	saveMetricsError    = "save metrics in db: %w"
+	restoreMetricsError = "restore metrics from db: %w"
+	restoreDataError    = "restore data from db response: %w"
+
+	logSaveMetricsInStorageStart     = "[DataBaseManager:SaveMetricsInStorage] start transaction"
+	logSaveMetricsInStorageCompleted = "[DataBaseManager:SaveMetricsInStorage] transaction completed"
 )
 
+// DatabaseErrorsToRetry is a list of database errors that are considered retryable.
 var DatabaseErrorsToRetry = []error{
 	errors.New(pgerrcode.UniqueViolation),
 	errors.New(pgerrcode.ConnectionException),
@@ -38,14 +52,16 @@ var DatabaseErrorsToRetry = []error{
 	errors.New(pgerrcode.ProtocolViolation),
 }
 
+// DataBaseManager is a struct implementing the StorageManager interface
+// for managing metric data storage in a PostgreSQL database.
 type DataBaseManager struct {
 	database *sql.DB
 	log      logger.BaseLogger
 }
 
+// CreateDataBaseManager creates a new instance of DataBaseManager, initializes the database, and performs migrations.
 func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.BaseLogger) (StorageManager, error) {
 	log.Info("[storagemngr:CreateDataBaseManager] Open database with settings: '%s'", cfg.DataBaseDSN)
-	createDatabaseError := "create db: %w"
 	database, err := sql.Open("pgx", cfg.DataBaseDSN)
 	if err != nil {
 		return nil, fmt.Errorf(createDatabaseError, err)
@@ -74,10 +90,12 @@ func CreateDataBaseManager(ctx context.Context, cfg *config.Config, log logger.B
 	return manager, nil
 }
 
+// Close closes the underlying SQL database connection.
 func (m *DataBaseManager) Close() error {
 	return m.database.Close()
 }
 
+// CheckConnection checks the connection to the SQL database and returns true if successful.
 func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 	exec := func(context context.Context) error {
 		return m.database.PingContext(context)
@@ -89,9 +107,10 @@ func (m *DataBaseManager) CheckConnection(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// SaveMetricsInStorage saves gauge and counter metric values in the PostgreSQL database.
 func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues map[string]interface{}, countersValues map[string]interface{}) error {
-	m.log.Info("[DataBaseManager:SaveMetricsInStorage] start transaction")
-	saveMetricsError := "save metrics in db: %w"
+	// m.log.Info(logSaveMetricsInStorageStart)
+
 	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf(saveMetricsError, err)
@@ -112,16 +131,16 @@ func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues
 		return fmt.Errorf(saveMetricsError, err)
 	}
 
-	m.log.Info("[DataBaseManager:SaveMetricsInStorage] transaction completed")
+	// m.log.Info(logSaveMetricsInStorageCompleted)
 	return nil
 }
 
+// RestoreDataFromStorage retrieves and restores stored metric data from the PostgreSQL database.
 func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	gauges := map[string]float64{}
 	counters := map[string]int64{}
 
 	m.log.Info("[DataBaseManager:RestoreDataFromStorage] start transaction")
-	restoreMetricsError := "restore metrics from db: %w"
 	tx, err := m.database.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
@@ -146,12 +165,12 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 	return gauges, counters, nil
 }
 
+// restoreDataInMap populates the provided mapDest with data from the specified database table.
 func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tableName string, mapDest interface{}) error {
-	restoreDataError := "restore data from db response: %w"
 	var err error
 	var rows *sql.Rows
 	if rows != nil {
-		//get rid of static check problem
+		// get rid of static check problem
 		err = rows.Err()
 
 	}
@@ -168,7 +187,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 
 		rows, err = tx.QueryContext(ctx, sqlSelect)
 		if rows != nil {
-			//get rid of static check problem
+			// get rid of static check problem
 			rows.Err()
 		}
 		return err
@@ -212,6 +231,7 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	return nil
 }
 
+// saveMetrics saves the provided metricsValues in the specified database table using a transaction.
 func (m *DataBaseManager) saveMetrics(ctx context.Context, tx *sql.Tx, metricTable string, metricsValues map[string]interface{}) error {
 	requestStmts, err := createDatabaseStmts(ctx, tx, metricTable)
 	if err != nil {
@@ -228,8 +248,8 @@ func (m *DataBaseManager) saveMetrics(ctx context.Context, tx *sql.Tx, metricTab
 	return nil
 }
 
+// saveMetric saves a single metric with the specified name and value using database statements.
 func (m *DataBaseManager) saveMetric(ctx context.Context, stmts map[string]*sql.Stmt, name string, value interface{}) error {
-	saveMetricError := "save metric: %w"
 	exists, err := m.checkMetricExists(ctx, stmts[existStmt], name, value)
 	if err != nil {
 		return fmt.Errorf(saveMetricError, err)
@@ -247,6 +267,7 @@ func (m *DataBaseManager) saveMetric(ctx context.Context, stmts map[string]*sql.
 	return nil
 }
 
+// checkMetricExists checks if a metric with the specified name already exists in the database.
 func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt, name string, _ interface{}) (bool, error) {
 	var exists bool
 	var err error
@@ -262,6 +283,7 @@ func (m *DataBaseManager) checkMetricExists(ctx context.Context, stmt *sql.Stmt,
 	return exists, err
 }
 
+// insertMetric inserts a new metric with the specified name and value into the database.
 func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
 	tableName := getMetricsTableName(value)
@@ -285,18 +307,19 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 	return nil
 }
 
+// updateMetric updates an existing metric with the specified name and value in the database.
 func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name string, value interface{}) error {
 	var err error
 	tableName := getMetricsTableName(value)
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, value.(float64), name)
+			_, err = stmt.ExecContext(context, *value.(*float64), name)
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, value.(int64), name)
+			_, err = stmt.ExecContext(context, *value.(*int64), name)
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
@@ -308,17 +331,19 @@ func (m *DataBaseManager) updateMetric(ctx context.Context, stmt *sql.Stmt, name
 	return nil
 }
 
+// getMetricsTableName determines the database table name based on the type of the metric value.
 func getMetricsTableName(value interface{}) string {
 	switch value.(type) {
-	case int64:
+	case *int64:
 		return countersTable
-	case float64:
+	case *float64:
 		return gaugesTable
 	default:
 		panic("unknown value type")
 	}
 }
 
+// createDatabaseStmts prepares and returns a map of SQL statements for the specified metric table.
 func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (map[string]*sql.Stmt, error) {
 	existStmtBody, err := createExistsStmt(ctx, tx, metricTable)
 	if err != nil {
@@ -342,6 +367,7 @@ func createDatabaseStmts(ctx context.Context, tx *sql.Tx, metricTable string) (m
 	}, nil
 }
 
+// createExistsStmt prepares and returns an SQL statement to check if a metric exists in the database.
 func createExistsStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
@@ -353,6 +379,7 @@ func createExistsStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 	return tx.PrepareContext(ctx, "SELECT EXISTS("+sqlExist+")")
 }
 
+// createInsertStmt prepares and returns an SQL statement to insert a new metric into the database.
 func createInsertStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
@@ -364,6 +391,7 @@ func createInsertStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 	return tx.PrepareContext(ctx, sqlInsert)
 }
 
+// createUpdateStmt prepares and returns an SQL statement to update an existing metric in the database.
 func createUpdateStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql.Stmt, error) {
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
@@ -375,6 +403,7 @@ func createUpdateStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 	return tx.PrepareContext(ctx, sqlUpdate)
 }
 
+// closeDatabaseStmts closes all the SQL statements in the provided map.
 func closeDatabaseStmts(stmts map[string]*sql.Stmt) {
 	for _, stmt := range stmts {
 		stmt.Close()

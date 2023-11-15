@@ -1,8 +1,17 @@
 package agentimpl
 
 import (
+	"context"
+	"fmt"
+	"sync"
 	"testing"
 
+	"github.com/erupshis/metrics/internal/agent/client"
+	"github.com/erupshis/metrics/internal/agent/config"
+	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/mocks"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,6 +134,178 @@ func TestAgent_createJSONCounterMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, tt.want, string(a.createJSONCounterMessage(tt.args.name, tt.args.value)))
+		})
+	}
+}
+
+func TestAgent_UpdateExtraStats(t *testing.T) {
+	type fields struct {
+		extraStats metricsgetter.ExtraStats
+		logger     logger.BaseLogger
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "valid",
+			fields: fields{
+				extraStats: metricsgetter.ExtraStats{Data: make(map[string]float64)},
+				logger:     logger.CreateMock(),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Agent{
+				extraStats:      tt.fields.extraStats,
+				extraStatsMutex: sync.RWMutex{},
+				logger:          tt.fields.logger,
+			}
+			a.UpdateExtraStats()
+			assert.Equal(t, 3, len(a.extraStats.Data))
+		})
+	}
+}
+
+func TestAgent_postJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockClient := mocks.NewMockBaseClient(ctrl)
+	gomock.InOrder(
+		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test err")),
+	)
+
+	type fields struct {
+		logger logger.BaseLogger
+		config config.Config
+		client client.BaseClient
+	}
+	type args struct {
+		ctx  context.Context
+		body []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx:  context.Background(),
+				body: []byte{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "client returns err",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx:  context.Background(),
+				body: []byte{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Agent{
+				client: tt.fields.client,
+				logger: tt.fields.logger,
+				config: tt.fields.config,
+			}
+
+			if err := a.postJSON(tt.args.ctx, tt.args.body); (err != nil) != tt.wantErr {
+				t.Errorf("postJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAgent_postBatchJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockClient := mocks.NewMockBaseClient(ctrl)
+	gomock.InOrder(
+		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test err")),
+	)
+
+	type fields struct {
+		logger logger.BaseLogger
+		config config.Config
+		client client.BaseClient
+	}
+	type args struct {
+		ctx  context.Context
+		body []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx:  context.Background(),
+				body: []byte{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "client returns err",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx:  context.Background(),
+				body: []byte{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Agent{
+				client: tt.fields.client,
+				logger: tt.fields.logger,
+				config: tt.fields.config,
+			}
+
+			if err := a.postBatchJSON(tt.args.ctx, tt.args.body); (err != nil) != tt.wantErr {
+				t.Errorf("postJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }

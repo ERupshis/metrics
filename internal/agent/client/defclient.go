@@ -12,16 +12,22 @@ import (
 	"github.com/erupshis/metrics/internal/retryer"
 )
 
+// DefaultClient object.
 type DefaultClient struct {
 	client *http.Client
 	log    logger.BaseLogger
 	hash   *hasher.Hasher
 }
 
+// CreateDefault creates default http client. Receives logger and hasher in params.
 func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
 	return &DefaultClient{client: &http.Client{}, log: log, hash: hash}
 }
 
+// PostJSON sends data via http post request.
+//
+// Performs gzip compression and add hash sum for message validation if hashKey is set in hasher.
+// Uses retryer to repeat call in case of connection error.
 func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
