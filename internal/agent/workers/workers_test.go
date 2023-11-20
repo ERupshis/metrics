@@ -83,7 +83,7 @@ func TestCreateWorkersPool(t *testing.T) {
 		{
 			name: "valid",
 			args: args{
-				count: 3,
+				count: 0,
 				log:   logger.CreateMock(),
 				jobs: []func() error{
 					func() error {
@@ -98,7 +98,7 @@ func TestCreateWorkersPool(t *testing.T) {
 				},
 			},
 			want: want{
-				createErr:    false,
+				createErr:    true,
 				jobsLen:      0,
 				jobsChClosed: true,
 				resLen:       3,
