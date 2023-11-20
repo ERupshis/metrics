@@ -99,10 +99,10 @@ func TestCreateWorkersPool(t *testing.T) {
 			},
 			want: want{
 				createErr:    false,
-				jobsLen:      0,
+				jobsLen:      3,
 				jobsChClosed: true,
 				resLen:       3,
-				resChClosed:  false,
+				resChClosed:  true,
 			},
 		},
 		{
