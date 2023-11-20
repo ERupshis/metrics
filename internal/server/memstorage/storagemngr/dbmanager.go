@@ -289,13 +289,13 @@ func (m *DataBaseManager) insertMetric(ctx context.Context, stmt *sql.Stmt, name
 	tableName := getMetricsTableName(value)
 	if tableName == gaugesTable {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, name, value.(float64))
+			_, err = stmt.ExecContext(context, name, *value.(*float64))
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
 	} else {
 		exec := func(context context.Context) error {
-			_, err = stmt.ExecContext(context, name, value.(int64))
+			_, err = stmt.ExecContext(context, name, *value.(*int64))
 			return err
 		}
 		err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, exec)
