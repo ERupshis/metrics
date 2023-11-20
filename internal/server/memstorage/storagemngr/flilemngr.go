@@ -207,20 +207,20 @@ func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	var err error
 
 	switch valType := value.(type) {
-	case int64:
+	case *int64:
 		metric := MetricData{
 			name,
 			"counter",
-			strconv.FormatInt(valType, 10),
+			strconv.FormatInt(*valType, 10),
 		}
 
 		data, err = json.Marshal(&metric)
 
-	case float64:
+	case *float64:
 		metric := MetricData{
 			name,
 			"gauge",
-			strconv.FormatFloat(valType, 'f', -1, 64),
+			strconv.FormatFloat(*valType, 'f', -1, 64),
 		}
 
 		data, err = json.Marshal(&metric)
