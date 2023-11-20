@@ -2,6 +2,7 @@ package ticker
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,10 +17,13 @@ func TestRun(t *testing.T) {
 	defer ticker.Stop()
 
 	// Set up a flag to indicate whether the callback was called
+	mu := sync.Mutex{}
 	callbackCalled := false
 
 	// Define the callback function
 	callback := func() {
+		mu.Lock()
+		defer mu.Unlock()
 		callbackCalled = true
 	}
 
@@ -36,7 +40,9 @@ func TestRun(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Check if the callback was called
+	mu.Lock()
 	if !callbackCalled {
 		t.Error("Callback function was not called")
 	}
+	mu.Unlock()
 }
