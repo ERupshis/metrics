@@ -159,6 +159,7 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 }
 
 func TestFileManager_WriteAndReadMetric(t *testing.T) {
+	num := 123.0
 	os.RemoveAll(testFolder)
 	log := logger.CreateMock()
 
@@ -180,7 +181,7 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 		{
 			name:    "float valid",
 			fields:  fields{path: testFolder + "/asd"},
-			args:    args{name: "someM", value: float64(123)},
+			args:    args{name: "someM", value: &num},
 			wantErr: false,
 		},
 	}
