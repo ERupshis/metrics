@@ -5,6 +5,7 @@ import (
 
 	"github.com/erupshis/metrics/cmd/staticlint/passes"
 	"github.com/erupshis/metrics/cmd/staticlint/staticio"
+	"github.com/erupshis/metrics/internal/exitcheck"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/fatih/errwrap/errwrap"
 	"github.com/kisielk/errcheck/errcheck"
@@ -32,6 +33,10 @@ func main() {
 		log.Info("failed to add public analyzers: %v", err)
 	}
 
+	if err := addExitCheck(&checks); err != nil {
+		log.Info("failed to add exit in main func analyzer: %v", err)
+	}
+
 	multichecker.Main(
 		checks...,
 	)
@@ -57,5 +62,10 @@ func addStaticChecksIO(checks *[]*analysis.Analyzer) error {
 func addPublicAnalyzers(checks *[]*analysis.Analyzer) error {
 	*checks = append(*checks, errcheck.Analyzer)
 	*checks = append(*checks, errwrap.Analyzer)
+	return nil
+}
+
+func addExitCheck(checks *[]*analysis.Analyzer) error {
+	*checks = append(*checks, exitcheck.Analyzer)
 	return nil
 }

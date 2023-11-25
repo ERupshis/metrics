@@ -4,6 +4,7 @@
 // - analyzers S1000, S1001, ST1000, ST1005, QF1003, QF1010 from the staticcheck.io package;
 // - an analyzer from the public package github.com/kisielk/errcheck/errcheck;
 // - an analyzer from the public package github.com/fatih/errwrap/errwrap;
+// - a custom analyzer ExitAnalyzer that tracks the usage of direct os.Exit calls in the main function of the main package.
 //
 // To install checker use `go install`.
 //
