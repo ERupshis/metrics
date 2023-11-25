@@ -133,7 +133,9 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 
 	// c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 

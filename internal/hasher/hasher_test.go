@@ -8,6 +8,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHasher_HashMsg(t *testing.T) {
@@ -401,7 +402,9 @@ func TestHasher_Handler(t *testing.T) {
 
 			req := httptest.NewRequest("GET", "/", nil)
 			req.Header.Add(hr.GetHeader(), tt.args.hashHeaderValue)
-			defer req.Body.Close()
+			defer func() {
+				_ = req.Body.Close()
+			}()
 
 			var buf bytes.Buffer
 			buf.Write(tt.args.body)
@@ -413,14 +416,16 @@ func TestHasher_Handler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
+			var err error
 			handler := hr.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("correct"))
+				_, err = w.Write([]byte("correct"))
 			}))
 
 			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.want.statusCode, rr.Code)
+			require.NoError(t, err)
 		})
 	}
 }

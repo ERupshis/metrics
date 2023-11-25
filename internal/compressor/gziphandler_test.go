@@ -121,7 +121,9 @@ func TestGzipHandler(t *testing.T) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		defer r.Body.Close()
+		defer func() {
+			_ = r.Body.Close()
+		}()
 
 		if buf.String() != in {
 			http.Error(w, "decompressed input is incorrect.", http.StatusBadRequest)
@@ -156,7 +158,9 @@ func TestGzipHandler(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		b, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
@@ -174,7 +178,9 @@ func TestGzipHandler(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 
 		zr, err := gzip.NewReader(resp.Body)
 		require.NoError(t, err)

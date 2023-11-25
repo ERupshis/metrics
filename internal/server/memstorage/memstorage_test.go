@@ -319,7 +319,9 @@ func TestMemStorage_SaveData(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
-			m.SaveData(context.Background())
+
+			err := m.SaveData(context.Background())
+			require.NoError(t, err)
 		})
 	}
 }
@@ -368,7 +370,8 @@ func TestMemStorage_RestoreData(t *testing.T) {
 				manager:        tt.fields.manager,
 			}
 
-			m.RestoreData(context.Background())
+			err := m.RestoreData(context.Background())
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.want.gaugeMetrics, m.gaugeMetrics)
 			assert.Equal(t, tt.want.counterMetrics, m.counterMetrics)

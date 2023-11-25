@@ -64,7 +64,11 @@ func (fm *FileManager) SaveMetricsInStorage(_ context.Context, gaugeValues map[s
 		if err := fm.OpenFile(fm.path, true); err != nil {
 			return fmt.Errorf("cannot open file '%s' to save metrics: %w", fm.path, err)
 		}
-		defer fm.CloseFile()
+		defer func() {
+			if err := fm.CloseFile(); err != nil {
+				fm.logger.Info("[FileManager::SaveMetricsInStorage] failed to close file: %v", err)
+			}
+		}()
 	}
 
 	for name, val := range gaugeValues {
@@ -92,7 +96,11 @@ func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]flo
 		if err := fm.OpenFile(fm.path, false); err != nil {
 			return gauges, counters, fmt.Errorf("cannot open file '%s' to read metrics: %w", fm.path, err)
 		}
-		defer fm.CloseFile()
+		defer func() {
+			if err := fm.CloseFile(); err != nil {
+				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to close file: %v", err)
+			}
+		}()
 	}
 
 	failedToReadMetricsCount := 0

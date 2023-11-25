@@ -40,7 +40,11 @@ func main() {
 
 	storageManager := createStorageManager(ctx, &cfg, log)
 	if storageManager != nil {
-		defer storageManager.Close()
+		defer func() {
+			if err := storageManager.Close(); err != nil {
+				log.Info("failed to close storage: %v", err)
+			}
+		}()
 	}
 	storage := memstorage.Create(storageManager)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -49,13 +53,13 @@ func main() {
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
-	//Schedule data saving in file with storeInterval
+	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	//heap profiling.
-	//router.Mount("/debug", middleware.Profiler())
+	// heap profiling.
+	// router.Mount("/debug", middleware.Profiler())
 
-	//server launch.
+	// server launch.
 	go func() {
 		log.Info("server is launching with Host setting: %s", cfg.Host)
 		if err := http.ListenAndServe(cfg.Host, router); err != nil {
@@ -63,8 +67,8 @@ func main() {
 		}
 	}()
 
-	//time.Sleep(300 * time.Second)
-	//memProfile()
+	// time.Sleep(300 * time.Second)
+	// memProfile()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh

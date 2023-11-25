@@ -63,7 +63,9 @@ func (gz *GzipHandler) GzipHandle(next http.Handler) http.Handler {
 			ow = gz.writer
 
 			w.Header().Set("Content-Encoding", "gzip")
-			defer gz.writer.Close()
+			defer func() {
+				_ = gz.writer.Close()
+			}()
 		}
 
 		contentEncoding := r.Header.Get("Content-Encoding")
@@ -75,7 +77,9 @@ func (gz *GzipHandler) GzipHandle(next http.Handler) http.Handler {
 			}
 
 			r.Body = gz.reader
-			defer gz.reader.Close()
+			defer func() {
+				_ = gz.reader.Close()
+			}()
 		}
 
 		next.ServeHTTP(ow, r)
@@ -106,17 +110,17 @@ func GzipCompress(data []byte) ([]byte, error) {
 
 	w, err := gzip.NewWriterLevel(&b, gzip.BestCompression)
 	if err != nil {
-		return nil, fmt.Errorf("failed init compress writer: %v", err)
+		return nil, fmt.Errorf("failed init compress writer: %w", err)
 	}
 
 	_, err = w.Write(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %w", err)
 	}
 
 	err = w.Close()
 	if err != nil {
-		return nil, fmt.Errorf("failed compress data: %v", err)
+		return nil, fmt.Errorf("failed compress data: %w", err)
 	}
 
 	return b.Bytes(), nil
@@ -126,14 +130,16 @@ func GzipCompress(data []byte) ([]byte, error) {
 func GzipDecompress(data []byte) ([]byte, error) {
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("failed init decompress reader: %v", err)
+		return nil, fmt.Errorf("failed init decompress reader: %w", err)
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 
 	var b bytes.Buffer
 	_, err = b.ReadFrom(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed decompress data: %v", err)
+		return nil, fmt.Errorf("failed decompress data: %w", err)
 	}
 
 	return b.Bytes(), nil

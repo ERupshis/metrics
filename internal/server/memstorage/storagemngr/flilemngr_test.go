@@ -118,8 +118,8 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 	log := logger.CreateMock()
 
 	fm := createFileManagerTest(path, log)
-	fm.OpenFile(path, false)
-	fm.CloseFile()
+	_ = fm.OpenFile(path, false)
+	_ = fm.CloseFile()
 
 	type fields struct {
 		path string
@@ -160,7 +160,7 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 
 func TestFileManager_WriteAndReadMetric(t *testing.T) {
 	num := 123.0
-	os.RemoveAll(testFolder)
+	_ = os.RemoveAll(testFolder)
 	log := logger.CreateMock()
 
 	fm := createFileManagerTest(testConfig.StoragePath, log)
@@ -187,7 +187,7 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm.OpenFile(tt.fields.path, true)
+			_ = fm.OpenFile(tt.fields.path, true)
 			if err := fm.WriteMetric(tt.args.name, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("WriteMetric() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -198,14 +198,14 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 			}
 			assert.Equal(t, metric.Name, tt.args.name)
 
-			fm.CloseFile()
+			_ = fm.CloseFile()
 		})
 	}
 
 	// check trunc
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm.OpenFile(tt.fields.path, false)
+			_ = fm.OpenFile(tt.fields.path, false)
 
 			metric, err := fm.ScanMetric()
 			if (err != nil) != tt.wantErr {
@@ -213,7 +213,7 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 			}
 			assert.Equal(t, metric.Name, tt.args.name)
 
-			fm.CloseFile()
+			_ = fm.CloseFile()
 		})
 	}
 }

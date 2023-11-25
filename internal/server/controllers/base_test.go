@@ -298,7 +298,9 @@ func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 
 			resp, errResp := ts.Client().Do(req)
 			assert.NoError(t, errResp)
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
@@ -630,7 +632,9 @@ func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 
 			resp, errResp := ts.Client().Do(req)
 			assert.NoError(t, errResp)
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
