@@ -42,8 +42,8 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 )
 
-// PassesChecks returns set of standard analyzers from `golang.org/x/tools/go/analysis/passes`.
-func PassesChecks() []*analysis.Analyzer {
+// Checks returns slice of standard analyzers from `golang.org/x/tools/go/analysis/passes`.
+func Checks() []*analysis.Analyzer {
 	return []*analysis.Analyzer{
 		appends.Analyzer,
 		asmdecl.Analyzer,
