@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/erupshis/metrics/cmd/staticlint/passes"
-	"github.com/erupshis/metrics/cmd/staticlint/staticio"
 	"github.com/erupshis/metrics/internal/exitcheck"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/staticlint/passes"
+	"github.com/erupshis/metrics/internal/staticlint/staticio"
 	"github.com/fatih/errwrap/errwrap"
 	"github.com/kisielk/errcheck/errcheck"
 	"golang.org/x/tools/go/analysis"
