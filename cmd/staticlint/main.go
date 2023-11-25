@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/erupshis/metrics/internal/exitcheck"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/staticlint/exitcheck"
 	"github.com/erupshis/metrics/internal/staticlint/passes"
 	"github.com/erupshis/metrics/internal/staticlint/staticio"
 	"github.com/fatih/errwrap/errwrap"
@@ -13,7 +13,7 @@ import (
 	"golang.org/x/tools/go/analysis/multichecker"
 )
 
-const config = "cmd/staticlint/staticio/config.json"
+const config = "cmd/staticlint/config.json"
 
 func main() {
 	log := logger.CreateLogger("info")
