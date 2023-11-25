@@ -319,7 +319,7 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := fmt.Sprintf("%d", value)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
-		if _, err := io.WriteString(w, responseBody); err != nil {
+		if _, err = io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
@@ -338,7 +338,7 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := strconv.FormatFloat(value, 'f', -1, 64)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
-		if _, err := io.WriteString(w, responseBody); err != nil {
+		if _, err = io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
@@ -389,7 +389,7 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	buf := bytes.Buffer{}
 	writer := bufio.NewWriter(&buf)
 
-	if err := tmpl.Execute(writer, tmplData{gaugesMap, countersMap}); err != nil {
+	if err = tmpl.Execute(writer, tmplData{gaugesMap, countersMap}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
