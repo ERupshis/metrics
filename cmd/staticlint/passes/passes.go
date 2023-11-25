@@ -1,3 +1,4 @@
+// Package passes returns standard analyzers.
 package passes
 
 import (

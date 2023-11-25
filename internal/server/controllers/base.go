@@ -193,7 +193,8 @@ func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg
 
 // addMetricFromMessage adds a metric to storage based on the metric type.
 func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
-	if data.MType == gaugeType {
+	switch data.MType {
+	case gaugeType:
 		valueIn := new(float64)
 		if data.Value != nil {
 			valueIn = data.Value
@@ -201,7 +202,7 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 		c.storage.AddGauge(data.ID, *valueIn)
 		valueOut, _ := c.storage.GetGauge(data.ID)
 		data.Value = &valueOut
-	} else if data.MType == counterType {
+	case counterType:
 		valueIn := new(int64)
 		if data.Delta != nil {
 			valueIn = data.Delta
@@ -214,14 +215,15 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 
 // jsonGetHandler handles JSON GET requests and retrieves metrics from storage.
 func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
-	if data.MType == gaugeType {
+	switch data.MType {
+	case gaugeType:
 		value, err := c.storage.GetGauge(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return nil
 		}
 		data.Value = &value
-	} else if data.MType == counterType {
+	case counterType:
 		value, err := c.storage.GetCounter(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -244,10 +246,11 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if valueType == gaugeType {
+	switch valueType {
+	case gaugeType:
 		c.postGaugeHandler(w, r)
 		return
-	} else if valueType == counterType {
+	case counterType:
 		c.postCounterHandler(w, r)
 		return
 	}
@@ -301,10 +304,11 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if valueType == gaugeType {
+	switch valueType {
+	case gaugeType:
 		c.getGaugeHandler(w, r)
 		return
-	} else if valueType == counterType {
+	case counterType:
 		c.getCounterHandler(w, r)
 		return
 	}

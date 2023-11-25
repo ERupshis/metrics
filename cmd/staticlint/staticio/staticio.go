@@ -1,3 +1,4 @@
+// Package staticio defines methods to get all SA-type checks or custom mentioned in config file.
 package staticio
 
 import (
@@ -6,7 +7,11 @@ import (
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
+	"honnef.co/go/tools/analysis/lint"
+	"honnef.co/go/tools/quickfix"
+	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 )
 
 // ChecksSA returns slice of static check with SA in short name.
@@ -44,12 +49,22 @@ func ChecksFromConfig(configPath string) ([]*analysis.Analyzer, error) {
 		checks[v] = true
 	}
 
-	res := make([]*analysis.Analyzer, 0, len(staticcheck.Analyzers))
-	for _, v := range staticcheck.Analyzers {
-		if checks[v.Analyzer.Name] {
-			res = append(res, v.Analyzer)
+	res := make([]*analysis.Analyzer, 0, len(checks))
+
+	res = addFilteredAnalyzers(simple.Analyzers, res, checks)
+	res = addFilteredAnalyzers(stylecheck.Analyzers, res, checks)
+	res = addFilteredAnalyzers(staticcheck.Analyzers, res, checks)
+	res = addFilteredAnalyzers(quickfix.Analyzers, res, checks)
+
+	return res, nil
+}
+
+func addFilteredAnalyzers(from []*lint.Analyzer, to []*analysis.Analyzer, filter map[string]bool) []*analysis.Analyzer {
+	for _, v := range from {
+		if filter[v.Analyzer.Name] {
+			to = append(to, v.Analyzer)
 		}
 	}
 
-	return res, nil
+	return to
 }
