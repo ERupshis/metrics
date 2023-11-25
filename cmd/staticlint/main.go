@@ -6,6 +6,8 @@ import (
 	"github.com/erupshis/metrics/cmd/staticlint/passes"
 	"github.com/erupshis/metrics/cmd/staticlint/staticio"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/fatih/errwrap/errwrap"
+	"github.com/kisielk/errcheck/errcheck"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 )
@@ -19,11 +21,15 @@ func main() {
 	var checks []*analysis.Analyzer
 
 	if err := addPassesChecks(&checks); err != nil {
-		log.Info("failed to add passes checks")
+		log.Info("failed to add passes checks: %v", err)
 	}
 
 	if err := addStaticChecksIO(&checks); err != nil {
-		log.Info("failed to add static checks")
+		log.Info("failed to add static checks: %v", err)
+	}
+
+	if err := addPublicAnalyzers(&checks); err != nil {
+		log.Info("failed to add public analyzers: %v", err)
 	}
 
 	multichecker.Main(
@@ -45,5 +51,11 @@ func addStaticChecksIO(checks *[]*analysis.Analyzer) error {
 	}
 
 	*checks = append(*checks, configChecks...)
+	return nil
+}
+
+func addPublicAnalyzers(checks *[]*analysis.Analyzer) error {
+	*checks = append(*checks, errcheck.Analyzer)
+	*checks = append(*checks, errwrap.Analyzer)
 	return nil
 }
