@@ -39,9 +39,9 @@ func (c *RestyClient) PostJSON(context context.Context, url string, body []byte)
 		SetHeader("Accept-Encoding", "gzip")
 
 	if c.hash.GetKey() != "" {
-		hashValue, err := c.hash.HashMsg(body)
-		if err != nil {
-			return fmt.Errorf("resty postJSON request: hasher calculation: %w", err)
+		hashValue, errHash := c.hash.HashMsg(body)
+		if errHash != nil {
+			return fmt.Errorf("resty postJSON request: hasher calculation: %w", errHash)
 		}
 
 		request.SetHeader(c.hash.GetHeader(), hashValue)

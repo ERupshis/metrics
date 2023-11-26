@@ -34,13 +34,8 @@ type configData struct {
 
 // ChecksFromConfig returns a slice of static checks with names from the specified config file.
 func ChecksFromConfig(configPath string) ([]*analysis.Analyzer, error) {
-	data, err := os.ReadFile(configPath)
+	cfg, err := readConfigFromFile(configPath)
 	if err != nil {
-		return nil, err
-	}
-
-	var cfg configData
-	if err = json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -57,6 +52,20 @@ func ChecksFromConfig(configPath string) ([]*analysis.Analyzer, error) {
 	res = addFilteredAnalyzers(quickfix.Analyzers, res, checks)
 
 	return res, nil
+}
+
+func readConfigFromFile(path string) (*configData, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg configData
+	if err = json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 func addFilteredAnalyzers(from []*lint.Analyzer, to []*analysis.Analyzer, filter map[string]bool) []*analysis.Analyzer {

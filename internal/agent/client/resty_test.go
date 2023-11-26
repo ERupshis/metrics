@@ -44,6 +44,20 @@ func TestRestyClient_PostJSON(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "valid with hash key",
+			fields: fields{
+				client: resty.New(),
+				log:    log,
+				hash:   hasher.CreateHasher("1234", hasher.SHA256, log),
+			},
+			args: args{
+				context: context.Background(),
+				url:     "/updates/",
+				body:    []byte(`{"val":1}`),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

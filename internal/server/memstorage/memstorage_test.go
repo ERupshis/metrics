@@ -458,3 +458,121 @@ func generateRandomMapInt64(size int) map[string]int64 {
 
 	return randomMap
 }
+
+func Test_copyMap(t *testing.T) {
+	type args[V any] struct {
+		m map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want map[string]interface{}
+	}
+	tests := []testCase[int64]{
+		{
+			name: "int64 valid",
+			args: args[int64]{
+				m: map[string]int64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": int64(1), "two": int64(2)},
+		},
+		{
+			name: "int64 empty",
+			args: args[int64]{
+				m: map[string]int64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	tests2 := []testCase[float64]{
+		{
+			name: "float64 valid",
+			args: args[float64]{
+				m: map[string]float64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": float64(1), "two": float64(2)},
+		},
+		{
+			name: "float64 empty",
+			args: args[float64]{
+				m: map[string]float64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, copyMap(tt.args.m), "copyMap(%v)", tt.args.m)
+			assert.Equalf(t, tt.want, copyMapPredefinedSize(tt.args.m), "copyMapPredefinedSize(%v)", tt.args.m)
+		})
+	}
+	for _, tt := range tests2 {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, copyMap(tt.args.m), "copyMap(%v)", tt.args.m)
+			assert.Equalf(t, tt.want, copyMapPredefinedSize(tt.args.m), "copyMapPredefinedSize(%v)", tt.args.m)
+		})
+	}
+}
+
+func Test_copyMapWithPointers(t *testing.T) {
+	type args[V any] struct {
+		m map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want map[string]interface{}
+	}
+	tests := []testCase[int64]{
+		{
+			name: "int64 valid",
+			args: args[int64]{
+				m: map[string]int64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": int64(1), "two": int64(2)},
+		},
+		{
+			name: "int64 empty",
+			args: args[int64]{
+				m: map[string]int64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	tests2 := []testCase[float64]{
+		{
+			name: "float64 valid",
+			args: args[float64]{
+				m: map[string]float64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": float64(1), "two": float64(2)},
+		},
+		{
+			name: "float64 empty",
+			args: args[float64]{
+				m: map[string]float64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*int64))
+			}
+			for k, v := range copyMapPointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*int64))
+			}
+		})
+	}
+	for _, tt := range tests2 {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
+			}
+			for k, v := range copyMapPointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
+			}
+		})
+	}
+}

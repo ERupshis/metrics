@@ -180,17 +180,17 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	}
 
 	query := func(context context.Context) error {
-		sqlSelect, _, err := sq.Select("*").From(schemaName + "." + tableName).ToSql()
-		if err != nil {
-			return fmt.Errorf("restore metrics: %w", err)
+		sqlSelect, _, errQuery := sq.Select("*").From(schemaName + "." + tableName).ToSql()
+		if errQuery != nil {
+			return fmt.Errorf("restore metrics: %w", errQuery)
 		}
 
-		rows, err = tx.QueryContext(ctx, sqlSelect)
+		rows, errQuery = tx.QueryContext(ctx, sqlSelect)
 		if rows != nil {
 			// get rid of static check problem
 			_ = rows.Err()
 		}
-		return err
+		return errQuery
 	}
 
 	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
