@@ -232,12 +232,12 @@ func TestFileManager_WriteAndScanMetricOnClosed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fm.ScanMetric()
-			if !tt.wantErr(t, err, fmt.Sprintf("ScanMetric()")) {
+			if !tt.wantErr(t, err, fmt.Sprint("ScanMetric()")) {
 				return
 			}
 
 			err = fm.WriteMetric("asd", 123)
-			if !tt.wantErr(t, err, fmt.Sprintf("WriteMetric()")) {
+			if !tt.wantErr(t, err, fmt.Sprint("WriteMetric()")) {
 				return
 			}
 
