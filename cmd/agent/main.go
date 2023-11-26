@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/erupshis/metrics/internal/agent/agentimpl"
@@ -13,7 +17,16 @@ import (
 	"github.com/erupshis/metrics/internal/ticker"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
+	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
+
 	cfg := config.Parse()
 
 	log := logger.CreateLogger("info")
@@ -45,9 +58,15 @@ func main() {
 	go ticker.Run(pollTicker, ctx, func() { agent.UpdateExtraStats() })
 	go ticker.Run(repeatTicker, ctx, func() { go workersPool.AddJob(func() error { return agent.PostJSONStatsBatch(ctx) }) })
 
-	for res := range workersPool.GetResultChan() {
-		if res != nil {
-			log.Info("[WorkersPool] failed work: %v", res)
+	go func() {
+		for res := range workersPool.GetResultChan() {
+			if res != nil {
+				log.Info("[WorkersPool] failed work: %v", res)
+			}
 		}
-	}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
 }
