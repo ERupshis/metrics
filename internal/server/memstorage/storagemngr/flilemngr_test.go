@@ -1,7 +1,6 @@
 package storagemngr
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -232,12 +231,12 @@ func TestFileManager_WriteAndScanMetricOnClosed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := fm.ScanMetric()
-			if !tt.wantErr(t, err, fmt.Sprint("ScanMetric()")) {
+			if !tt.wantErr(t, err, "ScanMetric()") {
 				return
 			}
 
 			err = fm.WriteMetric("asd", 123)
-			if !tt.wantErr(t, err, fmt.Sprint("WriteMetric()")) {
+			if !tt.wantErr(t, err, "WriteMetric()") {
 				return
 			}
 
