@@ -25,12 +25,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspectFunc := func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.CallExpr:
-			if sel, ok := n.Fun.(*ast.SelectorExpr); ok {
-				if _, ok = sel.X.(*ast.Ident); ok {
-					if isExitCall(n) {
-						pass.Reportf(n.Pos(), "avoid direct os.Exit calls in main")
-					}
-				}
+			if isExitCall(n) {
+				pass.Reportf(n.Pos(), "avoid direct os.Exit calls in main")
 			}
 		}
 		return true
