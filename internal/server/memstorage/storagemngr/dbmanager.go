@@ -35,9 +35,6 @@ const (
 	saveMetricsError    = "save metrics in db: %w"
 	restoreMetricsError = "restore metrics from db: %w"
 	restoreDataError    = "restore data from db response: %w"
-
-	logSaveMetricsInStorageStart     = "[DataBaseManager:SaveMetricsInStorage] start transaction"
-	logSaveMetricsInStorageCompleted = "[DataBaseManager:SaveMetricsInStorage] transaction completed"
 )
 
 // DatabaseErrorsToRetry is a list of database errors that are considered retryable.

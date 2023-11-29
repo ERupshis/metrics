@@ -574,12 +574,12 @@ func Test_copyMap(t *testing.T) {
 			assert.Equalf(t, ttSh.want, copyMapPredefinedSize(ttSh.args.m), "copyMapPredefinedSize(%v)", ttSh.args.m)
 		})
 	}
-	for _, tt := range tests2 {
-		ttSh := tt
-		t.Run(ttSh.name, func(t *testing.T) {
+	for _, ttCommon := range tests2 {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equalf(t, ttSh.want, copyMap(ttSh.args.m), "copyMap(%v)", ttSh.args.m)
-			assert.Equalf(t, ttSh.want, copyMapPredefinedSize(ttSh.args.m), "copyMapPredefinedSize(%v)", ttSh.args.m)
+			assert.Equalf(t, tt.want, copyMap(tt.args.m), "copyMap(%v)", tt.args.m)
+			assert.Equalf(t, tt.want, copyMapPredefinedSize(tt.args.m), "copyMapPredefinedSize(%v)", tt.args.m)
 		})
 	}
 }
@@ -625,27 +625,27 @@ func Test_copyMapWithPointers(t *testing.T) {
 			want: map[string]interface{}{},
 		},
 	}
-	for _, tt := range tests {
-		ttSh := tt
-		t.Run(ttSh.name, func(t *testing.T) {
+	for _, ttCommon := range tests {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			for k, v := range copyMapPredefinedSizePointers(ttSh.args.m) {
-				assert.Equal(t, ttSh.want[k], *v.(*int64))
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*int64))
 			}
 			for k, v := range copyMapPointers(tt.args.m) {
-				assert.Equal(t, ttSh.want[k], *v.(*int64))
+				assert.Equal(t, tt.want[k], *v.(*int64))
 			}
 		})
 	}
-	for _, tt := range tests2 {
-		ttSh := tt
-		t.Run(ttSh.name, func(t *testing.T) {
+	for _, ttCommon := range tests2 {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			for k, v := range copyMapPredefinedSizePointers(ttSh.args.m) {
-				assert.Equal(t, ttSh.want[k], *v.(*float64))
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
 			}
-			for k, v := range copyMapPointers(ttSh.args.m) {
-				assert.Equal(t, ttSh.want[k], *v.(*float64))
+			for k, v := range copyMapPointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
 			}
 		})
 	}
