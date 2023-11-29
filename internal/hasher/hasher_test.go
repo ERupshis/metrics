@@ -134,8 +134,10 @@ func TestHasher_checkRequestHash(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -227,8 +229,10 @@ func TestHasher_isRequestValid(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -299,8 +303,10 @@ func TestHasher_WriteHashHeaderInResponseIfNeed(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -392,8 +398,10 @@ func TestHasher_Handler(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,

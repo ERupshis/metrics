@@ -331,8 +331,10 @@ func TestFileManager_parseMetric(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fm.parseMetric(tt.args.metric, &tt.args.gauges, &tt.args.counters)
 
 			assert.True(t, reflect.DeepEqual(tt.args.gauges, tt.want.gauges))

@@ -59,8 +59,10 @@ func TestRestyClient_PostJSON(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			c := &RestyClient{
 				client: tt.fields.client,
 				log:    tt.fields.log,

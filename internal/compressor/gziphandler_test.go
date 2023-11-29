@@ -87,8 +87,10 @@ func Test_canCompress(t *testing.T) {
 			want: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			buf := bytes.NewBufferString("")
 			req := httptest.NewRequest("POST", "/", buf)
 			req.RequestURI = ""
