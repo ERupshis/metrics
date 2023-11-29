@@ -40,6 +40,19 @@ func TestHasher_HashMsg(t *testing.T) {
 			want:    "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
 			wantErr: false,
 		},
+		{
+			name: "unknown algorithm",
+			fields: fields{
+				log:      logger.CreateMock(),
+				hashType: 2,
+			},
+			args: args{
+				msg: []byte("{\"some message text\"}"),
+				key: "123",
+			},
+			want:    "",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

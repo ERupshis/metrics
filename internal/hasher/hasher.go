@@ -95,7 +95,12 @@ func (hr *Hasher) WriteHashHeaderInResponseIfNeed(w http.ResponseWriter, respons
 
 // HashMsg returns hash for message.
 func (hr *Hasher) HashMsg(msg []byte) (string, error) {
-	switch hr.getAlgo() {
+	algo, err := hr.getAlgo()
+	if err != nil {
+		return "", fmt.Errorf("hash message: %w", err)
+	}
+
+	switch algo {
 	case algoSHA256:
 		return hashMsg(sha256.New, msg, hr.key)
 	default:
@@ -161,12 +166,12 @@ func (hr *Hasher) GetHeader() string {
 }
 
 // getAlgo returns used algo.
-func (hr *Hasher) getAlgo() int {
+func (hr *Hasher) getAlgo() (int, error) {
 	switch hr.hashType {
 	case SHA256:
-		return algoSHA256
+		return algoSHA256, nil
 	default:
-		return algoSHA256
+		return -1, fmt.Errorf("unknow algorithm")
 	}
 }
 
