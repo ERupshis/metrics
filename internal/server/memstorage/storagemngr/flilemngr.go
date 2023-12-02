@@ -22,6 +22,11 @@ const (
 	openFileError = "open file: %w"
 )
 
+const (
+	gaugeType   = "gauge"
+	counterType = "counter"
+)
+
 // fileWriter is responsible for writing metric data to a file.
 type fileWriter struct {
 	file   *os.File
@@ -64,7 +69,11 @@ func (fm *FileManager) SaveMetricsInStorage(_ context.Context, gaugeValues map[s
 		if err := fm.OpenFile(fm.path, true); err != nil {
 			return fmt.Errorf("cannot open file '%s' to save metrics: %w", fm.path, err)
 		}
-		defer fm.CloseFile()
+		defer func() {
+			if err := fm.CloseFile(); err != nil {
+				fm.logger.Info("[FileManager::SaveMetricsInStorage] failed to close file: %v", err)
+			}
+		}()
 	}
 
 	for name, val := range gaugeValues {
@@ -92,7 +101,11 @@ func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]flo
 		if err := fm.OpenFile(fm.path, false); err != nil {
 			return gauges, counters, fmt.Errorf("cannot open file '%s' to read metrics: %w", fm.path, err)
 		}
-		defer fm.CloseFile()
+		defer func() {
+			if err := fm.CloseFile(); err != nil {
+				fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to close file: %v", err)
+			}
+		}()
 	}
 
 	failedToReadMetricsCount := 0
@@ -123,14 +136,14 @@ func (fm *FileManager) RestoreDataFromStorage(_ context.Context) (map[string]flo
 // parseMetric parses the MetricData and updates the provided gauge and counter maps accordingly.
 func (fm *FileManager) parseMetric(metric *MetricData, gauges *map[string]float64, counters *map[string]int64) {
 	switch metric.ValueType {
-	case "gauge":
+	case gaugeType:
 		value, err := strconv.ParseFloat(metric.Value, 64)
 		if err != nil {
 			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse float64 value for '%s'", metric.Name)
 			return
 		}
 		(*gauges)[metric.Name] = value
-	case "counter":
+	case counterType:
 		value, err := strconv.ParseInt(metric.Value, 10, 64)
 		if err != nil {
 			fm.logger.Info("[FileManager::RestoreDataFromStorage] failed to parse int64 value for '%s'", metric.Name)
@@ -210,7 +223,7 @@ func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	case *int64:
 		metric := MetricData{
 			name,
-			"counter",
+			counterType,
 			strconv.FormatInt(*valType, 10),
 		}
 
@@ -219,7 +232,7 @@ func (fm *FileManager) WriteMetric(name string, value interface{}) error {
 	case *float64:
 		metric := MetricData{
 			name,
-			"gauge",
+			gaugeType,
 			strconv.FormatFloat(*valType, 'f', -1, 64),
 		}
 

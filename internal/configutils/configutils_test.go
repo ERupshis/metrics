@@ -83,8 +83,10 @@ func TestAtoi64(t *testing.T) {
 			wantErr: assert.Error,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := Atoi64(tt.args.value)
 			if !tt.wantErr(t, err, fmt.Sprintf("Atoi64(%v)", tt.args.value)) {
 				return
@@ -118,8 +120,10 @@ func TestAddHTTPPrefixIfNeed(t *testing.T) {
 			want: "http://asd.asd",
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equalf(t, tt.want, AddHTTPPrefixIfNeed(tt.args.value), "AddHTTPPrefixIfNeed(%v)", tt.args.value)
 		})
 	}

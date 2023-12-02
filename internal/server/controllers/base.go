@@ -133,7 +133,9 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 
 	// c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
@@ -191,7 +193,8 @@ func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg
 
 // addMetricFromMessage adds a metric to storage based on the metric type.
 func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
-	if data.MType == gaugeType {
+	switch data.MType {
+	case gaugeType:
 		valueIn := new(float64)
 		if data.Value != nil {
 			valueIn = data.Value
@@ -199,7 +202,7 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 		c.storage.AddGauge(data.ID, *valueIn)
 		valueOut, _ := c.storage.GetGauge(data.ID)
 		data.Value = &valueOut
-	} else if data.MType == counterType {
+	case counterType:
 		valueIn := new(int64)
 		if data.Delta != nil {
 			valueIn = data.Delta
@@ -212,14 +215,15 @@ func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
 
 // jsonGetHandler handles JSON GET requests and retrieves metrics from storage.
 func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
-	if data.MType == gaugeType {
+	switch data.MType {
+	case gaugeType:
 		value, err := c.storage.GetGauge(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return nil
 		}
 		data.Value = &value
-	} else if data.MType == counterType {
+	case counterType:
 		value, err := c.storage.GetCounter(data.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -242,10 +246,11 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if valueType == gaugeType {
+	switch valueType {
+	case gaugeType:
 		c.postGaugeHandler(w, r)
 		return
-	} else if valueType == counterType {
+	case counterType:
 		c.postCounterHandler(w, r)
 		return
 	}
@@ -299,10 +304,11 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if valueType == gaugeType {
+	switch valueType {
+	case gaugeType:
 		c.getGaugeHandler(w, r)
 		return
-	} else if valueType == counterType {
+	case counterType:
 		c.getCounterHandler(w, r)
 		return
 	}
@@ -319,7 +325,7 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := fmt.Sprintf("%d", value)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
-		if _, err := io.WriteString(w, responseBody); err != nil {
+		if _, err = io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
@@ -338,7 +344,7 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := strconv.FormatFloat(value, 'f', -1, 64)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte(responseBody))
-		if _, err := io.WriteString(w, responseBody); err != nil {
+		if _, err = io.WriteString(w, responseBody); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
@@ -389,7 +395,7 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	buf := bytes.Buffer{}
 	writer := bufio.NewWriter(&buf)
 
-	if err := tmpl.Execute(writer, tmplData{gaugesMap, countersMap}); err != nil {
+	if err = tmpl.Execute(writer, tmplData{gaugesMap, countersMap}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 

@@ -150,6 +150,7 @@ func copyMapPredefinedSizePointers[V any](m map[string]V) map[string]interface{}
 func copyMapPointers[V any](m map[string]V) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range m {
+		v := v
 		result[k] = &v
 	}
 	return result

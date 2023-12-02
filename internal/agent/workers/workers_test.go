@@ -83,6 +83,18 @@ func TestCreateWorkersPool(t *testing.T) {
 		{
 			name: "valid",
 			args: args{
+				count: 2,
+				log:   logger.CreateMock(),
+			},
+			want: want{
+				createErr: false,
+				jobsLen:   0,
+				resLen:    0,
+			},
+		},
+		{
+			name: "incorrect workers count",
+			args: args{
 				count: 0,
 				log:   logger.CreateMock(),
 			},
@@ -115,7 +127,7 @@ func TestCreateWorkersPool(t *testing.T) {
 
 			pool.CloseJobsChan()
 			_, ok := <-pool.jobs
-			assert.Equal(t, tt.want.jobsChClosed, !ok)
+			assert.Equal(t, tt.want.jobsChClosed, ok)
 
 			pool.CloseResultsChan()
 			_, ok = <-pool.results

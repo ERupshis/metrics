@@ -35,9 +35,6 @@ const (
 	saveMetricsError    = "save metrics in db: %w"
 	restoreMetricsError = "restore metrics from db: %w"
 	restoreDataError    = "restore data from db response: %w"
-
-	logSaveMetricsInStorageStart     = "[DataBaseManager:SaveMetricsInStorage] start transaction"
-	logSaveMetricsInStorageCompleted = "[DataBaseManager:SaveMetricsInStorage] transaction completed"
 )
 
 // DatabaseErrorsToRetry is a list of database errors that are considered retryable.
@@ -117,12 +114,12 @@ func (m *DataBaseManager) SaveMetricsInStorage(ctx context.Context, gaugesValues
 	}
 
 	if err = m.saveMetrics(ctx, tx, gaugesTable, gaugesValues); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf(saveMetricsError, err)
 	}
 
 	if err = m.saveMetrics(ctx, tx, countersTable, countersValues); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf(saveMetricsError, err)
 	}
 
@@ -147,12 +144,12 @@ func (m *DataBaseManager) RestoreDataFromStorage(ctx context.Context) (map[strin
 	}
 
 	if err = m.restoreDataInMap(ctx, tx, gaugesTable, gauges); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
 	if err = m.restoreDataInMap(ctx, tx, countersTable, counters); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, nil, fmt.Errorf(restoreMetricsError, err)
 	}
 
@@ -180,24 +177,28 @@ func (m *DataBaseManager) restoreDataInMap(ctx context.Context, tx *sql.Tx, tabl
 	}
 
 	query := func(context context.Context) error {
-		sqlSelect, _, err := sq.Select("*").From(schemaName + "." + tableName).ToSql()
-		if err != nil {
-			return fmt.Errorf("restore metrics: %w", err)
+		sqlSelect, _, errQuery := sq.Select("*").From(schemaName + "." + tableName).ToSql()
+		if errQuery != nil {
+			return fmt.Errorf("restore metrics: %w", errQuery)
 		}
 
-		rows, err = tx.QueryContext(ctx, sqlSelect)
+		rows, errQuery = tx.QueryContext(ctx, sqlSelect)
 		if rows != nil {
 			// get rid of static check problem
-			rows.Err()
+			_ = rows.Err()
 		}
-		return err
+		return errQuery
 	}
 
 	err = retryer.RetryCallWithTimeout(ctx, m.log, nil, DatabaseErrorsToRetry, query)
 	if err != nil {
 		return fmt.Errorf(restoreDataError, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err = rows.Close(); err != nil {
+			m.log.Info("close query res: %v", err)
+		}
+	}()
 
 	for rows.Next() {
 		switch dest := mapDest.(type) {
@@ -406,6 +407,6 @@ func createUpdateStmt(ctx context.Context, tx *sql.Tx, metricTable string) (*sql
 // closeDatabaseStmts closes all the SQL statements in the provided map.
 func closeDatabaseStmts(stmts map[string]*sql.Stmt) {
 	for _, stmt := range stmts {
-		stmt.Close()
+		_ = stmt.Close()
 	}
 }

@@ -2,6 +2,7 @@ package storagemngr
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/erupshis/metrics/internal/logger"
@@ -118,8 +119,8 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 	log := logger.CreateMock()
 
 	fm := createFileManagerTest(path, log)
-	fm.OpenFile(path, false)
-	fm.CloseFile()
+	_ = fm.OpenFile(path, false)
+	_ = fm.CloseFile()
 
 	type fields struct {
 		path string
@@ -159,8 +160,9 @@ func TestFileManager_initWriterAndScanner(t *testing.T) {
 }
 
 func TestFileManager_WriteAndReadMetric(t *testing.T) {
-	num := 123.0
-	os.RemoveAll(testFolder)
+	numFloat := 123.0
+	numInt64 := int64(64)
+	_ = os.RemoveAll(testFolder)
 	log := logger.CreateMock()
 
 	fm := createFileManagerTest(testConfig.StoragePath, log)
@@ -181,13 +183,19 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 		{
 			name:    "float valid",
 			fields:  fields{path: testFolder + "/asd"},
-			args:    args{name: "someM", value: &num},
+			args:    args{name: "someM", value: &numFloat},
+			wantErr: false,
+		},
+		{
+			name:    "int64 valid",
+			fields:  fields{path: testFolder + "/asd"},
+			args:    args{name: "someMInt", value: &numInt64},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm.OpenFile(tt.fields.path, true)
+			_ = fm.OpenFile(tt.fields.path, true)
 			if err := fm.WriteMetric(tt.args.name, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("WriteMetric() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -198,22 +206,139 @@ func TestFileManager_WriteAndReadMetric(t *testing.T) {
 			}
 			assert.Equal(t, metric.Name, tt.args.name)
 
-			fm.CloseFile()
+			_ = fm.CloseFile()
 		})
 	}
+}
 
-	// check trunc
+func TestFileManager_WriteAndScanMetricOnClosed(t *testing.T) {
+	_ = os.RemoveAll(testFolder)
+
+	log := logger.CreateMock()
+	defer log.Sync()
+	fm := createFileManagerTest(testConfig.StoragePath, log)
+	tests := []struct {
+		name    string
+		want    *MetricData
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name:    "closed file",
+			want:    nil,
+			wantErr: assert.Error,
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm.OpenFile(tt.fields.path, false)
-
-			metric, err := fm.ScanMetric()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ScanMetric() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := fm.ScanMetric()
+			if !tt.wantErr(t, err, "ScanMetric()") {
+				return
 			}
-			assert.Equal(t, metric.Name, tt.args.name)
 
-			fm.CloseFile()
+			err = fm.WriteMetric("asd", 123)
+			if !tt.wantErr(t, err, "WriteMetric()") {
+				return
+			}
+
+			assert.Equalf(t, tt.want, got, "ScanMetric()")
+		})
+	}
+}
+
+func TestFileManager_parseMetric(t *testing.T) {
+	_ = os.RemoveAll(testFolder)
+
+	log := logger.CreateMock()
+	defer log.Sync()
+	fm := createFileManagerTest(testConfig.StoragePath, log)
+
+	type args struct {
+		metric   *MetricData
+		gauges   map[string]float64
+		counters map[string]int64
+	}
+	type want struct {
+		gauges   map[string]float64
+		counters map[string]int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "int64 valid",
+			args: args{
+				metric: &MetricData{
+					Name:      "int64 metric",
+					ValueType: counterType,
+					Value:     "123",
+				},
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{"int64 metric": 123},
+			},
+		},
+		{
+			name: "float64 valid",
+			args: args{
+				metric: &MetricData{
+					Name:      "float64 metric",
+					ValueType: gaugeType,
+					Value:     "123",
+				},
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+			want: want{
+				gauges:   map[string]float64{"float64 metric": 123},
+				counters: map[string]int64{},
+			},
+		},
+		{
+			name: "int64 incorrect metric value",
+			args: args{
+				metric: &MetricData{
+					Name:      "int64 metric",
+					ValueType: counterType,
+					Value:     "asd",
+				},
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+		},
+		{
+			name: "float64 incorrect metric value",
+			args: args{
+				metric: &MetricData{
+					Name:      "float64 metric",
+					ValueType: gaugeType,
+					Value:     "asd",
+				},
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+		},
+	}
+	for _, ttCommon := range tests {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			fm.parseMetric(tt.args.metric, &tt.args.gauges, &tt.args.counters)
+
+			assert.True(t, reflect.DeepEqual(tt.args.gauges, tt.want.gauges))
+			assert.True(t, reflect.DeepEqual(tt.args.counters, tt.want.counters))
 		})
 	}
 }

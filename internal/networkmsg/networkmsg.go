@@ -70,7 +70,7 @@ func ParsePostBatchValueMessage(message []byte) ([]Metric, error) {
 	err := fmt.Errorf("found invalid metrics in message: ")
 	for i, metric := range out {
 		if _, errMetric := isMetricValid(metric); errMetric != nil {
-			err = fmt.Errorf("%w %d: %w |", err, i, errMetric)
+			err = fmt.Errorf("%v %d: %w |", err, i, errMetric)
 		}
 	}
 

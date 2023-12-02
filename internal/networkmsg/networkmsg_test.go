@@ -64,8 +64,10 @@ func TestParsePostBatchValueMessage(t *testing.T) {
 			wantErr: assert.Error,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ParsePostBatchValueMessage(tt.args.message)
 			if !tt.wantErr(t, err, fmt.Sprintf("ParsePostBatchValueMessage(%v)", tt.args.message)) {
 				return
@@ -159,8 +161,10 @@ func TestParsePostValueMessage(t *testing.T) {
 			wantErr: assert.Error,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ParsePostValueMessage(tt.args.message)
 			if !tt.wantErr(t, err, fmt.Sprintf("ParsePostValueMessage(%v)", tt.args.message)) {
 				return
@@ -248,8 +252,10 @@ func Test_isMetricValid(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := isMetricValid(tt.args.m)
 			if !tt.wantErr(t, err, fmt.Sprintf("isMetricValid(%v)", tt.args.m)) {
 				return

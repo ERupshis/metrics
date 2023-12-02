@@ -8,6 +8,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHasher_HashMsg(t *testing.T) {
@@ -38,6 +39,19 @@ func TestHasher_HashMsg(t *testing.T) {
 			},
 			want:    "b325442b7351543173366c32ad347b7f2b643e6bdabe7aa3717c819caeb9726c",
 			wantErr: false,
+		},
+		{
+			name: "unknown algorithm",
+			fields: fields{
+				log:      logger.CreateMock(),
+				hashType: 2,
+			},
+			args: args{
+				msg: []byte("{\"some message text\"}"),
+				key: "123",
+			},
+			want:    "",
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -133,8 +147,10 @@ func TestHasher_checkRequestHash(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -226,8 +242,10 @@ func TestHasher_isRequestValid(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -298,8 +316,10 @@ func TestHasher_WriteHashHeaderInResponseIfNeed(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -391,8 +411,10 @@ func TestHasher_Handler(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			hr := &Hasher{
 				log:      tt.fields.log,
 				hashType: tt.fields.hashType,
@@ -401,7 +423,9 @@ func TestHasher_Handler(t *testing.T) {
 
 			req := httptest.NewRequest("GET", "/", nil)
 			req.Header.Add(hr.GetHeader(), tt.args.hashHeaderValue)
-			defer req.Body.Close()
+			defer func() {
+				_ = req.Body.Close()
+			}()
 
 			var buf bytes.Buffer
 			buf.Write(tt.args.body)
@@ -413,14 +437,16 @@ func TestHasher_Handler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
+			var err error
 			handler := hr.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("correct"))
+				_, err = w.Write([]byte("correct"))
 			}))
 
 			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.want.statusCode, rr.Code)
+			require.NoError(t, err)
 		})
 	}
 }

@@ -71,7 +71,11 @@ func (c *DefaultClient) makeRequest(ctx context.Context, method string, url stri
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err = resp.Body.Close(); err != nil {
+			c.log.Info("close response body: %v", err)
+		}
+	}()
 
 	return nil
 }

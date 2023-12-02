@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -19,16 +20,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
-	/*fcpu, err := os.Create(`profiles/cpu_optimized_logger_removed_from_SaveMetrics.pprof`)
-	if err != nil {
-		panic(err)
-	}
-	defer fcpu.Close()
-	if err := pprof.StartCPUProfile(fcpu); err != nil {
-		panic(err)
-	}
-	defer pprof.StopCPUProfile()*/
+	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
+	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 
 	cfg := config.Parse()
 
@@ -40,7 +40,11 @@ func main() {
 
 	storageManager := createStorageManager(ctx, &cfg, log)
 	if storageManager != nil {
-		defer storageManager.Close()
+		defer func() {
+			if err := storageManager.Close(); err != nil {
+				log.Info("failed to close storage: %v", err)
+			}
+		}()
 	}
 	storage := memstorage.Create(storageManager)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
@@ -49,13 +53,13 @@ func main() {
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
-	//Schedule data saving in file with storeInterval
+	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	//heap profiling.
-	//router.Mount("/debug", middleware.Profiler())
+	// heap profiling.
+	// router.Mount("/debug", middleware.Profiler())
 
-	//server launch.
+	// server launch.
 	go func() {
 		log.Info("server is launching with Host setting: %s", cfg.Host)
 		if err := http.ListenAndServe(cfg.Host, router); err != nil {
@@ -63,8 +67,8 @@ func main() {
 		}
 	}()
 
-	//time.Sleep(300 * time.Second)
-	//memProfile()
+	// time.Sleep(300 * time.Second)
+	// memProfile()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh
@@ -101,16 +105,3 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 		return nil
 	}
 }
-
-/*func memProfile() {
-	// создаём файл журнала профилирования памяти
-	fmem, err := os.Create(`profiles/result.pprof`)
-	if err != nil {
-		panic(err)
-	}
-	defer fmem.Close()
-	runtime.GC() // получаем статистику по использованию памяти
-	if err := pprof.WriteHeapProfile(fmem); err != nil {
-		panic(err)
-	}
-}*/

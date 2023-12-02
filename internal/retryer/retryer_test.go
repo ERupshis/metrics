@@ -57,8 +57,10 @@ func Test_canRetryCall(t *testing.T) {
 			want: false,
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.want, canRetryCall(tt.args.err, tt.args.repeatableErrors))
 		})
 	}
@@ -163,8 +165,10 @@ func TestRetryCallWithTimeout(t *testing.T) {
 			wantErr: errors.New("some error"),
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.wantErr, RetryCallWithTimeout(tt.args.ctx, tt.args.log, tt.args.intervals, tt.args.repeatableErrors, tt.args.callback))
 		})
 	}

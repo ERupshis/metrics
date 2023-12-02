@@ -84,8 +84,10 @@ func TestMemStorage_GetCounter(t *testing.T) {
 		{"valid name", "metric1", 1, false},
 		{"invalid name", "metric2", -1, true},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := storage.GetCounter(tt.req)
 			if err != nil && !tt.wantErr {
 				assert.NoError(t, err, "GetCounter(%v) missing name", tt.req)
@@ -165,8 +167,10 @@ func TestMemStorage_GetAllCounters(t *testing.T) {
 			want: map[string]interface{}{"metric2": &int1, "metric3": &int2},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			m := &MemStorage{
 				gaugeMetrics:   tt.fields.gaugeMetrics,
 				counterMetrics: tt.fields.counterMetrics,
@@ -220,8 +224,11 @@ func TestMemStorage_GetAllGauges(t *testing.T) {
 			want: map[string]interface{}{"metric1": &float1, "metric3": &float2},
 		},
 	}
-	for _, tt := range tests {
+	for _, ttCommon := range tests {
+		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			m := &MemStorage{
 				gaugeMetrics:   tt.fields.gaugeMetrics,
 				counterMetrics: tt.fields.counterMetrics,
@@ -289,9 +296,10 @@ func TestMemStorage_SaveData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockStorageManager(ctrl)
+	manager := mocks.NewMockStorageManager(ctrl)
 	gomock.InOrder(
-		m.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		manager.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+		manager.EXPECT().SaveMetricsInStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("manager err")),
 	)
 
 	type fields struct {
@@ -299,16 +307,45 @@ func TestMemStorage_SaveData(t *testing.T) {
 		counterMetrics map[string]counter
 		manager        storagemngr.StorageManager
 	}
+	type want struct {
+		wantErr bool
+	}
 	tests := []struct {
 		name   string
 		fields fields
+		want   want
 	}{
 		{
 			name: "valid",
 			fields: fields{
 				gaugeMetrics:   nil,
 				counterMetrics: nil,
-				manager:        m,
+				manager:        manager,
+			},
+			want: want{
+				wantErr: false,
+			},
+		},
+		{
+			name: "error from manager",
+			fields: fields{
+				gaugeMetrics:   nil,
+				counterMetrics: nil,
+				manager:        manager,
+			},
+			want: want{
+				wantErr: true,
+			},
+		},
+		{
+			name: "manager is not init",
+			fields: fields{
+				gaugeMetrics:   nil,
+				counterMetrics: nil,
+				manager:        nil,
+			},
+			want: want{
+				wantErr: true,
 			},
 		},
 	}
@@ -319,7 +356,12 @@ func TestMemStorage_SaveData(t *testing.T) {
 				counterMetrics: tt.fields.counterMetrics,
 				manager:        tt.fields.manager,
 			}
-			m.SaveData(context.Background())
+
+			err := m.SaveData(context.Background())
+			if (err != nil) != tt.want.wantErr {
+				t.Errorf("SaveData() error = %v, wantErr %v", err, tt.want.wantErr)
+				return
+			}
 		})
 	}
 }
@@ -328,7 +370,17 @@ func TestMemStorage_RestoreData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockStorageManager(ctrl)
+	manager := mocks.NewMockStorageManager(ctrl)
+	gomock.InOrder(
+		manager.EXPECT().RestoreDataFromStorage(context.Background()).Return(
+			map[string]float64{"gauge1": 1.1, "gauge2": 2.2},
+			map[string]int64{"counter1": 1, "counter3": 3},
+			nil),
+		manager.EXPECT().RestoreDataFromStorage(context.Background()).Return(
+			nil,
+			nil,
+			fmt.Errorf("manager err")),
+	)
 
 	type fields struct {
 		gaugeMetrics   map[string]gauge
@@ -338,6 +390,7 @@ func TestMemStorage_RestoreData(t *testing.T) {
 	type want struct {
 		gaugeMetrics   map[string]gauge
 		counterMetrics map[string]counter
+		wantErr        bool
 	}
 	tests := []struct {
 		name   string
@@ -349,16 +402,28 @@ func TestMemStorage_RestoreData(t *testing.T) {
 			fields: fields{
 				gaugeMetrics:   map[string]gauge{},
 				counterMetrics: map[string]counter{},
-				manager:        m,
+				manager:        manager,
 			},
 			want: want{
 				gaugeMetrics:   map[string]float64{"gauge1": 1.1, "gauge2": 2.2},
 				counterMetrics: map[string]int64{"counter1": 1, "counter3": 3},
+				wantErr:        false,
+			},
+		},
+		{
+			name: "valid",
+			fields: fields{
+				gaugeMetrics:   map[string]gauge{},
+				counterMetrics: map[string]counter{},
+				manager:        manager,
+			},
+			want: want{
+				gaugeMetrics:   map[string]gauge{},
+				counterMetrics: map[string]counter{},
+				wantErr:        true,
 			},
 		},
 	}
-
-	m.EXPECT().RestoreDataFromStorage(context.Background()).Return(map[string]float64{"gauge1": 1.1, "gauge2": 2.2}, map[string]int64{"counter1": 1, "counter3": 3}, nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -368,7 +433,11 @@ func TestMemStorage_RestoreData(t *testing.T) {
 				manager:        tt.fields.manager,
 			}
 
-			m.RestoreData(context.Background())
+			err := m.RestoreData(context.Background())
+			if (err != nil) != tt.want.wantErr {
+				t.Errorf("SaveData() error = %v, wantErr %v", err, tt.want.wantErr)
+				return
+			}
 
 			assert.Equal(t, tt.want.gaugeMetrics, m.gaugeMetrics)
 			assert.Equal(t, tt.want.counterMetrics, m.counterMetrics)
@@ -454,4 +523,130 @@ func generateRandomMapInt64(size int) map[string]int64 {
 	}
 
 	return randomMap
+}
+
+func Test_copyMap(t *testing.T) {
+	type args[V any] struct {
+		m map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want map[string]interface{}
+	}
+	tests := []testCase[int64]{
+		{
+			name: "int64 valid",
+			args: args[int64]{
+				m: map[string]int64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": int64(1), "two": int64(2)},
+		},
+		{
+			name: "int64 empty",
+			args: args[int64]{
+				m: map[string]int64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	tests2 := []testCase[float64]{
+		{
+			name: "float64 valid",
+			args: args[float64]{
+				m: map[string]float64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": float64(1), "two": float64(2)},
+		},
+		{
+			name: "float64 empty",
+			args: args[float64]{
+				m: map[string]float64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	for _, tt := range tests {
+		ttSh := tt
+		t.Run(ttSh.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equalf(t, ttSh.want, copyMap(ttSh.args.m), "copyMap(%v)", ttSh.args.m)
+			assert.Equalf(t, ttSh.want, copyMapPredefinedSize(ttSh.args.m), "copyMapPredefinedSize(%v)", ttSh.args.m)
+		})
+	}
+	for _, ttCommon := range tests2 {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equalf(t, tt.want, copyMap(tt.args.m), "copyMap(%v)", tt.args.m)
+			assert.Equalf(t, tt.want, copyMapPredefinedSize(tt.args.m), "copyMapPredefinedSize(%v)", tt.args.m)
+		})
+	}
+}
+
+func Test_copyMapWithPointers(t *testing.T) {
+	type args[V any] struct {
+		m map[string]V
+	}
+	type testCase[V any] struct {
+		name string
+		args args[V]
+		want map[string]interface{}
+	}
+	tests := []testCase[int64]{
+		{
+			name: "int64 valid",
+			args: args[int64]{
+				m: map[string]int64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": int64(1), "two": int64(2)},
+		},
+		{
+			name: "int64 empty",
+			args: args[int64]{
+				m: map[string]int64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	tests2 := []testCase[float64]{
+		{
+			name: "float64 valid",
+			args: args[float64]{
+				m: map[string]float64{"one": 1, "two": 2},
+			},
+			want: map[string]interface{}{"one": float64(1), "two": float64(2)},
+		},
+		{
+			name: "float64 empty",
+			args: args[float64]{
+				m: map[string]float64{},
+			},
+			want: map[string]interface{}{},
+		},
+	}
+	for _, ttCommon := range tests {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*int64))
+			}
+			for k, v := range copyMapPointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*int64))
+			}
+		})
+	}
+	for _, ttCommon := range tests2 {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			for k, v := range copyMapPredefinedSizePointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
+			}
+			for k, v := range copyMapPointers(tt.args.m) {
+				assert.Equal(t, tt.want[k], *v.(*float64))
+			}
+		})
+	}
 }
