@@ -1,6 +1,7 @@
 package storagemngr
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testFolder = "/test"
@@ -339,6 +341,103 @@ func TestFileManager_parseMetric(t *testing.T) {
 
 			assert.True(t, reflect.DeepEqual(tt.args.gauges, tt.want.gauges))
 			assert.True(t, reflect.DeepEqual(tt.args.counters, tt.want.counters))
+		})
+	}
+}
+
+func TestFileManager_SaveAndReadFile(t *testing.T) {
+	_ = os.RemoveAll(testFolder)
+	gauge := float64(123)
+	counter := int64(12)
+
+	var path = testFolder + "/dd1"
+
+	log := logger.CreateLogger("info")
+
+	fm := createFileManagerTest(path, log)
+
+	type args struct {
+		gauges   map[string]interface{}
+		counters map[string]interface{}
+	}
+	type want struct {
+		gauges   map[string]float64
+		counters map[string]int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "float64 valid",
+			args: args{
+
+				gauges:   map[string]interface{}{"float64 metric": &gauge},
+				counters: map[string]interface{}{},
+			},
+			want: want{
+				gauges:   map[string]float64{"float64 metric": 123},
+				counters: map[string]int64{},
+			},
+		},
+		{
+			name: "int64 valid",
+			args: args{
+				gauges:   map[string]interface{}{},
+				counters: map[string]interface{}{"counter metric": &counter},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{"counter metric": int64(12)},
+			},
+		},
+		{
+			name: "int64 and float64 valid",
+			args: args{
+				gauges:   map[string]interface{}{"float64 metric": &gauge},
+				counters: map[string]interface{}{"counter metric": &counter},
+			},
+			want: want{
+				gauges:   map[string]float64{"float64 metric": 123},
+				counters: map[string]int64{"counter metric": int64(12)},
+			},
+		},
+		{
+			name: "nothing to save",
+			args: args{
+				gauges:   map[string]interface{}{},
+				counters: map[string]interface{}{},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+		},
+		{
+			name: "incorrect metric type",
+			args: args{
+				gauges:   map[string]interface{}{"float64 metric": 123},
+				counters: map[string]interface{}{},
+			},
+			want: want{
+				gauges:   map[string]float64{},
+				counters: map[string]int64{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_ = os.RemoveAll(path)
+			err := fm.SaveMetricsInStorage(context.Background(), tt.args.gauges, tt.args.counters)
+			require.NoError(t, err)
+			require.NoError(t, fm.Close())
+
+			gauges, counters, err := fm.RestoreDataFromStorage(context.Background())
+			require.NoError(t, err)
+			assert.True(t, reflect.DeepEqual(gauges, tt.want.gauges))
+			assert.True(t, reflect.DeepEqual(counters, tt.want.counters))
+
 		})
 	}
 }

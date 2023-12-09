@@ -14,7 +14,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/workers"
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
-	rsa "github.com/erupshis/metrics/internal/rsa"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/ticker"
 )
 
