@@ -12,6 +12,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/erupshis/metrics/internal/server/memstorage"
@@ -47,8 +48,16 @@ func main() {
 		}()
 	}
 	storage := memstorage.Create(storageManager)
+	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
-	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash)
+
+	// rsa encrypting
+	rsaDecoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("[main] failed to create RSA decoder: %v", err)
+	}
+
+	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())

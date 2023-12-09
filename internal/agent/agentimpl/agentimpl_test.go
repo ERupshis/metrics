@@ -372,3 +372,65 @@ func TestAgent_PostJSONStatsBatch(t *testing.T) {
 		})
 	}
 }
+
+func TestAgent_PostJSONStats(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockClient := mocks.NewMockBaseClient(ctrl)
+	gomock.InOrder(
+		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(64),
+	)
+
+	type fields struct {
+		client client.BaseClient
+		logger logger.BaseLogger
+		config config.Config
+	}
+	type args struct {
+		ctx context.Context
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "valid",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "error from http client",
+			fields: fields{
+				logger: logger.CreateMock(),
+				config: config.Config{
+					Host: "/",
+				},
+				client: mockClient,
+			},
+			args: args{
+				ctx: context.Background(),
+			},
+			wantErr: assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := Create(tt.fields.config, tt.fields.logger, tt.fields.client)
+			a.UpdateStats()
+			a.UpdateExtraStats()
+			a.PostJSONStats(tt.args.ctx)
+		})
+	}
+}
