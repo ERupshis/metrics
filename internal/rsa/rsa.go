@@ -6,11 +6,14 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
+
+var invalidPrivateKeyRSA = fmt.Errorf("RSA key is not set")
 
 // Encoder RSA message encryptor.
 type Encoder struct {
@@ -70,7 +73,7 @@ func CreateDecoder(keyFilePath string) (*Decoder, error) {
 // Decode encrypts message using RSA public key.
 func (e *Decoder) Decode(msg []byte) ([]byte, error) {
 	if e.key == nil {
-		return nil, fmt.Errorf("RSA cert is not set")
+		return nil, invalidPrivateKeyRSA
 	}
 
 	return rsa.DecryptPKCS1v15(rand.Reader, e.key, msg)
@@ -91,7 +94,11 @@ func (e *Decoder) DecodeRSAHandler(next http.Handler) http.Handler {
 
 		decryptedMessage, err := e.Decode(buf.Bytes())
 		if err != nil {
-			http.Error(w, "Error decrypting message", http.StatusBadRequest)
+			if errors.Is(err, invalidPrivateKeyRSA) {
+				http.Error(w, "Error decrypting message", http.StatusInternalServerError)
+			} else {
+				http.Error(w, "Error decrypting message", http.StatusBadRequest)
+			}
 			return
 		}
 
