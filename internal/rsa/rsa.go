@@ -1,3 +1,4 @@
+// Package rsa implements encoding/decoding client/server communication with RSA keys.
 package rsa
 
 import (
