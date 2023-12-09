@@ -16,6 +16,7 @@ import (
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
+	"github.com/erupshis/metrics/internal/rsa"
 )
 
 type Agent struct {
@@ -43,7 +44,14 @@ func CreateDefault() *Agent {
 	log := logger.CreateLogger("Info")
 	hashKey := ""
 	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
-	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log)), config: config.Default(), logger: log, extraStats: extraStats}
+
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("create default agent: %v", err)
+		return nil
+	}
+
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log), encoder), config: config.Default(), logger: log, extraStats: extraStats}
 }
 
 // GetPollInterval returns collecting poll interval (seconds).

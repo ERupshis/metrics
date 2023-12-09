@@ -25,6 +25,7 @@ type Config struct {
 	StoragePath   string // StoragePath is the file storage path for metrics data.
 	DataBaseDSN   string // DataBaseDSN is the DSN for connecting to the metrics database.
 	Key           string // Key is the authentication key for the metrics server.
+	KeyRSA        string // KeyRSA private key for connection.
 }
 
 // Parse reads and parses command line flags, updating the provided Config.
@@ -39,13 +40,14 @@ func Parse() Config {
 
 // Constants representing command line flags.
 const (
-	flagAddress       = "a" // flagAddress represents the server endpoint.
-	flagLogLevel      = "l" // flagLogLevel represents the log level.
-	flagRestore       = "r" // flagRestore represents the data restoration setting.
-	flagStoragePath   = "f" // flagStoragePath represents the file storage path.
-	flagStoreInterval = "i" // flagStoreInterval represents the store interval.
-	flagDataBaseDSN   = "d" // flagDataBaseDSN represents the database DSN.
-	flagKey           = "k" // flagKey represents the hash key.
+	flagAddress       = "a"          // flagAddress represents the server endpoint.
+	flagLogLevel      = "l"          // flagLogLevel represents the log level.
+	flagRestore       = "r"          // flagRestore represents the data restoration setting.
+	flagStoragePath   = "f"          // flagStoragePath represents the file storage path.
+	flagStoreInterval = "i"          // flagStoreInterval represents the store interval.
+	flagDataBaseDSN   = "d"          // flagDataBaseDSN represents the database DSN.
+	flagKey           = "k"          // flagKey represents the hash key.
+	flagKeyRSA        = "crypto-key" // flagKeyRSA private connection key.
 )
 
 // checkFlags initializes and parses command line flags, updating the provided Config.
@@ -58,9 +60,10 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.StoragePath, flagStoragePath, "", "file storage path")
 	flag.Int64Var(&config.StoreInterval, flagStoreInterval, 5, "store interval val (sec)")
 
-	// databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable"
-	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, "", "database DSN")
+	databaseDefDSN := "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable"
+	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, databaseDefDSN, "database DSN")
 	flag.StringVar(&config.Key, flagKey, "", "Auth key")
+	flag.StringVar(&config.KeyRSA, flagKeyRSA, "rsa/key.pem", "private RSA key path")
 	flag.Parse()
 }
 
@@ -75,6 +78,7 @@ type envConfig struct {
 	StoreInterval string `env:"STORE_INTERVAL"`    // StoreInterval is the store interval.
 	DataBaseDSN   string `env:"DATABASE_DSN"`      // DataBaseDSN is the database DSN.
 	Key           string `env:"KEY"`               // Key is the hash key.
+	KeyRSA        string `env:"CRYPTO_KEY"`        // KeyRSA private key for connection.
 }
 
 // checkEnvironments reads and parses environment variables, updating the provided Config.
@@ -91,6 +95,7 @@ func checkEnvironments(config *Config) {
 	configutils.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
 	configutils.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
+	configutils.SetEnvToParamIfNeed(&config.KeyRSA, envs.KeyRSA)
 
 	config.Restore = envs.Restore || config.Restore
 }

@@ -8,10 +8,17 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/rsa"
+	"github.com/stretchr/testify/assert"
 )
+
+const certRSA = "../../../rsa/cert.pem"
 
 func TestDefaultClient_PostJSON(t *testing.T) {
 	log := logger.CreateMock()
+
+	encoder, err := rsa.CreateEncoder(certRSA)
+	assert.NoError(t, err, "rsa encoder create error")
 
 	type fields struct {
 		client *http.Client
@@ -63,9 +70,10 @@ func TestDefaultClient_PostJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := &DefaultClient{
-				client: tt.fields.client,
-				log:    tt.fields.log,
-				hash:   tt.fields.hash,
+				client:  tt.fields.client,
+				log:     tt.fields.log,
+				hash:    tt.fields.hash,
+				encoder: encoder,
 			}
 
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

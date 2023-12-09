@@ -14,6 +14,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/workers"
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	rsa "github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/ticker"
 )
 
@@ -32,8 +33,16 @@ func main() {
 	log := logger.CreateLogger("info")
 	defer log.Sync()
 
+	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
-	defClient := client.CreateDefault(log, hash)
+
+	// rsa encrypting
+	rsaEncoder, err := rsa.CreateEncoder(cfg.CertRSA)
+	if err != nil {
+		log.Info("[main] failed to create RSA encoder: %v", err)
+	}
+
+	defClient := client.CreateDefault(log, hash, rsaEncoder)
 
 	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("agent has started.")

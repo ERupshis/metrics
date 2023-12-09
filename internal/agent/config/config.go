@@ -17,6 +17,7 @@ type Config struct {
 	ReportInterval int64  // sending stats on server interval
 	RateLimit      int64  // number of simultaneous agent's connections to server
 	Key            string // hash key for message check-su
+	CertRSA        string // CertRSA public certificate for connection.
 }
 
 // Default create default settings config. For debug use only.
@@ -46,6 +47,7 @@ const (
 	flagPollInterval   = "p"
 	flagRateLimit      = "l"
 	flagKey            = "k"
+	flagCertRSA        = "crypto-key" // flagCertRSA public connection key.
 )
 
 func checkFlags(config *Config) {
@@ -54,6 +56,7 @@ func checkFlags(config *Config) {
 	flag.Int64Var(&config.PollInterval, flagPollInterval, 2, "poll interval val (sec)")
 	flag.Int64Var(&config.RateLimit, flagRateLimit, 1, "rate limit")
 	flag.StringVar(&config.Key, flagKey, "", "auth key")
+	flag.StringVar(&config.CertRSA, flagCertRSA, "rsa/cert.pem", "public RSA key path")
 	flag.Parse()
 }
 
@@ -64,6 +67,7 @@ type envConfig struct {
 	PollInterval   string `env:"POLL_INTERVAL"`
 	RateLimit      string `env:"RATE_LIMIT"`
 	Key            string `env:"KEY"`
+	CertRSA        string `env:"CRYPTO_KEY"` // CertRSA private key for connection.
 }
 
 func checkEnvironments(config *Config) {
@@ -78,4 +82,5 @@ func checkEnvironments(config *Config) {
 	configutils.SetEnvToParamIfNeed(&config.ReportInterval, envs.ReportInterval)
 	configutils.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
+	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
 }

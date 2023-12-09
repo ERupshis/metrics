@@ -12,11 +12,14 @@ import (
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const certRSA = "../../../rsa/cert.pem"
 
 // JSON HANDLERS.
 type testJSON struct {
@@ -41,6 +44,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
@@ -49,7 +53,10 @@ func TestJSONCounterBaseController(t *testing.T) {
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -160,14 +167,19 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -290,7 +302,13 @@ func TestJSONGaugeBaseController(t *testing.T) {
 func runJSONTests(t *testing.T, tests *[]testJSON, ts *httptest.Server) {
 	for _, tt := range *tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body := bytes.NewBufferString(tt.req.body)
+			encoder, err := rsa.CreateEncoder(certRSA)
+			assert.NoError(t, err, "rsa encoder create error")
+
+			encryptedBody, err := encoder.Encode([]byte(tt.req.body))
+			assert.NoError(t, err)
+			body := bytes.NewBuffer(encryptedBody)
+
 			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, body)
 			require.NoError(t, errReq)
 
@@ -334,14 +352,19 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -370,14 +393,19 @@ func TestListHandlerBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -396,15 +424,21 @@ func TestMissingNameBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
+
 	missingNameTests := []test{
 		{
 			"post update counter valid path",
@@ -455,14 +489,19 @@ func TestCounterBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
+
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -530,16 +569,20 @@ func TestGaugeBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
+		KeyRSA:   "../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
 	// defer log.Sync()
+
 	storage := memstorage.Create(nil)
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash).Route())
-	defer ts.Close()
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	assert.NoError(t, err, "rsa decoder create error")
 
+	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder).Route())
+	defer ts.Close()
 	gaugeTests := []test{
 		{
 			"gauge post valid case",
@@ -624,7 +667,14 @@ func TestGaugeBaseController(t *testing.T) {
 func runTests(t *testing.T, tests *[]test, ts *httptest.Server) {
 	for _, tt := range *tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, nil)
+			encoder, err := rsa.CreateEncoder(certRSA)
+			assert.NoError(t, err, "rsa encoder create error")
+
+			encryptedBody, err := encoder.Encode(nil)
+			assert.NoError(t, err)
+			body := bytes.NewBuffer(encryptedBody)
+
+			req, errReq := http.NewRequest(tt.req.method, ts.URL+tt.req.url, body)
 			require.NoError(t, errReq)
 
 			req.Header.Add("Content-Type", "html/text")
