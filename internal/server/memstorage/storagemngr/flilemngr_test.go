@@ -352,7 +352,7 @@ func TestFileManager_SaveAndReadFile(t *testing.T) {
 
 	var path = testFolder + "/dd1"
 
-	log := logger.CreateLogger("info")
+	log := logger.CreateMock()
 
 	fm := createFileManagerTest(path, log)
 
