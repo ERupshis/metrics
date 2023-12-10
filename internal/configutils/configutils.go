@@ -77,11 +77,21 @@ func CheckConfigFile(config any) error {
 	SetEnvToParamIfNeed(&configFilePath, envs.Config)
 
 	if configFilePath == "" {
-		flag.StringVar(&configFilePath, flagConfig, "", "path to config file")
-	}
+		tmpFull := ""
+		flag.StringVar(&tmpFull, flagConfig, "", "path to config file")
 
-	if configFilePath == "" {
-		flag.StringVar(&configFilePath, flagConfigShort, "", "path to config file")
+		tmpShort := ""
+		flag.StringVar(&tmpShort, flagConfigShort, "", "path to config file")
+
+		flag.Parse()
+
+		if tmpShort != "" {
+			configFilePath = tmpShort
+		}
+
+		if tmpFull != "" {
+			configFilePath = tmpFull
+		}
 	}
 
 	if configFilePath == "" {

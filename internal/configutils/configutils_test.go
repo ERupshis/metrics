@@ -220,3 +220,101 @@ func TestParseConfigFromFile(t *testing.T) {
 		})
 	}
 }
+
+const testFolder1 = "/test1"
+
+func TestCheckConfigFile(t *testing.T) {
+	_ = os.RemoveAll(testFolder1)
+	err := os.Mkdir(testFolder1, 0750)
+	require.NoError(t, err)
+
+	defer func() {
+		_ = os.RemoveAll(testFolder1)
+	}()
+
+	test1 := "/test1"
+	test2 := "/test2"
+	test3 := "/test3"
+
+	type args struct {
+		filePath    string
+		fileData    string
+		config      any
+		initializer func()
+	}
+	type want struct {
+		fieldData string
+		wantErr   assert.ErrorAssertionFunc
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "without env",
+			args: args{
+				config: &testConfig{},
+				initializer: func() {
+
+				},
+				filePath: testFolder1 + test3,
+				fileData: `{"test": "test"}`,
+			},
+			want: want{
+				fieldData: "",
+				wantErr:   assert.NoError,
+			},
+		},
+		{
+			name: "valid env",
+			args: args{
+				config: &testConfig{},
+				initializer: func() {
+					_ = os.Setenv("CONFIG", testFolder1+test1)
+				},
+				filePath: testFolder1 + test1,
+				fileData: `{"test": "test"}`,
+			},
+			want: want{
+				fieldData: "test",
+				wantErr:   assert.NoError,
+			},
+		},
+		{
+			name: "incorrect file path",
+			args: args{
+				config: &testConfig{},
+				initializer: func() {
+					_ = os.Setenv("CONFIG", testFolder1+"/wrong")
+				},
+				filePath: testFolder1 + test2,
+				fileData: `{"test": "test"}`,
+			},
+			want: want{
+				fieldData: "",
+				wantErr:   assert.Error,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.initializer()
+
+			f, err := os.Create(tt.args.filePath)
+			require.NoError(t, err)
+			defer func() {
+				_ = f.Close()
+			}()
+
+			w := bufio.NewWriter(f)
+			_, err = w.Write([]byte(tt.args.fileData))
+			require.NoError(t, err)
+			err = w.Flush()
+			require.NoError(t, err)
+
+			tt.want.wantErr(t, CheckConfigFile(tt.args.config), fmt.Sprintf("CheckConfigFile(%v)", tt.args.config))
+			assert.Equal(t, tt.want.fieldData, tt.args.config.(*testConfig).Test)
+		})
+	}
+}
