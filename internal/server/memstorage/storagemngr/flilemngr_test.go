@@ -26,7 +26,7 @@ func createFileManagerTest(dataPath string, logger logger.BaseLogger) *FileManag
 }
 
 func TestFileManager_IsFileOpen(t *testing.T) {
-	cfg := config.Parse()
+	cfg, _ := config.Parse()
 	log := logger.CreateMock()
 
 	fm := createFileManagerTest(cfg.StoragePath, log)

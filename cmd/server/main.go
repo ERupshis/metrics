@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -31,7 +32,11 @@ func main() {
 	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
 	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 
-	cfg := config.Parse()
+	cfg, err := config.Parse()
+	if err != nil {
+		log.Fatalf("error parse config: %v", err)
+		return
+	}
 
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
@@ -84,13 +89,13 @@ func main() {
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
-	var interval int64 = 1
+	interval := time.Second
 	if cfg.StoreInterval > 1 {
 		interval = cfg.StoreInterval
 	}
 
-	log.Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
-	storeTicker := time.NewTicker(time.Duration(interval) * time.Second)
+	log.Info("[main::scheduleDataStoringInFile] init saving in file with interval: %s", cfg.StoreInterval.String())
+	storeTicker := time.NewTicker(interval)
 	go ticker.Run(storeTicker, ctx, func() {
 		err := storage.SaveData(ctx)
 		if err != nil {

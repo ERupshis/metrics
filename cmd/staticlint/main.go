@@ -13,7 +13,7 @@ import (
 	"golang.org/x/tools/go/analysis/multichecker"
 )
 
-const config = "cmd/staticlint/config.json"
+const config = "cmd/staticlint/server_config.json"
 
 func main() {
 	log := logger.CreateLogger("info")
@@ -52,7 +52,7 @@ func addStaticChecksIO(checks *[]*analysis.Analyzer) error {
 
 	configChecks, err := staticio.ChecksFromConfig(config)
 	if err != nil {
-		return fmt.Errorf("add checks mentioned in config.json: %w", err)
+		return fmt.Errorf("add checks mentioned in server_config.json: %w", err)
 	}
 
 	*checks = append(*checks, configChecks...)

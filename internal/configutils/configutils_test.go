@@ -1,10 +1,13 @@
 package configutils
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetEnvToParamIfNeed(t *testing.T) {
@@ -125,6 +128,95 @@ func TestAddHTTPPrefixIfNeed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equalf(t, tt.want, AddHTTPPrefixIfNeed(tt.args.value), "AddHTTPPrefixIfNeed(%v)", tt.args.value)
+		})
+	}
+}
+
+const testFolder = "/test"
+
+type testConfig struct {
+	Test string `json:"test"`
+}
+
+func TestParseConfigFromFile(t *testing.T) {
+	type args struct {
+		filePath     string
+		pathToSeek   string
+		fileData     string
+		structToFill any
+	}
+	type want struct {
+		fieldData string
+		wantErr   assert.ErrorAssertionFunc
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "valid",
+			args: args{
+				filePath:     testFolder + "/test",
+				pathToSeek:   testFolder + "/test",
+				fileData:     `{"test": "test"}`,
+				structToFill: &testConfig{},
+			},
+			want: want{
+				wantErr:   assert.NoError,
+				fieldData: "test",
+			},
+		},
+		{
+			name: "incorrect path",
+			args: args{
+				filePath:     testFolder + "/test2",
+				pathToSeek:   testFolder + "/wrong",
+				fileData:     `{"test": "test"}`,
+				structToFill: &testConfig{},
+			},
+			want: want{
+				wantErr:   assert.Error,
+				fieldData: "",
+			},
+		},
+		{
+			name: "broken json",
+			args: args{
+				filePath:     testFolder + "/test3",
+				pathToSeek:   testFolder + "/test3",
+				fileData:     `{"test": "test"`,
+				structToFill: &testConfig{},
+			},
+			want: want{
+				wantErr:   assert.Error,
+				fieldData: "",
+			},
+		},
+	}
+	for _, ttCommon := range tests {
+		tt := ttCommon
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			f, err := os.Create(tt.args.filePath)
+			require.NoError(t, err)
+			defer func() {
+				_ = f.Close()
+			}()
+
+			defer func() {
+				_ = os.RemoveAll(testFolder)
+			}()
+
+			w := bufio.NewWriter(f)
+			_, err = w.Write([]byte(tt.args.fileData))
+			require.NoError(t, err)
+			err = w.Flush()
+			require.NoError(t, err)
+
+			tt.want.wantErr(t, ParseConfigFromFile(tt.args.pathToSeek, tt.args.structToFill),
+				fmt.Sprintf("ParseConfigFromFile(%v, %v)", tt.args.pathToSeek, tt.args.structToFill))
+			assert.Equal(t, tt.want.fieldData, tt.args.structToFill.(*testConfig).Test)
 		})
 	}
 }

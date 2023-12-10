@@ -2,9 +2,12 @@
 package configutils
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // SetEnvToParamIfNeed assigns environment value to param depends on param's type definition.
@@ -17,6 +20,12 @@ func SetEnvToParamIfNeed(param interface{}, val string) {
 	switch param := param.(type) {
 	case *int64:
 		if envVal, err := Atoi64(val); err == nil {
+			*param = envVal
+		} else {
+			panic(err)
+		}
+	case *time.Duration:
+		if envVal, err := time.ParseDuration(val); err == nil {
 			*param = envVal
 		} else {
 			panic(err)
@@ -42,4 +51,17 @@ func AddHTTPPrefixIfNeed(value string) string {
 	}
 
 	return value
+}
+
+func ParseConfigFromFile(filePath string, structToFill any) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("read file: %w", err)
+	}
+
+	if err = json.Unmarshal(data, structToFill); err != nil {
+		return fmt.Errorf("parse data: %w", err)
+	}
+
+	return nil
 }
