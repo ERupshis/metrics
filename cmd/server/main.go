@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -70,22 +71,29 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	// heap profiling.
-	// router.Mount("/debug", middleware.Profiler())
-
 	// server launch.
+	srv := &http.Server{
+		Addr:    cfg.Host,
+		Handler: router,
+	}
+
+	idleConnsClosed := make(chan struct{})
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
-		log.Info("server is launching with Host setting: %s", cfg.Host)
-		if err := http.ListenAndServe(cfg.Host, router); err != nil {
-			log.Info("server refused to start with error: %v", err)
+		<-sigCh
+		if err := srv.Shutdown(context.Background()); err != nil {
+			log.Info("server Shutdown error: %v", err)
 		}
+		close(idleConnsClosed)
 	}()
 
-	// time.Sleep(300 * time.Second)
-	// memProfile()
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
+	log.Info("server is launching with Host setting: %s", cfg.Host)
+	if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		log.Info("server refused to start or stop with error: %v", err)
+	}
+	<-idleConnsClosed
+	log.Info("server Shutdown gracefully")
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {

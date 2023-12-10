@@ -3,6 +3,7 @@ package workers
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/erupshis/metrics/internal/logger"
 )
@@ -14,6 +15,8 @@ type Job = func() error
 type Pool struct {
 	jobs    chan Job
 	results chan error
+
+	activeJobs sync.WaitGroup
 
 	log logger.BaseLogger
 }
@@ -50,9 +53,17 @@ func (p *Pool) GetResultChan() chan error {
 
 // CloseResultsChan closes results channel.
 // Should be called right after create function via defer.
-func (p *Pool) CloseResultsChan() {
+func (p *Pool) CloseResultsChan() <-chan bool {
+	graceful := make(chan bool, 1)
 	p.log.Info("[WorkersPool:CloseJobsChan] results closed.")
-	close(p.results)
+	go func() {
+		p.activeJobs.Wait()
+		p.log.Info("[WorkersPool:CloseJobsChan] results closed.")
+		close(p.results)
+		close(graceful)
+	}()
+
+	return graceful
 }
 
 func (p *Pool) createWorkers(count int64) {
@@ -64,10 +75,12 @@ func (p *Pool) createWorkers(count int64) {
 func (p *Pool) worker() {
 	// worker stops when jobs channel is closed.
 	for job := range p.jobs {
+		p.activeJobs.Add(1)
 		p.log.Info("[WorkersPool:worker] worker starts job from queue.")
 		err := job()
 		p.log.Info("[WorkersPool:worker] worker is sending completed work to result queue.")
 		p.results <- err
+		p.activeJobs.Done()
 		p.log.Info("[WorkersPool:worker] worker has sent job result to result queue.")
 	}
 }

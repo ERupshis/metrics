@@ -58,7 +58,6 @@ func main() {
 	defer repeatTicker.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	workersPool, err := workers.CreateWorkersPool(cfg.RateLimit, log)
 	if err != nil {
@@ -80,7 +79,14 @@ func main() {
 		}
 	}()
 
+	idleConnsClosed := make(chan struct{})
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		<-sigCh
+		cancel()
+		close(idleConnsClosed)
+	}()
+
+	<-idleConnsClosed
 }
