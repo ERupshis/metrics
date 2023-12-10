@@ -137,7 +137,7 @@ func TestChecksFromConfig(t *testing.T) {
 }
 
 func createTempConfigFile(t *testing.T, content string) string {
-	tmpfile, err := os.CreateTemp("", "config.json")
+	tmpfile, err := os.CreateTemp("", "server_config.json")
 	if err != nil {
 		t.Fatalf("Error creating temp file: %v", err)
 	}

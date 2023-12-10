@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
@@ -32,9 +33,9 @@ func TestCreateAgent(t *testing.T) {
 func TestAgent_GetPollInterval(t *testing.T) {
 	tests := []struct {
 		name string
-		want int64
+		want time.Duration
 	}{
-		{"default pollInterval value", 2},
+		{"default pollInterval value", 2 * time.Second},
 	}
 
 	for _, tt := range tests {
@@ -48,9 +49,9 @@ func TestAgent_GetPollInterval(t *testing.T) {
 func TestAgent_GetReportInterval(t *testing.T) {
 	tests := []struct {
 		name string
-		want int64
+		want time.Duration
 	}{
-		{"default reportInterval value", 10},
+		{"default reportInterval value", 10 * time.Second},
 	}
 
 	for _, tt := range tests {

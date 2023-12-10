@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
@@ -51,16 +52,16 @@ func CreateDefault() *Agent {
 		return nil
 	}
 
-	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log), encoder), config: config.Default(), logger: log, extraStats: extraStats}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log), encoder), config: config.ConfigDefault, logger: log, extraStats: extraStats}
 }
 
 // GetPollInterval returns collecting poll interval (seconds).
-func (a *Agent) GetPollInterval() int64 {
+func (a *Agent) GetPollInterval() time.Duration {
 	return a.config.PollInterval
 }
 
 // GetReportInterval returns send stats to server interval.
-func (a *Agent) GetReportInterval() int64 {
+func (a *Agent) GetReportInterval() time.Duration {
 	return a.config.ReportInterval
 }
 
