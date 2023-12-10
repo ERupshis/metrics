@@ -3,11 +3,14 @@ package configutils
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/caarlos0/env"
 )
 
 // SetEnvToParamIfNeed assigns environment value to param depends on param's type definition.
@@ -51,6 +54,45 @@ func AddHTTPPrefixIfNeed(value string) string {
 	}
 
 	return value
+}
+
+// CONFIG FILE PARSING.
+const (
+	flagConfigShort = "c"      // flagConfigShort path to config file short.
+	flagConfig      = "config" // flagConfig path to config file.
+)
+
+type envFileConfig struct {
+	Config string `env:"CONFIG"` // Config path to file config.
+}
+
+func CheckConfigFile(config any) error {
+	var envs = envFileConfig{}
+	err := env.Parse(&envs)
+	if err != nil {
+		return fmt.Errorf("parse config file path from env: %w", err)
+	}
+
+	configFilePath := ""
+	SetEnvToParamIfNeed(&configFilePath, envs.Config)
+
+	if configFilePath == "" {
+		flag.StringVar(&configFilePath, flagConfig, "", "path to config file")
+	}
+
+	if configFilePath == "" {
+		flag.StringVar(&configFilePath, flagConfigShort, "", "path to config file")
+	}
+
+	if configFilePath == "" {
+		return nil
+	}
+
+	if err = ParseConfigFromFile(configFilePath, &config); err != nil {
+		return fmt.Errorf("parse config file: %w", err)
+	}
+
+	return nil
 }
 
 func ParseConfigFromFile(filePath string, structToFill any) error {

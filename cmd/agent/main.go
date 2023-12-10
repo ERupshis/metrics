@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,7 +29,11 @@ func main() {
 	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
 	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 
-	cfg := config.Parse()
+	cfg, err := config.Parse()
+	if err != nil {
+		log.Fatalf("error parse config: %v", err)
+		return
+	}
 
 	log := logger.CreateLogger("info")
 	defer log.Sync()
@@ -47,9 +52,9 @@ func main() {
 	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("agent has started.")
 
-	pollTicker := time.NewTicker(time.Duration(agent.GetPollInterval()) * time.Second)
+	pollTicker := time.NewTicker(agent.GetPollInterval())
 	defer pollTicker.Stop()
-	repeatTicker := time.NewTicker(time.Duration(agent.GetReportInterval()) * time.Second)
+	repeatTicker := time.NewTicker(agent.GetReportInterval())
 	defer repeatTicker.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -18,7 +18,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig1(in *jlexer.Lexer, out *envConfig) {
+func easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig(in *jlexer.Lexer, out *envConfig) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -39,20 +39,16 @@ func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig1(in *jle
 		switch key {
 		case "Host":
 			out.Host = string(in.String())
-		case "LogLevel":
-			out.LogLevel = string(in.String())
-		case "Restore":
-			out.Restore = bool(in.Bool())
-		case "StoragePath":
-			out.StoragePath = string(in.String())
-		case "StoreInterval":
-			out.StoreInterval = string(in.String())
-		case "DataBaseDSN":
-			out.DataBaseDSN = string(in.String())
+		case "ReportInterval":
+			out.ReportInterval = string(in.String())
+		case "PollInterval":
+			out.PollInterval = string(in.String())
+		case "RateLimit":
+			out.RateLimit = string(in.String())
 		case "Key":
 			out.Key = string(in.String())
-		case "KeyRSA":
-			out.KeyRSA = string(in.String())
+		case "CertRSA":
+			out.CertRSA = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -63,7 +59,7 @@ func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig1(in *jle
 		in.Consumed()
 	}
 }
-func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(out *jwriter.Writer, in envConfig) {
+func easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig(out *jwriter.Writer, in envConfig) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -73,29 +69,19 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(out *jw
 		out.String(string(in.Host))
 	}
 	{
-		const prefix string = ",\"LogLevel\":"
+		const prefix string = ",\"ReportInterval\":"
 		out.RawString(prefix)
-		out.String(string(in.LogLevel))
+		out.String(string(in.ReportInterval))
 	}
 	{
-		const prefix string = ",\"Restore\":"
+		const prefix string = ",\"PollInterval\":"
 		out.RawString(prefix)
-		out.Bool(bool(in.Restore))
+		out.String(string(in.PollInterval))
 	}
 	{
-		const prefix string = ",\"StoragePath\":"
+		const prefix string = ",\"RateLimit\":"
 		out.RawString(prefix)
-		out.String(string(in.StoragePath))
-	}
-	{
-		const prefix string = ",\"StoreInterval\":"
-		out.RawString(prefix)
-		out.String(string(in.StoreInterval))
-	}
-	{
-		const prefix string = ",\"DataBaseDSN\":"
-		out.RawString(prefix)
-		out.String(string(in.DataBaseDSN))
+		out.String(string(in.RateLimit))
 	}
 	{
 		const prefix string = ",\"Key\":"
@@ -103,9 +89,9 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(out *jw
 		out.String(string(in.Key))
 	}
 	{
-		const prefix string = ",\"KeyRSA\":"
+		const prefix string = ",\"CertRSA\":"
 		out.RawString(prefix)
-		out.String(string(in.KeyRSA))
+		out.String(string(in.CertRSA))
 	}
 	out.RawByte('}')
 }
@@ -113,27 +99,27 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(out *jw
 // MarshalJSON supports json.Marshaler interface
 func (v envConfig) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(&w, v)
+	easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v envConfig) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig1(w, v)
+	easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *envConfig) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig1(&r, v)
+	easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *envConfig) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig1(l, v)
+	easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig(l, v)
 }
-func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig2(in *jlexer.Lexer, out *Config) {
+func easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig1(in *jlexer.Lexer, out *Config) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -154,20 +140,16 @@ func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig2(in *jle
 		switch key {
 		case "address":
 			out.Host = string(in.String())
-		case "log_level":
-			out.LogLevel = string(in.String())
-		case "restore":
-			out.Restore = bool(in.Bool())
-		case "store_interval":
-			out.StoreInterval, _ = time.ParseDuration(in.String())
-		case "storage_file":
-			out.StoragePath = string(in.String())
-		case "database_dsn":
-			out.DataBaseDSN = string(in.String())
+		case "poll_interval":
+			out.PollInterval, _ = time.ParseDuration(in.String())
+		case "report_interval":
+			out.ReportInterval, _ = time.ParseDuration(in.String())
+		case "rate_limit":
+			out.RateLimit = int64(in.Int64())
 		case "hash_key":
 			out.Key = string(in.String())
 		case "crypto_key":
-			out.KeyRSA = string(in.String())
+			out.CertRSA = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -178,7 +160,7 @@ func easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig2(in *jle
 		in.Consumed()
 	}
 }
-func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(out *jwriter.Writer, in Config) {
+func easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig1(out *jwriter.Writer, in Config) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -188,29 +170,19 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(out *jw
 		out.String(string(in.Host))
 	}
 	{
-		const prefix string = ",\"log_level\":"
+		const prefix string = ",\"poll_interval\":"
 		out.RawString(prefix)
-		out.String(string(in.LogLevel))
+		out.String(string(in.PollInterval.String()))
 	}
 	{
-		const prefix string = ",\"restore\":"
+		const prefix string = ",\"report_interval\":"
 		out.RawString(prefix)
-		out.Bool(bool(in.Restore))
+		out.String(string(in.ReportInterval.String()))
 	}
 	{
-		const prefix string = ",\"store_interval\":"
+		const prefix string = ",\"rate_limit\":"
 		out.RawString(prefix)
-		out.String(string(in.StoreInterval.String()))
-	}
-	{
-		const prefix string = ",\"storage_file\":"
-		out.RawString(prefix)
-		out.String(string(in.StoragePath))
-	}
-	{
-		const prefix string = ",\"database_dsn\":"
-		out.RawString(prefix)
-		out.String(string(in.DataBaseDSN))
+		out.Int64(int64(in.RateLimit))
 	}
 	{
 		const prefix string = ",\"hash_key\":"
@@ -220,7 +192,7 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(out *jw
 	{
 		const prefix string = ",\"crypto_key\":"
 		out.RawString(prefix)
-		out.String(string(in.KeyRSA))
+		out.String(string(in.CertRSA))
 	}
 	out.RawByte('}')
 }
@@ -228,23 +200,23 @@ func easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(out *jw
 // MarshalJSON supports json.Marshaler interface
 func (v Config) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(&w, v)
+	easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Config) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson6615c02eEncodeGithubComErupshisMetricsInternalServerConfig2(w, v)
+	easyjson6615c02eEncodeGithubComErupshisMetricsInternalAgentConfig1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Config) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig2(&r, v)
+	easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Config) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson6615c02eDecodeGithubComErupshisMetricsInternalServerConfig2(l, v)
+	easyjson6615c02eDecodeGithubComErupshisMetricsInternalAgentConfig1(l, v)
 }

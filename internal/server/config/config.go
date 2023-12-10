@@ -39,14 +39,14 @@ var configDefault = Config{
 	StoreInterval: 5 * time.Second,
 	StoragePath:   "", // "/tmp/metrics-db.json"
 	DataBaseDSN:   "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
-	Key:           "",
+	Key:           "123",
 	KeyRSA:        "rsa/key.pem",
 }
 
 // Parse reads and parses command line flags, updating the provided Config.
 func Parse() (Config, error) {
 	var config = configDefault
-	if err := checkConfigFile(&config); err != nil {
+	if err := configutils.CheckConfigFile(&config); err != nil {
 		return config, fmt.Errorf("parse config file: %w", err)
 	}
 	checkFlags(&config)
@@ -56,40 +56,6 @@ func Parse() (Config, error) {
 	}
 
 	return config, nil
-}
-
-// CONFIG FILE PARSING.
-type envFileConfig struct {
-	Config string `env:"CONFIG"` // Config path to file config.
-}
-
-func checkConfigFile(config *Config) error {
-	var envs = envFileConfig{}
-	err := env.Parse(&envs)
-	if err != nil {
-		return fmt.Errorf("parse config file path from env: %w", err)
-	}
-
-	configFilePath := ""
-	configutils.SetEnvToParamIfNeed(&configFilePath, envs.Config)
-
-	if configFilePath == "" {
-		flag.StringVar(&configFilePath, flagConfig, "", "path to config file")
-	}
-
-	if configFilePath == "" {
-		flag.StringVar(&configFilePath, flagConfigShort, "", "path to config file")
-	}
-
-	if configFilePath == "" {
-		return nil
-	}
-
-	if err = configutils.ParseConfigFromFile(configFilePath, &config); err != nil {
-		return fmt.Errorf("parse config file: %w", err)
-	}
-
-	return nil
 }
 
 // FLAGS PARSING.
@@ -104,8 +70,6 @@ const (
 	flagDataBaseDSN   = "d"          // flagDataBaseDSN represents the database DSN.
 	flagKey           = "k"          // flagKey represents the hash key.
 	flagKeyRSA        = "crypto-key" // flagKeyRSA private connection key.
-	flagConfigShort   = "c"          // flagConfigShort path to config file short.
-	flagConfig        = "config"     // flagConfig path to config file.
 )
 
 // checkFlags initializes and parses command line flags, updating the provided Config.
