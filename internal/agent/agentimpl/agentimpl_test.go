@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/metricsgetter"
+	"github.com/erupshis/metrics/internal/configutils"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/mocks"
 	"github.com/golang/mock/gomock"
@@ -17,7 +19,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type envConfig struct {
+	PrivateKey  string `env:"KEY_RSA"`
+	Certificate string `env:"CERT_RSA"`
+}
+
+func getEnvironments() (string, string) {
+	keyRSA := "../../../rsa/key.pem"
+	certRSA := "../../../rsa/cert.pem"
+
+	var envs = envConfig{}
+	err := env.Parse(&envs)
+	if err != nil {
+		return certRSA, keyRSA
+	}
+
+	configutils.SetEnvToParamIfNeed(&keyRSA, envs.PrivateKey)
+	configutils.SetEnvToParamIfNeed(&certRSA, envs.Certificate)
+
+	return certRSA, keyRSA
+}
+
 func TestCreateAgent(t *testing.T) {
+	certRSA, _ := getEnvironments()
 	tests := []struct {
 		name string
 	}{
@@ -25,12 +49,14 @@ func TestCreateAgent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NotNil(t, CreateDefault())
+			require.NotNil(t, CreateDefault(certRSA))
 		})
 	}
 }
 
 func TestAgent_GetPollInterval(t *testing.T) {
+	certRSA, _ := getEnvironments()
+
 	tests := []struct {
 		name string
 		want time.Duration
@@ -39,7 +65,7 @@ func TestAgent_GetPollInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateDefault()
+		agent := CreateDefault(certRSA)
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetPollInterval(), tt.want)
 		})
@@ -47,6 +73,8 @@ func TestAgent_GetPollInterval(t *testing.T) {
 }
 
 func TestAgent_GetReportInterval(t *testing.T) {
+	certRSA, _ := getEnvironments()
+
 	tests := []struct {
 		name string
 		want time.Duration
@@ -55,7 +83,7 @@ func TestAgent_GetReportInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateDefault()
+		agent := CreateDefault(certRSA)
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetReportInterval(), tt.want)
 		})
@@ -63,6 +91,8 @@ func TestAgent_GetReportInterval(t *testing.T) {
 }
 
 func TestAgent_UpdateStats(t *testing.T) {
+	certRSA, _ := getEnvironments()
+
 	tests := []struct {
 		name string
 	}{
@@ -70,7 +100,7 @@ func TestAgent_UpdateStats(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := CreateDefault()
+			agent := CreateDefault(certRSA)
 			agent.UpdateStats()
 			pollCountOld := agent.pollCount.Load()
 			agent.UpdateStats()
@@ -80,6 +110,8 @@ func TestAgent_UpdateStats(t *testing.T) {
 }
 
 func TestAgent_createJSONGaugeMessage(t *testing.T) {
+	certRSA, _ := getEnvironments()
+
 	type args struct {
 		name  string
 		value float64
@@ -101,7 +133,7 @@ func TestAgent_createJSONGaugeMessage(t *testing.T) {
 		},
 	}
 
-	a := CreateDefault()
+	a := CreateDefault(certRSA)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, tt.want, string(a.createJSONGaugeMessage(tt.args.name, tt.args.value)))
@@ -110,6 +142,8 @@ func TestAgent_createJSONGaugeMessage(t *testing.T) {
 }
 
 func TestAgent_createJSONCounterMessage(t *testing.T) {
+	certRSA, _ := getEnvironments()
+
 	type args struct {
 		name  string
 		value int64
@@ -131,7 +165,7 @@ func TestAgent_createJSONCounterMessage(t *testing.T) {
 		},
 	}
 
-	a := CreateDefault()
+	a := CreateDefault(certRSA)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, tt.want, string(a.createJSONCounterMessage(tt.args.name, tt.args.value)))

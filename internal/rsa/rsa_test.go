@@ -31,7 +31,7 @@ func getEnvironments() (string, string) {
 	var envs = envConfig{}
 	err := env.Parse(&envs)
 	if err != nil {
-		return keyRSA, certRSA
+		return certRSA, keyRSA
 	}
 
 	configutils.SetEnvToParamIfNeed(&keyRSA, envs.PrivateKey)

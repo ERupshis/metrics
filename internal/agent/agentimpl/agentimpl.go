@@ -41,12 +41,12 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 }
 
 // CreateDefault agent with predefined fields. Recommended to use for debug only clauses.
-func CreateDefault() *Agent {
+func CreateDefault(certFileRSA string) *Agent {
 	log := logger.CreateLogger("Info")
 	hashKey := ""
 	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
 
-	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	encoder, err := rsa.CreateEncoder(certFileRSA)
 	if err != nil {
 		log.Info("create default agent: %v", err)
 		return nil
