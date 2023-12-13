@@ -7,17 +7,42 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/caarlos0/env"
+	"github.com/erupshis/metrics/internal/configutils"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	certRSA = "../../../rsa/cert.pem"
-	keyRSA  = "../../../rsa/key.pem"
+	flagCertRSA = "crsa"
+	flagKeyRSA  = "krsa"
 )
 
+type envConfig struct {
+	PrivateKey  string `env:"KEY_RSA"`
+	Certificate string `env:"CERT_RSA"`
+}
+
+func getEnvironments() (string, string) {
+	keyRSA := "../../../rsa/key.pem"
+	certRSA := "../../../rsa/cert.pem"
+
+	var envs = envConfig{}
+	err := env.Parse(&envs)
+	if err != nil {
+		return keyRSA, certRSA
+	}
+
+	configutils.SetEnvToParamIfNeed(&keyRSA, envs.PrivateKey)
+	configutils.SetEnvToParamIfNeed(&certRSA, envs.Certificate)
+
+	return certRSA, keyRSA
+}
+
 func TestCreateEncoder(t *testing.T) {
+	certRSA, keyRSA := getEnvironments()
+
 	type args struct {
 		certFilePath string
 	}
@@ -36,7 +61,7 @@ func TestCreateEncoder(t *testing.T) {
 		{
 			name: "incorrect path for cert",
 			args: args{
-				certFilePath: "../../../cert.pem",
+				certFilePath: "../../",
 			},
 			wantErr: true,
 		},
@@ -62,6 +87,8 @@ func TestCreateEncoder(t *testing.T) {
 }
 
 func TestCreateDecoder(t *testing.T) {
+	certRSA, keyRSA := getEnvironments()
+
 	type args struct {
 		keyFilePath string
 	}
@@ -80,7 +107,7 @@ func TestCreateDecoder(t *testing.T) {
 		{
 			name: "incorrect path for cert",
 			args: args{
-				keyFilePath: "../../../key.pem",
+				keyFilePath: "../../",
 			},
 			wantErr: true,
 		},
@@ -106,6 +133,8 @@ func TestCreateDecoder(t *testing.T) {
 }
 
 func TestEncoder_Encode(t *testing.T) {
+	certRSA, keyRSA := getEnvironments()
+
 	encoder, err := CreateEncoder(certRSA)
 	require.NoError(t, err)
 	decoder, err := CreateDecoder(keyRSA)
@@ -195,6 +224,8 @@ func TestEncoder_Encode(t *testing.T) {
 }
 
 func TestDecoder_DecodeRSAHandler(t *testing.T) {
+	certRSA, keyRSA := getEnvironments()
+
 	encoder, err := CreateEncoder(certRSA)
 	require.NoError(t, err)
 	decoder, err := CreateDecoder(keyRSA)
