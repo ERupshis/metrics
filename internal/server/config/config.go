@@ -35,7 +35,7 @@ type Config struct {
 var configDefault = Config{
 	Host:          "localhost:8080",
 	LogLevel:      "Info",
-	Restore:       true,
+	Restore:       false,
 	StoreInterval: 5 * time.Second,
 	StoragePath:   "", // "/tmp/metrics-db.json"
 	DataBaseDSN:   "", // postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
