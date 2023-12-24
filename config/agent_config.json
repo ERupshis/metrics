@@ -1,5 +1,5 @@
 {
-    "address": "localhost:8080",
+    "address": "http://localhost:8080",
     "report_interval": "1s",
     "poll_interval": "1s",
     "crypto_key": "rsa/cert.pem"
