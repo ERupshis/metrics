@@ -1,6 +1,6 @@
 {
     "address": "localhost:8080",
-    "restore": false,
+    "restore": true,
     "store_interval": "5s",
     "crypto_key": "rsa/key.pem"
 }
