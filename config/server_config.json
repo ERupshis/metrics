@@ -1,6 +1,7 @@
 {
     "address": "localhost:8080",
     "restore": true,
+    "database_dsn": "",
     "store_interval": "5s",
     "crypto_key": "rsa/key.pem"
 }
