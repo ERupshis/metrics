@@ -18,7 +18,7 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
-	"github.com/erupshis/metrics/internal/server/controllers"
+	"github.com/erupshis/metrics/internal/server/controllers/base"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
@@ -68,7 +68,7 @@ func main() {
 	// trusted subnet validation.
 	validatorIP := createTrustedSubnetValidator(&cfg, log)
 
-	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder, validatorIP)
+	baseController := base.Create(ctx, cfg, log, storage, hash, rsaDecoder, validatorIP)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
@@ -87,7 +87,7 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		<-sigCh
-		if err := srv.Shutdown(context.Background()); err != nil {
+		if err := srv.Shutdown(ctx); err != nil {
 			log.Info("server Shutdown error: %v", err)
 		}
 		close(idleConnsClosed)

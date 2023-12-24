@@ -38,7 +38,7 @@ func main() {
 	defer log.Sync()
 
 	IPparts := strings.Split(cfg.RealIP, "/")
-	grpcClient, err := client.CreateGRPC(cfg.Host, IPparts[0])
+	grpcClient, err := client.CreateGRPC(strings.TrimPrefix(cfg.Host, "http://"), IPparts[0], log)
 	if err != nil {
 		log.Info("failed to create grpc client.")
 		return

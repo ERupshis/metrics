@@ -1,4 +1,4 @@
-package controllers
+package base
 
 import (
 	"bytes"
@@ -20,7 +20,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const certRSA = "../../../rsa/cert.pem"
+const (
+	keyRSA  = "../../../../rsa/key.pem"
+	certRSA = "../../../../rsa/cert.pem"
+)
 
 // JSON HANDLERS.
 type testJSON struct {
@@ -45,7 +48,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   "../../../../rsa/key.pem",
 	}
 
 	log := logger.CreateMock()
@@ -57,7 +60,7 @@ func TestJSONCounterBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -168,7 +171,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -180,7 +183,7 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -353,7 +356,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -365,7 +368,7 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -394,7 +397,7 @@ func TestListHandlerBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -406,7 +409,7 @@ func TestListHandlerBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -425,7 +428,7 @@ func TestMissingNameBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -437,7 +440,7 @@ func TestMissingNameBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	missingNameTests := []test{
@@ -490,7 +493,7 @@ func TestCounterBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -502,7 +505,7 @@ func TestCounterBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -570,7 +573,7 @@ func TestGaugeBaseController(t *testing.T) {
 		Host:     "localhost:8080",
 		LogLevel: "Info",
 		Key:      "",
-		KeyRSA:   "../../../rsa/key.pem",
+		KeyRSA:   keyRSA,
 	}
 
 	log := logger.CreateMock()
@@ -582,7 +585,7 @@ func TestGaugeBaseController(t *testing.T) {
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(CreateBase(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 	gaugeTests := []test{
 		{

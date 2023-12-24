@@ -24,7 +24,7 @@ type Grpc struct {
 	IP  string
 }
 
-func CreateGRPC(address string, IP string) (BaseClient, error) {
+func CreateGRPC(address string, IP string, baseLogger logger.BaseLogger) (BaseClient, error) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -41,6 +41,7 @@ func CreateGRPC(address string, IP string) (BaseClient, error) {
 	return &Grpc{
 		client: client,
 		conn:   conn,
+		log:    baseLogger,
 		IP:     IP,
 	}, nil
 }
@@ -86,13 +87,13 @@ func convertMetricToGrpcFormat(metric *networkmsg.Metric) *pb.Metric {
 		return &pb.Metric{
 			Id:    metric.ID,
 			Type:  pb.Metric_GAUGE,
-			Delta: *metric.Delta,
+			Value: *metric.Value,
 		}
 	} else {
 		return &pb.Metric{
 			Id:    metric.ID,
 			Type:  pb.Metric_COUNTER,
-			Value: *metric.Value,
+			Delta: *metric.Delta,
 		}
 	}
 }

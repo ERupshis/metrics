@@ -2,27 +2,23 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
-	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
-	"github.com/erupshis/metrics/internal/server/controllers"
+	"github.com/erupshis/metrics/internal/server/grpcserver"
+	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
-	"github.com/go-chi/chi/v5"
 )
 
 var (
@@ -56,49 +52,38 @@ func main() {
 		}()
 	}
 	storage := memstorage.Create(storageManager)
-	// hash sum evaluation
-	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
-
-	// rsa encrypting
-	rsaDecoder, err := rsa.CreateDecoder(cfg.KeyRSA)
-	if err != nil {
-		log.Info("[main] failed to create RSA decoder: %v", err)
-	}
 
 	// trusted subnet validation.
-	validatorIP := createTrustedSubnetValidator(&cfg, log)
+	_ = createTrustedSubnetValidator(&cfg, log)
 
-	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder, validatorIP)
-
-	router := chi.NewRouter()
-	router.Mount("/", baseController.Route())
+	grpcController := controller.New()
 
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	// server launch.
-	srv := &http.Server{
-		Addr:    cfg.Host,
-		Handler: router,
+	grpcServer := grpcserver.NewServer(grpcController, log)
+	idleConnsClosed := initShutDown(grpcServer, log)
+
+	_, port, err := net.SplitHostPort(cfg.Host)
+	if err != nil {
+		log.Info("failed to parse port for gRPC")
+		return
 	}
 
-	idleConnsClosed := make(chan struct{})
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	go func() {
-		<-sigCh
-		if err := srv.Shutdown(context.Background()); err != nil {
-			log.Info("server Shutdown error: %v", err)
-		}
-		close(idleConnsClosed)
-	}()
+	log.Info("starting gRPC listener on port %s", port)
 
-	log.Info("server is launching with Host setting: %s", cfg.Host)
-	if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Info("server refused to start or stop with error: %v", err)
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Info("failed to listen: %v", err)
+		return
 	}
+
+	if err = grpcServer.Serve(listener); err != nil {
+		log.Info("gRPC server refused to start or stop with error: %v", err)
+	}
+
 	<-idleConnsClosed
-	log.Info("server Shutdown gracefully")
+	log.Info("gRPC server shutdown gracefully")
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
@@ -142,4 +127,18 @@ func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ip
 	}
 
 	return ipvalidator.Create(subnet)
+}
+
+func initShutDown(srv *grpcserver.Server, logger logger.BaseLogger) <-chan struct{} {
+	idleConnsClosed := make(chan struct{})
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	go func() {
+		<-sigCh
+		logger.Info("gRPC server is going to gracefully shutdown")
+		srv.GracefulStop()
+		close(idleConnsClosed)
+	}()
+
+	return idleConnsClosed
 }
