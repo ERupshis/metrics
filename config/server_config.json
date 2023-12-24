@@ -1,7 +1,7 @@
 {
     "address": "localhost:8080",
     "restore": true,
-    "database_dsn": "",
+    "database_dsn": "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
     "store_interval": "5s",
     "crypto_key": "rsa/key.pem"
 }
