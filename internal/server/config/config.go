@@ -40,7 +40,7 @@ var configDefault = Config{
 	StoragePath:   "", // "/tmp/metrics-db.json"
 	DataBaseDSN:   "", // postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
 	Key:           "123",
-	KeyRSA:        "rsa/key.pem",
+	KeyRSA:        "",
 }
 
 // Parse reads and parses command line flags, updating the provided Config.
