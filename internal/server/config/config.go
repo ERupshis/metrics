@@ -38,7 +38,7 @@ var configDefault = Config{
 	Restore:       true,
 	StoreInterval: 5 * time.Second,
 	StoragePath:   "", // "/tmp/metrics-db.json"
-	DataBaseDSN:   "", // postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
+	DataBaseDSN:   "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
 	Key:           "123",
 	KeyRSA:        "rsa/key.pem",
 }
