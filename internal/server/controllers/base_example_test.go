@@ -9,6 +9,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/erupshis/metrics/internal/server/memstorage"
@@ -24,6 +25,7 @@ func createExampleConfig() config.Config {
 		StoragePath:   "/tmp/metrics-db.json",
 		DataBaseDSN:   "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
 		Key:           "",
+		KeyRSA:        "../../../rsa/key.pem",
 	}
 }
 
@@ -38,14 +40,26 @@ func ExampleBaseController_ListHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
 
 	storage.AddGauge("example", 42.0)
 	storage.AddCounter("example", 10)
 
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
+
 	// Create a test request for the "/list" endpoint.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	encryptedBody, _ := encoder.Encode(nil)
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(encryptedBody))
 	w := httptest.NewRecorder()
 
 	// Use the router to handle the request.
@@ -69,11 +83,23 @@ func ExampleBaseController_checkStorageHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
 
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
+
+	encryptedBody, _ := encoder.Encode(nil)
 	// Create a test request for the "/ping" endpoint.
-	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ping", bytes.NewBuffer(encryptedBody))
 	w := httptest.NewRecorder()
 
 	// Use the router to handle the request.
@@ -99,11 +125,22 @@ func ExampleBaseController_jsonHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
 
 	// Create an array of test JSON requests for different request types.
 	requests := []string{"update", "value", "updates"}
+
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
 
 	for _, requestType := range requests {
 		// Customize the JSON body based on the request type.
@@ -118,7 +155,8 @@ func ExampleBaseController_jsonHandler() {
 			jsonBody = []byte(`[{"id": "example1", "type": "gauge", "value": 42.0}, {"id": "example2", "type": "counter", "delta": 10}]`)
 		}
 
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/%s", requestType), bytes.NewReader(jsonBody))
+		encryptedBody, _ := encoder.Encode(jsonBody)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/%s", requestType), bytes.NewBuffer(encryptedBody))
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.
@@ -150,15 +188,27 @@ func ExampleBaseController_missingNameHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
 
 	// Create an array of test requests for different metric types.
 	types := []string{"gauge", "counter"}
 
 	for _, metricType := range types {
 		// Customize the request based on the metric type.
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/update/%s", metricType), nil)
+		encryptedBody, _ := encoder.Encode(nil)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/update/%s", metricType), bytes.NewBuffer(encryptedBody))
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.
@@ -184,19 +234,31 @@ func ExampleBaseController_getHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)
 	storage.AddCounter("example", 10)
+
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
 
 	// Create an array of test requests for different metric types.
 	types := []string{"gauge", "counter"}
 
 	for _, metricType := range types {
 		// Customize the request based on the metric type.
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/value/%s/example", metricType), nil)
+		encryptedBody, _ := encoder.Encode(nil)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/value/%s/example", metricType), bytes.NewBuffer(encryptedBody))
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.
@@ -224,8 +286,13 @@ func ExampleBaseController_postHandler() {
 	storage := memstorage.Create(storageManager)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
+	// RSA message decoder.
+	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("rsa decoder: %v", err)
+	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)
@@ -236,9 +303,16 @@ func ExampleBaseController_postHandler() {
 	types := []string{"gauge", "counter"}
 	values := []string{"42.0", "10"}
 
+	// RSA message encoder.
+	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
+	if err != nil {
+		log.Info("rsa encoder: %v", err)
+	}
+
 	for i := 0; i < len(names); i++ {
 		// Customize the request based on the metric type.
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/%s/%s/%s", types[i], names[i], values[i]), nil)
+		encryptedBody, _ := encoder.Encode(nil)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/%s/%s/%s", types[i], names[i], values[i]), bytes.NewBuffer(encryptedBody))
 		w := httptest.NewRecorder()
 
 		// Use the router to handle the request.

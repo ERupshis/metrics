@@ -19,6 +19,7 @@ import (
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/go-chi/chi/v5"
@@ -31,18 +32,20 @@ type BaseController struct {
 	logger     logger.BaseLogger
 	compressor compressor.GzipHandler
 	hash       *hasher.Hasher
+	decoder    *rsa.Decoder
 }
 
 // CreateBase initializes and returns a new instance of BaseController.
 // It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
 // If data restoration is enabled, it attempts to restore data from a file.
-func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher) *BaseController {
+func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder) *BaseController {
 	controller := &BaseController{
 		config:     config,
 		storage:    *storage,
 		logger:     logger,
 		compressor: compressor.GzipHandler{},
 		hash:       hash,
+		decoder:    decoder,
 	}
 
 	if !controller.config.Restore {
@@ -67,7 +70,8 @@ func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(c.logger.LogHandler)
-	r.Use(c.HashCheckHandler)
+	r.Use(c.decoder.DecodeRSAHandler)
+	r.Use(c.hash.Handler)
 	r.Use(c.compressor.GzipHandle)
 
 	r.Get("/", c.ListHandler)
@@ -85,11 +89,6 @@ func (c *BaseController) Route() *chi.Mux {
 	r.NotFound(c.badRequestHandler)
 
 	return r
-}
-
-// HashCheckHandler is a middleware that adds hashing functionality to HTTP requests.
-func (c *BaseController) HashCheckHandler(h http.Handler) http.Handler {
-	return c.hash.Handler(h)
 }
 
 // badRequestHandler handles HTTP requests with a status of BadRequest (400).

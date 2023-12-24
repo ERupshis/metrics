@@ -2,9 +2,15 @@
 package configutils
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/caarlos0/env"
 )
 
 // SetEnvToParamIfNeed assigns environment value to param depends on param's type definition.
@@ -17,6 +23,12 @@ func SetEnvToParamIfNeed(param interface{}, val string) {
 	switch param := param.(type) {
 	case *int64:
 		if envVal, err := Atoi64(val); err == nil {
+			*param = envVal
+		} else {
+			panic(err)
+		}
+	case *time.Duration:
+		if envVal, err := time.ParseDuration(val); err == nil {
 			*param = envVal
 		} else {
 			panic(err)
@@ -42,4 +54,66 @@ func AddHTTPPrefixIfNeed(value string) string {
 	}
 
 	return value
+}
+
+// CONFIG FILE PARSING.
+const (
+	flagConfigShort = "c"      // flagConfigShort path to config file short.
+	flagConfig      = "config" // flagConfig path to config file.
+)
+
+type envFileConfig struct {
+	Config string `env:"CONFIG"` // Config path to file config.
+}
+
+func CheckConfigFile(config any) error {
+	var envs = envFileConfig{}
+	err := env.Parse(&envs)
+	if err != nil {
+		return fmt.Errorf("parse config file path from env: %w", err)
+	}
+
+	configFilePath := ""
+	SetEnvToParamIfNeed(&configFilePath, envs.Config)
+
+	if configFilePath == "" {
+		tmpFull := ""
+		flag.StringVar(&tmpFull, flagConfig, "", "path to config file")
+
+		tmpShort := ""
+		flag.StringVar(&tmpShort, flagConfigShort, "", "path to config file")
+
+		flag.Parse()
+
+		if tmpShort != "" {
+			configFilePath = tmpShort
+		}
+
+		if tmpFull != "" {
+			configFilePath = tmpFull
+		}
+	}
+
+	if configFilePath == "" {
+		return nil
+	}
+
+	if err = ParseConfigFromFile(configFilePath, &config); err != nil {
+		return fmt.Errorf("parse config file: %w", err)
+	}
+
+	return nil
+}
+
+func ParseConfigFromFile(filePath string, structToFill any) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("read file: %w", err)
+	}
+
+	if err = json.Unmarshal(data, structToFill); err != nil {
+		return fmt.Errorf("parse data: %w", err)
+	}
+
+	return nil
 }

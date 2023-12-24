@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/controllers"
 	"github.com/erupshis/metrics/internal/server/memstorage"
@@ -30,7 +33,11 @@ func main() {
 	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
 	fmt.Printf("Build version: %s\nBuild date: %s\nBuild commit: %s\n", buildVersion, buildDate, buildCommit)
 
-	cfg := config.Parse()
+	cfg, err := config.Parse()
+	if err != nil {
+		log.Fatalf("error parse config: %v", err)
+		return
+	}
 
 	log := logger.CreateLogger(cfg.LogLevel)
 	defer log.Sync()
@@ -47,8 +54,16 @@ func main() {
 		}()
 	}
 	storage := memstorage.Create(storageManager)
+	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
-	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash)
+
+	// rsa encrypting
+	rsaDecoder, err := rsa.CreateDecoder(cfg.KeyRSA)
+	if err != nil {
+		log.Info("[main] failed to create RSA decoder: %v", err)
+	}
+
+	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
@@ -56,32 +71,39 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	// heap profiling.
-	// router.Mount("/debug", middleware.Profiler())
-
 	// server launch.
+	srv := &http.Server{
+		Addr:    cfg.Host,
+		Handler: router,
+	}
+
+	idleConnsClosed := make(chan struct{})
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
-		log.Info("server is launching with Host setting: %s", cfg.Host)
-		if err := http.ListenAndServe(cfg.Host, router); err != nil {
-			log.Info("server refused to start with error: %v", err)
+		<-sigCh
+		if err := srv.Shutdown(context.Background()); err != nil {
+			log.Info("server Shutdown error: %v", err)
 		}
+		close(idleConnsClosed)
 	}()
 
-	// time.Sleep(300 * time.Second)
-	// memProfile()
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
+	log.Info("server is launching with Host setting: %s", cfg.Host)
+	if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		log.Info("server refused to start or stop with error: %v", err)
+	}
+	<-idleConnsClosed
+	log.Info("server Shutdown gracefully")
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
-	var interval int64 = 1
+	interval := time.Second
 	if cfg.StoreInterval > 1 {
 		interval = cfg.StoreInterval
 	}
 
-	log.Info("[main::scheduleDataStoringInFile] init saving in file with interval: %d", cfg.StoreInterval)
-	storeTicker := time.NewTicker(time.Duration(interval) * time.Second)
+	log.Info("[main::scheduleDataStoringInFile] init saving in file with interval: %s", cfg.StoreInterval.String())
+	storeTicker := time.NewTicker(interval)
 	go ticker.Run(storeTicker, ctx, func() {
 		err := storage.SaveData(ctx)
 		if err != nil {

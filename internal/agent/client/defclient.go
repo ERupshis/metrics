@@ -10,18 +10,20 @@ import (
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/retryer"
+	"github.com/erupshis/metrics/internal/rsa"
 )
 
 // DefaultClient object.
 type DefaultClient struct {
-	client *http.Client
-	log    logger.BaseLogger
-	hash   *hasher.Hasher
+	client  *http.Client
+	log     logger.BaseLogger
+	hash    *hasher.Hasher
+	encoder *rsa.Encoder
 }
 
 // CreateDefault creates default http client. Receives logger and hasher in params.
-func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
-	return &DefaultClient{client: &http.Client{}, log: log, hash: hash}
+func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher, encoder *rsa.Encoder) BaseClient {
+	return &DefaultClient{client: &http.Client{}, log: log, hash: hash, encoder: encoder}
 }
 
 // PostJSON sends data via http post request.
@@ -42,8 +44,13 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) e
 		}
 	}
 
+	encryptedBody, err := c.encoder.Encode(compressedBody)
+	if err != nil {
+		return fmt.Errorf("defclient postJSON request: %w", err)
+	}
+
 	request := func(context context.Context) error {
-		return c.makeRequest(context, http.MethodPost, url, compressedBody, hashValue)
+		return c.makeRequest(context, http.MethodPost, url, encryptedBody, hashValue)
 	}
 
 	err = retryer.RetryCallWithTimeout(ctx, c.log, nil, nil, request)
