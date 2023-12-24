@@ -16,7 +16,7 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
-	"github.com/erupshis/metrics/internal/server/controllers/base"
+	"github.com/erupshis/metrics/internal/server/httpserver/base"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
