@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -47,7 +48,8 @@ func main() {
 		log.Info("[main] failed to create RSA encoder: %v", err)
 	}
 
-	defClient := client.CreateDefault(log, hash, rsaEncoder)
+	IPparts := strings.Split(cfg.RealIP, "/")
+	defClient := client.CreateDefault(log, hash, rsaEncoder, IPparts[0])
 
 	agent := agentimpl.Create(cfg, log, defClient)
 	log.Info("agent has started.")

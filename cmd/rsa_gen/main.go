@@ -56,7 +56,7 @@ func main() {
 	// generating new private RSA-key with length 4096 bytes
 	// make attention. for generation certificate and key
 	// rand.Reader is used as source of random numbers.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 8192)
 	if err != nil {
 		log.Fatal(err)
 	}

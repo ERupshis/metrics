@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -63,7 +65,10 @@ func main() {
 		log.Info("[main] failed to create RSA decoder: %v", err)
 	}
 
-	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder)
+	// trusted subnet validation.
+	validatorIP := createTrustedSubnetValidator(&cfg, log)
+
+	baseController := controllers.CreateBase(ctx, cfg, log, storage, hash, rsaDecoder, validatorIP)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
@@ -126,4 +131,15 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 	} else {
 		return nil
 	}
+}
+
+func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ipvalidator.ValidatorIP {
+	_, subnet, err := net.ParseCIDR(cfg.TrustedSubnet)
+	if err != nil {
+		if err != nil {
+			log.Info("[main:createTrustedSubnetValidator] failed to parse CIDR: %v", err)
+		}
+	}
+
+	return ipvalidator.Create(subnet)
 }

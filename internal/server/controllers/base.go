@@ -17,6 +17,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
@@ -27,25 +28,27 @@ import (
 
 // BaseController represents the base controller for handling HTTP requests and managing metrics.
 type BaseController struct {
-	config     config.Config
-	storage    memstorage.MemStorage
-	logger     logger.BaseLogger
-	compressor compressor.GzipHandler
-	hash       *hasher.Hasher
-	decoder    *rsa.Decoder
+	config      config.Config
+	storage     memstorage.MemStorage
+	logger      logger.BaseLogger
+	compressor  compressor.GzipHandler
+	hash        *hasher.Hasher
+	decoder     *rsa.Decoder
+	validatorIP *ipvalidator.ValidatorIP
 }
 
 // CreateBase initializes and returns a new instance of BaseController.
 // It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
 // If data restoration is enabled, it attempts to restore data from a file.
-func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder) *BaseController {
+func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *BaseController {
 	controller := &BaseController{
-		config:     config,
-		storage:    *storage,
-		logger:     logger,
-		compressor: compressor.GzipHandler{},
-		hash:       hash,
-		decoder:    decoder,
+		config:      config,
+		storage:     *storage,
+		logger:      logger,
+		compressor:  compressor.GzipHandler{},
+		hash:        hash,
+		decoder:     decoder,
+		validatorIP: validatorIP,
 	}
 
 	if !controller.config.Restore {
@@ -70,6 +73,7 @@ func (c *BaseController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(c.logger.LogHandler)
+	r.Use(c.validatorIP.ValidateIPHandler)
 	r.Use(c.decoder.DecodeRSAHandler)
 	r.Use(c.hash.Handler)
 	r.Use(c.compressor.GzipHandle)

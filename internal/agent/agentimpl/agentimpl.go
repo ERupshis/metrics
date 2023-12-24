@@ -41,7 +41,7 @@ func Create(config config.Config, logger logger.BaseLogger, client client.BaseCl
 }
 
 // CreateDefault agent with predefined fields. Recommended to use for debug only clauses.
-func CreateDefault(certFileRSA string) *Agent {
+func CreateDefault(certFileRSA string, realIP string) *Agent {
 	log := logger.CreateLogger("Info")
 	hashKey := ""
 	extraStats := metricsgetter.ExtraStats{Data: make(map[string]float64)}
@@ -52,7 +52,7 @@ func CreateDefault(certFileRSA string) *Agent {
 		return nil
 	}
 
-	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log), encoder), config: config.ConfigDefault, logger: log, extraStats: extraStats}
+	return &Agent{client: client.CreateDefault(log, hasher.CreateHasher(hashKey, hasher.SHA256, log), encoder, realIP), config: config.ConfigDefault, logger: log, extraStats: extraStats}
 }
 
 // GetPollInterval returns collecting poll interval (seconds).

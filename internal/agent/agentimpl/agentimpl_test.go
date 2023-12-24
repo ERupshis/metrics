@@ -19,6 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const IP = "127.0.0.1"
+
 type envConfig struct {
 	PrivateKey  string `env:"KEY_RSA"`
 	Certificate string `env:"CERT_RSA"`
@@ -49,7 +51,7 @@ func TestCreateAgent(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NotNil(t, CreateDefault(certRSA))
+			require.NotNil(t, CreateDefault(certRSA, IP))
 		})
 	}
 }
@@ -65,7 +67,7 @@ func TestAgent_GetPollInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateDefault(certRSA)
+		agent := CreateDefault(certRSA, IP)
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetPollInterval(), tt.want)
 		})
@@ -83,7 +85,7 @@ func TestAgent_GetReportInterval(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		agent := CreateDefault(certRSA)
+		agent := CreateDefault(certRSA, IP)
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, agent.GetReportInterval(), tt.want)
 		})
@@ -100,7 +102,7 @@ func TestAgent_UpdateStats(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := CreateDefault(certRSA)
+			agent := CreateDefault(certRSA, IP)
 			agent.UpdateStats()
 			pollCountOld := agent.pollCount.Load()
 			agent.UpdateStats()
@@ -133,7 +135,7 @@ func TestAgent_createJSONGaugeMessage(t *testing.T) {
 		},
 	}
 
-	a := CreateDefault(certRSA)
+	a := CreateDefault(certRSA, IP)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, tt.want, string(a.createJSONGaugeMessage(tt.args.name, tt.args.value)))
@@ -165,7 +167,7 @@ func TestAgent_createJSONCounterMessage(t *testing.T) {
 		},
 	}
 
-	a := CreateDefault(certRSA)
+	a := CreateDefault(certRSA, IP)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, tt.want, string(a.createJSONCounterMessage(tt.args.name, tt.args.value)))

@@ -19,11 +19,12 @@ type DefaultClient struct {
 	log     logger.BaseLogger
 	hash    *hasher.Hasher
 	encoder *rsa.Encoder
+	IP      string
 }
 
 // CreateDefault creates default http client. Receives logger and hasher in params.
-func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher, encoder *rsa.Encoder) BaseClient {
-	return &DefaultClient{client: &http.Client{}, log: log, hash: hash, encoder: encoder}
+func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher, encoder *rsa.Encoder, IP string) BaseClient {
+	return &DefaultClient{client: &http.Client{}, log: log, hash: hash, encoder: encoder, IP: IP}
 }
 
 // PostJSON sends data via http post request.
@@ -69,6 +70,7 @@ func (c *DefaultClient) makeRequest(ctx context.Context, method string, url stri
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("X-Real-IP", c.IP)
 
 	if hashValue != "" {
 		req.Header.Set(c.hash.GetHeader(), hashValue)

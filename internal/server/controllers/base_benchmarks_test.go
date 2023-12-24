@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
@@ -86,7 +87,7 @@ func postURI(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -119,7 +120,7 @@ func postJSON(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -154,7 +155,7 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(&metrics)
@@ -184,7 +185,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(testSlice)

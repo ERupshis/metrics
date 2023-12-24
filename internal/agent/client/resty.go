@@ -15,11 +15,12 @@ type RestyClient struct {
 	client *resty.Client
 	log    logger.BaseLogger
 	hash   *hasher.Hasher
+	IP     string
 }
 
 // CreateResty creates resty http client. Receives logger and hasher in params.
-func CreateResty(log logger.BaseLogger, hash *hasher.Hasher) BaseClient {
-	return &RestyClient{resty.New(), log, hash}
+func CreateResty(log logger.BaseLogger, hash *hasher.Hasher, IP string) BaseClient {
+	return &RestyClient{client: resty.New(), log: log, hash: hash, IP: IP}
 }
 
 // PostJSON sends data via http post request.
@@ -36,7 +37,8 @@ func (c *RestyClient) PostJSON(context context.Context, url string, body []byte)
 		SetContext(context).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip")
+		SetHeader("Accept-Encoding", "gzip").
+		SetHeader("X-Real-IP", c.IP)
 
 	if c.hash.GetKey() != "" {
 		hashValue, errHash := c.hash.HashMsg(body)

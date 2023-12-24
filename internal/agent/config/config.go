@@ -5,6 +5,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -21,6 +22,7 @@ type Config struct {
 	RateLimit      int64         `json:"rate_limit"`      // number of simultaneous agent's connections to server
 	Key            string        `json:"hash_key"`        // hash key for message check-su
 	CertRSA        string        `json:"crypto_key"`      // CertRSA public certificate for connection.
+	RealIP         string        `json:"real_ip"`         // RealIP for client-server CIDR validation.
 }
 
 // ConfigDefault create default settings config. For debug use only.
@@ -48,6 +50,13 @@ func Parse() (Config, error) {
 	}
 
 	config.Host = configutils.AddHTTPPrefixIfNeed(config.Host)
+
+	realIP, err := getRealIPAddr()
+	if err != nil {
+		return config, fmt.Errorf("real ip identification: %w", err)
+	}
+
+	config.RealIP = realIP
 	return config, nil
 }
 
@@ -94,4 +103,21 @@ func checkEnvironments(config *Config) error {
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
 	return nil
+}
+
+// getRealIPAddr Gets first non-local loop Network interface address.
+func getRealIPAddr() (string, error) {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addresses {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no ethernet adapter found")
 }

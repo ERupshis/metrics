@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -46,7 +47,7 @@ func ExampleBaseController_ListHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	storage.AddGauge("example", 42.0)
 	storage.AddCounter("example", 10)
@@ -89,7 +90,7 @@ func ExampleBaseController_checkStorageHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// RSA message encoder.
 	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
@@ -131,7 +132,7 @@ func ExampleBaseController_jsonHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Create an array of test JSON requests for different request types.
 	requests := []string{"update", "value", "updates"}
@@ -194,7 +195,7 @@ func ExampleBaseController_missingNameHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// RSA message encoder.
 	encoder, err := rsa.CreateEncoder("../../../rsa/cert.pem")
@@ -240,7 +241,7 @@ func ExampleBaseController_getHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)
@@ -292,7 +293,7 @@ func ExampleBaseController_postHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)
