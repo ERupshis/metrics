@@ -14,9 +14,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/workers"
-	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
-	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/ticker"
 )
 
@@ -39,19 +37,13 @@ func main() {
 	log := logger.CreateLogger("info")
 	defer log.Sync()
 
-	// hash sum evaluation
-	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
-
-	// rsa encrypting
-	rsaEncoder, err := rsa.CreateEncoder(cfg.CertRSA)
-	if err != nil {
-		log.Info("[main] failed to create RSA encoder: %v", err)
-	}
-
 	IPparts := strings.Split(cfg.RealIP, "/")
-	defClient := client.CreateDefault(log, hash, rsaEncoder, IPparts[0], cfg.Host)
-
-	agent := agentimpl.Create(cfg, log, defClient)
+	grpcClient, err := client.CreateGRPC(cfg.Host, IPparts[0])
+	if err != nil {
+		log.Info("failed to create grpc client.")
+		return
+	}
+	agent := agentimpl.Create(cfg, log, grpcClient)
 	log.Info("agent has started.")
 
 	pollTicker := time.NewTicker(agent.GetPollInterval())

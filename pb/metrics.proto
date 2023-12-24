@@ -1,0 +1,54 @@
+//INIT
+//go get -u google.golang.org/grpc
+//go get -u github.com/golang/protobuf/protoc-gen-go
+
+//GENERATION.
+//protoc --proto_path=./pb/ --go_out=./pb --go_opt=paths=source_relative --go-grpc_out=./pb --go-grpc_opt=paths=source_relative ./pb/metrics.proto
+
+syntax = "proto3";
+package proto_metrics;
+
+option go_package = "github.com/erupshis/metrics/pb";
+
+import "google/protobuf/empty.proto";
+
+service Metrics {
+  rpc Updates(stream UpdatesRequest) returns (google.protobuf.Empty);
+  rpc Update(UpdateRequest) returns (google.protobuf.Empty);
+  rpc Value(ValueRequest) returns (ValueResponse);
+  rpc Values(google.protobuf.Empty) returns (stream ValuesResponse);
+}
+
+message UpdatesRequest {
+  Metric metric = 1;
+}
+
+message UpdateRequest {
+  Metric metric = 1;
+}
+
+message ValueRequest {
+  Metric metric = 1;
+}
+
+message ValueResponse {
+    Metric metric = 1;
+}
+
+message ValuesResponse {
+  Metric metric = 1;
+}
+
+message Metric {
+    string id = 1;
+
+    enum Type {
+      UNKNOWN = 0;
+      COUNTER = 1;
+      GAUGE = 2;
+    }
+    Type type = 2;
+
+    int64 delta = 3;
+    double value = 4;
+}

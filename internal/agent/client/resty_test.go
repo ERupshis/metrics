@@ -8,6 +8,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -22,7 +23,7 @@ func TestRestyClient_PostJSON(t *testing.T) {
 	type args struct {
 		context context.Context
 		url     string
-		body    []byte
+		metric  []networkmsg.Metric
 	}
 	tests := []struct {
 		name    string
@@ -40,7 +41,7 @@ func TestRestyClient_PostJSON(t *testing.T) {
 			args: args{
 				context: context.Background(),
 				url:     "/updates/",
-				body:    []byte(`{"val":1}`),
+				metric:  []networkmsg.Metric{networkmsg.CreateCounterMetrics("val", 1)},
 			},
 			wantErr: false,
 		},
@@ -54,7 +55,7 @@ func TestRestyClient_PostJSON(t *testing.T) {
 			args: args{
 				context: context.Background(),
 				url:     "/updates/",
-				body:    []byte(`{"val":1}`),
+				metric:  []networkmsg.Metric{networkmsg.CreateCounterMetrics("val", 1)},
 			},
 			wantErr: false,
 		},
@@ -63,18 +64,21 @@ func TestRestyClient_PostJSON(t *testing.T) {
 		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := &RestyClient{
-				client: tt.fields.client,
-				log:    tt.fields.log,
-				hash:   tt.fields.hash,
-			}
 
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}))
+
+			c := &RestyClient{
+				client: tt.fields.client,
+				log:    tt.fields.log,
+				hash:   tt.fields.hash,
+				host:   ts.URL,
+			}
+
 			defer ts.Close()
 
-			if err := c.PostJSON(tt.args.context, ts.URL+tt.args.url, tt.args.body); (err != nil) != tt.wantErr {
+			if err := c.Post(tt.args.context, tt.args.metric); (err != nil) != tt.wantErr {
 				t.Errorf("PostJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

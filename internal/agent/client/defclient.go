@@ -3,12 +3,14 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/retryer"
 	"github.com/erupshis/metrics/internal/rsa"
 )
@@ -20,18 +22,30 @@ type DefaultClient struct {
 	hash    *hasher.Hasher
 	encoder *rsa.Encoder
 	IP      string
+	host    string
 }
 
 // CreateDefault creates default http client. Receives logger and hasher in params.
-func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher, encoder *rsa.Encoder, IP string) BaseClient {
-	return &DefaultClient{client: &http.Client{}, log: log, hash: hash, encoder: encoder, IP: IP}
+func CreateDefault(log logger.BaseLogger, hash *hasher.Hasher, encoder *rsa.Encoder, IP string, host string) BaseClient {
+	return &DefaultClient{client: &http.Client{},
+		log:     log,
+		hash:    hash,
+		encoder: encoder,
+		IP:      IP,
+		host:    host,
+	}
 }
 
-// PostJSON sends data via http post request.
+// Post sends data via http post request.
 //
 // Performs gzip compression and add hash sum for message validation if hashKey is set in hasher.
 // Uses retryer to repeat call in case of connection error.
-func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) error {
+func (c *DefaultClient) Post(ctx context.Context, metrics []networkmsg.Metric) error {
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		return fmt.Errorf("marshal body: %w", err)
+	}
+
 	compressedBody, err := compressor.GzipCompress(body)
 	if err != nil {
 		return fmt.Errorf("defclient postJSON request: %w", err)
@@ -48,6 +62,13 @@ func (c *DefaultClient) PostJSON(ctx context.Context, url string, body []byte) e
 	encryptedBody, err := c.encoder.Encode(compressedBody)
 	if err != nil {
 		return fmt.Errorf("defclient postJSON request: %w", err)
+	}
+
+	url := c.host
+	if len(metrics) == 1 {
+		url += "/update/"
+	} else {
+		url += "/updates/"
 	}
 
 	request := func(context context.Context) error {

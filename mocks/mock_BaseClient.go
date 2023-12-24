@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	networkmsg "github.com/erupshis/metrics/internal/networkmsg"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -34,16 +35,16 @@ func (m *MockBaseClient) EXPECT() *MockBaseClientMockRecorder {
 	return m.recorder
 }
 
-// PostJSON mocks base method.
-func (m *MockBaseClient) PostJSON(arg0 context.Context, arg1 string, arg2 []byte) error {
+// Post mocks base method.
+func (m *MockBaseClient) Post(arg0 context.Context, arg1 []networkmsg.Metric) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostJSON", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Post", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PostJSON indicates an expected call of PostJSON.
-func (mr *MockBaseClientMockRecorder) PostJSON(arg0, arg1, arg2 interface{}) *gomock.Call {
+// Post indicates an expected call of Post.
+func (mr *MockBaseClientMockRecorder) Post(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostJSON", reflect.TypeOf((*MockBaseClient)(nil).PostJSON), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Post", reflect.TypeOf((*MockBaseClient)(nil).Post), arg0, arg1)
 }
