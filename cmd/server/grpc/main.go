@@ -68,7 +68,7 @@ func main() {
 	opts = append(opts, grpc.ChainUnaryInterceptor(logging.UnaryServer(log)))
 	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(log)))
 
-	grpcServer := grpcserver.NewServer(grpcController, log, opts...)
+	grpcServer := grpcserver.NewServer(grpcController, opts...)
 	idleConnsClosed := initShutDown(grpcServer, log)
 
 	_, port, err := net.SplitHostPort(cfg.Host)
