@@ -1,7 +1,6 @@
 package grpcserver
 
 import (
-	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
 	"github.com/erupshis/metrics/pb"
@@ -16,7 +15,7 @@ type Server struct {
 	*grpc.Server
 }
 
-func NewServer(controller *controller.Controller, baseLogger logger.BaseLogger, options ...grpc.ServerOption) *Server {
+func NewServer(controller *controller.Controller, options ...grpc.ServerOption) *Server {
 	var opts []grpc.ServerOption
 	for _, option := range options {
 		opts = append(opts, option)

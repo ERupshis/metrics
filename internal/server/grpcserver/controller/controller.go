@@ -39,12 +39,12 @@ func (s *Controller) Updates(stream pb.Metrics_UpdatesServer) error {
 	}
 }
 
-func (s *Controller) Update(ctx context.Context, in *pb.UpdateRequest) (*emptypb.Empty, error) {
+func (s *Controller) Update(_ context.Context, in *pb.UpdateRequest) (*emptypb.Empty, error) {
 	s.storage.AddMetricMessageInStorage(utils.ConvertGrpcFormatToMetric(in.Metric))
 	return &emptypb.Empty{}, nil
 }
 
-func (s *Controller) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueResponse, error) {
+func (s *Controller) Value(_ context.Context, in *pb.ValueRequest) (*pb.ValueResponse, error) {
 	metric := utils.ConvertGrpcFormatToMetric(in.Metric)
 	if metric == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "couldn't convert incoming metric")

@@ -29,7 +29,7 @@ import (
 // HTTPController represents the base controller for handling HTTP requests and managing metrics.
 type HTTPController struct {
 	config      config.Config
-	storage     memstorage.MemStorage
+	storage     *memstorage.MemStorage
 	logger      logger.BaseLogger
 	compressor  compressor.GzipHandler
 	hash        *hasher.Hasher
@@ -43,7 +43,7 @@ type HTTPController struct {
 func Create(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
 	controller := &HTTPController{
 		config:      config,
-		storage:     *storage,
+		storage:     storage,
 		logger:      logger,
 		compressor:  compressor.GzipHandler{},
 		hash:        hash,
