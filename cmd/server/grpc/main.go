@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/erupshis/metrics/internal/grpc/interceptors/ipvalidator"
 	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
-	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -67,6 +67,9 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
+	// trusted subnet validation.
+	validatorIP := createTrustedSubnetValidator(&cfg, log)
+
 	// TLS.
 	cert, err := tls.LoadX509KeyPair(cfg.CertRSA, cfg.KeyRSA)
 	if err != nil {
@@ -77,8 +80,14 @@ func main() {
 	// gRPC server options.
 	var opts []grpc.ServerOption
 	opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
-	opts = append(opts, grpc.ChainUnaryInterceptor(logging.UnaryServer(log)))
-	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(log)))
+	opts = append(opts, grpc.ChainUnaryInterceptor(
+		logging.UnaryServer(log),
+		validatorIP.UnaryServer(log),
+	))
+	opts = append(opts, grpc.ChainStreamInterceptor(
+		logging.StreamServer(log),
+		validatorIP.StreamServer(log),
+	))
 
 	grpcServer := grpcserver.NewServer(grpcController, opts...)
 	idleConnsClosed := initShutDown(ctx, grpcServer, log)
@@ -145,7 +154,7 @@ func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ip
 		}
 	}
 
-	return ipvalidator.Create(subnet)
+	return ipvalidator.Create(subnet, "")
 }
 
 func initShutDown(ctx context.Context, srv server.BaseServer, logger logger.BaseLogger) <-chan struct{} {

@@ -14,6 +14,7 @@ import (
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/workers"
+	"github.com/erupshis/metrics/internal/grpc/interceptors/ipvalidator"
 	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
@@ -43,6 +44,9 @@ func main() {
 
 	IPparts := strings.Split(cfg.RealIP, "/")
 
+	// trusted subnet validation.
+	validatorIP := ipvalidator.Create(nil, IPparts[0])
+
 	// TLS.
 	creds, err := credentials.NewClientTLSFromFile(cfg.CertRSA, strings.Split(strings.TrimPrefix(cfg.Host, "http://"), ":")[0])
 	if err != nil {
@@ -52,8 +56,14 @@ func main() {
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(creds))
-	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(log)))
-	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(log)))
+	opts = append(opts, grpc.WithChainUnaryInterceptor(
+		logging.UnaryClient(log),
+		validatorIP.UnaryClient(),
+	))
+	opts = append(opts, grpc.WithChainStreamInterceptor(
+		logging.StreamClient(log),
+		validatorIP.StreamClient(),
+	))
 	opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 
 	grpcClient, err := client.CreateGRPC(strings.TrimPrefix(cfg.Host, "http://"), IPparts[0], opts...)
