@@ -180,7 +180,7 @@ func (c *HTTPController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 // jsonPostBatchHandler handles batch JSON requests and adds metrics to storage.
 func (c *HTTPController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
 	for _, metric := range metrics {
-		c.addMetricFromMessage(&metric)
+		c.storage.AddMetricMessageInStorage(&metric)
 	}
 
 	w.Header().Add("Content-Type", "application/json")
@@ -189,31 +189,9 @@ func (c *HTTPController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 
 // jsonPostHandler handles single JSON requests and adds a metric to storage.
 func (c *HTTPController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
-	c.addMetricFromMessage(data)
+	c.storage.AddMetricMessageInStorage(data)
 	w.Header().Add("Content-Type", "application/json")
 	return networkmsg.CreatePostUpdateMessage(*data)
-}
-
-// addMetricFromMessage adds a metric to storage based on the metric type.
-func (c *HTTPController) addMetricFromMessage(data *networkmsg.Metric) {
-	switch data.MType {
-	case gaugeType:
-		valueIn := new(float64)
-		if data.Value != nil {
-			valueIn = data.Value
-		}
-		c.storage.AddGauge(data.ID, *valueIn)
-		valueOut, _ := c.storage.GetGauge(data.ID)
-		data.Value = &valueOut
-	case counterType:
-		valueIn := new(int64)
-		if data.Delta != nil {
-			valueIn = data.Delta
-		}
-		c.storage.AddCounter(data.ID, *valueIn)
-		value, _ := c.storage.GetCounter(data.ID)
-		data.Delta = &value
-	}
 }
 
 // jsonGetHandler handles JSON GET requests and retrieves metrics from storage.

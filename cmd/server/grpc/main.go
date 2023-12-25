@@ -56,7 +56,7 @@ func main() {
 	// trusted subnet validation.
 	_ = createTrustedSubnetValidator(&cfg, log)
 
-	grpcController := controller.New()
+	grpcController := controller.New(storage)
 
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)

@@ -27,6 +27,7 @@ type MetricsClient interface {
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Value(ctx context.Context, in *ValueRequest, opts ...grpc.CallOption) (*ValueResponse, error)
 	Values(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Metrics_ValuesClient, error)
+	CheckStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CheckStorageResponse, error)
 }
 
 type metricsClient struct {
@@ -121,6 +122,15 @@ func (x *metricsValuesClient) Recv() (*ValuesResponse, error) {
 	return m, nil
 }
 
+func (c *metricsClient) CheckStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*CheckStorageResponse, error) {
+	out := new(CheckStorageResponse)
+	err := c.cc.Invoke(ctx, "/proto_metrics.Metrics/CheckStorage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MetricsServer is the server API for Metrics service.
 // All implementations must embed UnimplementedMetricsServer
 // for forward compatibility
@@ -129,6 +139,7 @@ type MetricsServer interface {
 	Update(context.Context, *UpdateRequest) (*emptypb.Empty, error)
 	Value(context.Context, *ValueRequest) (*ValueResponse, error)
 	Values(*emptypb.Empty, Metrics_ValuesServer) error
+	CheckStorage(context.Context, *emptypb.Empty) (*CheckStorageResponse, error)
 	mustEmbedUnimplementedMetricsServer()
 }
 
@@ -147,6 +158,9 @@ func (UnimplementedMetricsServer) Value(context.Context, *ValueRequest) (*ValueR
 }
 func (UnimplementedMetricsServer) Values(*emptypb.Empty, Metrics_ValuesServer) error {
 	return status.Errorf(codes.Unimplemented, "method Values not implemented")
+}
+func (UnimplementedMetricsServer) CheckStorage(context.Context, *emptypb.Empty) (*CheckStorageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckStorage not implemented")
 }
 func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
 
@@ -244,6 +258,24 @@ func (x *metricsValuesServer) Send(m *ValuesResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Metrics_CheckStorage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsServer).CheckStorage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto_metrics.Metrics/CheckStorage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsServer).CheckStorage(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -258,6 +290,10 @@ var Metrics_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Value",
 			Handler:    _Metrics_Value_Handler,
+		},
+		{
+			MethodName: "CheckStorage",
+			Handler:    _Metrics_CheckStorage_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

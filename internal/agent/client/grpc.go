@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
+	"github.com/erupshis/metrics/internal/grpc/utils"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/pb"
@@ -20,13 +22,14 @@ type Grpc struct {
 	client pb.MetricsClient
 	conn   *grpc.ClientConn
 
-	log logger.BaseLogger
-	IP  string
+	IP string
 }
 
 func CreateGRPC(address string, IP string, baseLogger logger.BaseLogger) (BaseClient, error) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(baseLogger)))
+	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(baseLogger)))
 
 	conn, err := grpc.Dial(address, opts...)
 	if err != nil {
@@ -41,7 +44,6 @@ func CreateGRPC(address string, IP string, baseLogger logger.BaseLogger) (BaseCl
 	return &Grpc{
 		client: client,
 		conn:   conn,
-		log:    baseLogger,
 		IP:     IP,
 	}, nil
 }
@@ -58,7 +60,7 @@ func (s *Grpc) Post(ctx context.Context, metrics []networkmsg.Metric) error {
 	mdCtx := metadata.NewOutgoingContext(ctx, md)
 
 	if len(metrics) == 1 {
-		_, err := s.client.Update(mdCtx, &pb.UpdateRequest{Metric: convertMetricToGrpcFormat(&metrics[0])})
+		_, err := s.client.Update(mdCtx, &pb.UpdateRequest{Metric: utils.ConvertMetricToGrpcFormat(&metrics[0])})
 		return err
 	} else {
 		stream, err := s.client.Updates(mdCtx)
@@ -72,7 +74,7 @@ func (s *Grpc) Post(ctx context.Context, metrics []networkmsg.Metric) error {
 
 		for _, metric := range metrics {
 			metric := metric
-			err = stream.Send(&pb.UpdatesRequest{Metric: convertMetricToGrpcFormat(&metric)})
+			err = stream.Send(&pb.UpdatesRequest{Metric: utils.ConvertMetricToGrpcFormat(&metric)})
 			if err != nil {
 				return err
 			}
@@ -80,20 +82,4 @@ func (s *Grpc) Post(ctx context.Context, metrics []networkmsg.Metric) error {
 	}
 
 	return nil
-}
-
-func convertMetricToGrpcFormat(metric *networkmsg.Metric) *pb.Metric {
-	if metric.MType == "gauge" {
-		return &pb.Metric{
-			Id:    metric.ID,
-			Type:  pb.Metric_GAUGE,
-			Value: *metric.Value,
-		}
-	} else {
-		return &pb.Metric{
-			Id:    metric.ID,
-			Type:  pb.Metric_COUNTER,
-			Delta: *metric.Delta,
-		}
-	}
 }

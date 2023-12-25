@@ -17,6 +17,8 @@ service Metrics {
   rpc Update(UpdateRequest) returns (google.protobuf.Empty);
   rpc Value(ValueRequest) returns (ValueResponse);
   rpc Values(google.protobuf.Empty) returns (stream ValuesResponse);
+
+  rpc CheckStorage(google.protobuf.Empty) returns (CheckStorageResponse);
 }
 
 message UpdatesRequest {
@@ -51,4 +53,8 @@ message Metric {
 
     int64 delta = 3;
     double value = 4;
+}
+
+message CheckStorageResponse {
+  bool ok = 1;
 }
