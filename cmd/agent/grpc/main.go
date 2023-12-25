@@ -14,8 +14,11 @@ import (
 	"github.com/erupshis/metrics/internal/agent/client"
 	"github.com/erupshis/metrics/internal/agent/config"
 	"github.com/erupshis/metrics/internal/agent/workers"
+	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
@@ -38,7 +41,13 @@ func main() {
 	defer log.Sync()
 
 	IPparts := strings.Split(cfg.RealIP, "/")
-	grpcClient, err := client.CreateGRPC(strings.TrimPrefix(cfg.Host, "http://"), IPparts[0], log)
+
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(log)))
+	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(log)))
+
+	grpcClient, err := client.CreateGRPC(strings.TrimPrefix(cfg.Host, "http://"), IPparts[0], opts...)
 	if err != nil {
 		log.Info("failed to create grpc client.")
 		return

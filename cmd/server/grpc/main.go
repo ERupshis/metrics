@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server/config"
@@ -19,6 +20,7 @@ import (
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -61,7 +63,12 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	grpcServer := grpcserver.NewServer(grpcController, log)
+	// gRPC server options.
+	var opts []grpc.ServerOption
+	opts = append(opts, grpc.ChainUnaryInterceptor(logging.UnaryServer(log)))
+	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(log)))
+
+	grpcServer := grpcserver.NewServer(grpcController, log, opts...)
 	idleConnsClosed := initShutDown(grpcServer, log)
 
 	_, port, err := net.SplitHostPort(cfg.Host)

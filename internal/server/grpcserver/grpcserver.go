@@ -1,7 +1,6 @@
 package grpcserver
 
 import (
-	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
@@ -17,10 +16,11 @@ type Server struct {
 	*grpc.Server
 }
 
-func NewServer(controller *controller.Controller, baseLogger logger.BaseLogger) *Server {
+func NewServer(controller *controller.Controller, baseLogger logger.BaseLogger, options ...grpc.ServerOption) *Server {
 	var opts []grpc.ServerOption
-	opts = append(opts, grpc.ChainUnaryInterceptor(logging.UnaryServer(baseLogger)))
-	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(baseLogger)))
+	for _, option := range options {
+		opts = append(opts, option)
+	}
 
 	s := grpc.NewServer(opts...)
 	pb.RegisterMetricsServer(s, controller)

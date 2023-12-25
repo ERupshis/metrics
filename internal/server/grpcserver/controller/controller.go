@@ -95,3 +95,12 @@ func (s *Controller) Values(_ *emptypb.Empty, stream pb.Metrics_ValuesServer) er
 
 	return nil
 }
+
+func (s *Controller) CheckStorage(ctx context.Context, _ *emptypb.Empty) (*pb.CheckStorageResponse, error) {
+	res, err := s.storage.IsAvailable(ctx)
+	if err != nil {
+		return &pb.CheckStorageResponse{Ok: false}, status.Errorf(codes.Internal, "storage is not responding: %v", err)
+	}
+
+	return &pb.CheckStorageResponse{Ok: res}, nil
+}

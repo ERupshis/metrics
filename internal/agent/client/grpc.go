@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/grpc/utils"
-	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -25,11 +22,11 @@ type Grpc struct {
 	IP string
 }
 
-func CreateGRPC(address string, IP string, baseLogger logger.BaseLogger) (BaseClient, error) {
+func CreateGRPC(address string, IP string, options ...grpc.DialOption) (BaseClient, error) {
 	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(baseLogger)))
-	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(baseLogger)))
+	for _, option := range options {
+		opts = append(opts, option)
+	}
 
 	conn, err := grpc.Dial(address, opts...)
 	if err != nil {
