@@ -19,6 +19,7 @@ import (
 	"github.com/erupshis/metrics/internal/ticker"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/encoding/gzip"
 )
 
 var (
@@ -53,6 +54,7 @@ func main() {
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(log)))
 	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(log)))
+	opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 
 	grpcClient, err := client.CreateGRPC(strings.TrimPrefix(cfg.Host, "http://"), IPparts[0], opts...)
 	if err != nil {
