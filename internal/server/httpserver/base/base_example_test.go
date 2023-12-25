@@ -30,8 +30,8 @@ func createExampleConfig() config.Config {
 	}
 }
 
-// ExampleBaseController_ListHandler demonstrates how to use the ListHandler for displaying metrics in HTML format.
-func ExampleBaseController_ListHandler() {
+// ExampleHTTPController_ListHandler demonstrates how to use the ListHandler for displaying metrics in HTML format.
+func ExampleHTTPController_ListHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
@@ -73,8 +73,8 @@ func ExampleBaseController_ListHandler() {
 	// Response Status Code: 200
 }
 
-// ExampleBaseController_checkStorageHandler demonstrates how to use the checkStorageHandler for the "/ping" endpoint.
-func ExampleBaseController_checkStorageHandler() {
+// ExampleHTTPController_checkStorageHandler demonstrates how to use the checkStorageHandler for the "/ping" endpoint.
+func ExampleHTTPController_checkStorageHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
@@ -115,8 +115,8 @@ func ExampleBaseController_checkStorageHandler() {
 	// Response Body:
 }
 
-// ExampleBaseController_jsonHandler demonstrates how to use the jsonHandler for different JSON request types.
-func ExampleBaseController_jsonHandler() {
+// ExampleHTTPController_jsonHandler demonstrates how to use the jsonHandler for different JSON request types.
+func ExampleHTTPController_jsonHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
@@ -178,8 +178,8 @@ func ExampleBaseController_jsonHandler() {
 
 }
 
-// ExampleBaseController_missingNameHandler demonstrates how to use the missingNameHandler for different metric types.
-func ExampleBaseController_missingNameHandler() {
+// ExampleHTTPController_missingNameHandler demonstrates how to use the missingNameHandler for different metric types.
+func ExampleHTTPController_missingNameHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
@@ -224,8 +224,8 @@ func ExampleBaseController_missingNameHandler() {
 	// Response Status Code for missingNameHandler with type counter: 404
 }
 
-// ExampleBaseController_getHandler demonstrates how to use the getHandler for different metric types.
-func ExampleBaseController_getHandler() {
+// ExampleHTTPController_getHandler demonstrates how to use the getHandler for different metric types.
+func ExampleHTTPController_getHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
@@ -277,7 +277,7 @@ func ExampleBaseController_getHandler() {
 	// Response Body for getHandler with type counter: 10
 }
 
-func ExampleBaseController_postHandler() {
+func ExampleHTTPController_postHandler() {
 	// Create a sample configuration.
 	cfg := createExampleConfig()
 
