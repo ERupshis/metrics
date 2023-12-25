@@ -149,9 +149,7 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ipvalidator.ValidatorIP {
 	_, subnet, err := net.ParseCIDR(cfg.TrustedSubnet)
 	if err != nil {
-		if err != nil {
-			log.Info("[main:createTrustedSubnetValidator] failed to parse CIDR: %v", err)
-		}
+		log.Info("[main:createTrustedSubnetValidator] failed to parse CIDR: %v", err)
 	}
 
 	return ipvalidator.Create(subnet, "")
