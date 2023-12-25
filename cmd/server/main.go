@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -17,7 +15,9 @@ import (
 	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/rsa"
+	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/erupshis/metrics/internal/server/httpserver"
 	"github.com/erupshis/metrics/internal/server/httpserver/base"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
@@ -77,28 +77,23 @@ func main() {
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
 	// server launch.
-	srv := &http.Server{
-		Addr:    cfg.Host,
-		Handler: router,
-	}
-
-	idleConnsClosed := make(chan struct{})
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	go func() {
-		<-sigCh
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Info("server Shutdown error: %v", err)
-		}
-		close(idleConnsClosed)
-	}()
+	mainServer := httpserver.NewServer(cfg.Host, router)
+	idleConnsClosed := initShutDown(ctx, mainServer, log)
 
 	log.Info("server is launching with Host setting: %s", cfg.Host)
-	if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Info("server refused to start or stop with error: %v", err)
+
+	listener, err := net.Listen("tcp", cfg.Host)
+	if err != nil {
+		log.Info("failed to listen: %v", err)
+		return
 	}
+
+	if err = mainServer.Serve(listener); err != nil {
+		log.Info("http server refused to start or stop with error: %v", err)
+	}
+
 	<-idleConnsClosed
-	log.Info("server Shutdown gracefully")
+	log.Info("http server shutdown gracefully")
 }
 
 func scheduleDataStoringInFile(ctx context.Context, cfg *config.Config, storage *memstorage.MemStorage, log logger.BaseLogger) *time.Ticker {
@@ -142,4 +137,20 @@ func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ip
 	}
 
 	return ipvalidator.Create(subnet)
+}
+
+func initShutDown(ctx context.Context, srv server.BaseServer, logger logger.BaseLogger) <-chan struct{} {
+	idleConnsClosed := make(chan struct{})
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	go func() {
+		<-sigCh
+		logger.Info("http server is going to gracefully shutdown")
+		if err := srv.GracefulStop(ctx); err != nil {
+			logger.Info("graceful stop error: %v", err)
+		}
+		close(idleConnsClosed)
+	}()
+
+	return idleConnsClosed
 }

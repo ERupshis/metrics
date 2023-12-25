@@ -1,6 +1,9 @@
 package grpcserver
 
 import (
+	"context"
+	"net"
+
 	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
 	"github.com/erupshis/metrics/pb"
@@ -29,4 +32,13 @@ func NewServer(controller *controller.Controller, options ...grpc.ServerOption) 
 	}
 
 	return srv
+}
+
+func (s *Server) Serve(lis net.Listener) error {
+	return s.Server.Serve(lis)
+}
+
+func (s *Server) GracefulStop(_ context.Context) error {
+	s.Server.GracefulStop()
+	return nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/grpcserver"
 	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
@@ -69,7 +70,7 @@ func main() {
 	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(log)))
 
 	grpcServer := grpcserver.NewServer(grpcController, opts...)
-	idleConnsClosed := initShutDown(grpcServer, log)
+	idleConnsClosed := initShutDown(ctx, grpcServer, log)
 
 	_, port, err := net.SplitHostPort(cfg.Host)
 	if err != nil {
@@ -136,14 +137,14 @@ func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ip
 	return ipvalidator.Create(subnet)
 }
 
-func initShutDown(srv *grpcserver.Server, logger logger.BaseLogger) <-chan struct{} {
+func initShutDown(ctx context.Context, srv server.BaseServer, logger logger.BaseLogger) <-chan struct{} {
 	idleConnsClosed := make(chan struct{})
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		<-sigCh
 		logger.Info("gRPC server is going to gracefully shutdown")
-		srv.GracefulStop()
+		_ = srv.GracefulStop(ctx)
 		close(idleConnsClosed)
 	}()
 
