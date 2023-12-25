@@ -22,17 +22,19 @@ type Config struct {
 	RateLimit      int64         `json:"rate_limit"`      // number of simultaneous agent's connections to server
 	Key            string        `json:"hash_key"`        // hash key for message check-su
 	CertRSA        string        `json:"crypto_key"`      // CertRSA public certificate for connection.
+	CACertRSA      string        `json:"ca_crypto_cert"`  // CertRSA public certificate for connection.
 	RealIP         string        `json:"real_ip"`         // RealIP for client-server CIDR validation.
 }
 
 // ConfigDefault create default settings config. For debug use only.
 var ConfigDefault = Config{
-	Host:           "http://localhost:8080",
+	Host:           "http://127.0.0.1:8080",
 	PollInterval:   2 * time.Second,
 	ReportInterval: 10 * time.Second,
 	RateLimit:      1,
 	Key:            "123",
 	CertRSA:        "rsa/cert.pem",
+	CACertRSA:      "rsa/ca_cert.pem",
 }
 
 // Parse handling and reading settings from agent's launch flags and then environments,

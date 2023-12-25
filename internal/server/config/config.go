@@ -28,6 +28,7 @@ type Config struct {
 	StoragePath   string        `json:"storage_file"`   // StoragePath is the file storage path for metrics data.
 	DataBaseDSN   string        `json:"database_dsn"`   // DataBaseDSN is the DSN for connecting to the metrics database.
 	Key           string        `json:"hash_key"`       // Key is the authentication key for the metrics server.
+	CertRSA       string        `json:"crypto_cert"`    // CertRSA public cert for connection.
 	KeyRSA        string        `json:"crypto_key"`     // KeyRSA private key for connection.
 	TrustedSubnet string        `json:"trusted_subnet"` // TrustedSubnet CIDR settings.
 }
@@ -41,6 +42,7 @@ var configDefault = Config{
 	StoragePath:   "", // "/tmp/metrics-db.json"
 	DataBaseDSN:   "postgres://postgres:postgres@localhost:5432/metrics_db?sslmode=disable",
 	Key:           "123",
+	CertRSA:       "rsa/cert.pem",
 	KeyRSA:        "rsa/key.pem",
 	TrustedSubnet: "169.254.98.134/24",
 }
@@ -64,15 +66,16 @@ func Parse() (Config, error) {
 
 // Constants representing command line flags.
 const (
-	flagAddress       = "a"          // flagAddress represents the server endpoint.
-	flagLogLevel      = "l"          // flagLogLevel represents the log level.
-	flagRestore       = "r"          // flagRestore represents the data restoration setting.
-	flagStoragePath   = "f"          // flagStoragePath represents the file storage path.
-	flagStoreInterval = "i"          // flagStoreInterval represents the store interval.
-	flagDataBaseDSN   = "d"          // flagDataBaseDSN represents the database DSN.
-	flagKey           = "k"          // flagKey represents the hash key.
-	flagKeyRSA        = "crypto-key" // flagKeyRSA private connection key.
-	flagTrustedSubnet = "t"          // flagTrustedSubnet CIDR settings.
+	flagAddress       = "a"           // flagAddress represents the server endpoint.
+	flagLogLevel      = "l"           // flagLogLevel represents the log level.
+	flagRestore       = "r"           // flagRestore represents the data restoration setting.
+	flagStoragePath   = "f"           // flagStoragePath represents the file storage path.
+	flagStoreInterval = "i"           // flagStoreInterval represents the store interval.
+	flagDataBaseDSN   = "d"           // flagDataBaseDSN represents the database DSN.
+	flagKey           = "k"           // flagKey represents the hash key.
+	flagCertRSA       = "crypto-cert" // flagCertRSA public connection cert.
+	flagKeyRSA        = "crypto-key"  // flagKeyRSA private connection key.
+	flagTrustedSubnet = "t"           // flagTrustedSubnet CIDR settings.
 )
 
 // checkFlags initializes and parses command line flags, updating the provided Config.
@@ -86,6 +89,7 @@ func checkFlags(config *Config) {
 
 	flag.StringVar(&config.DataBaseDSN, flagDataBaseDSN, config.DataBaseDSN, "database DSN")
 	flag.StringVar(&config.Key, flagKey, config.Key, "Auth key")
+	flag.StringVar(&config.CertRSA, flagCertRSA, config.CertRSA, "public RSA cert path")
 	flag.StringVar(&config.KeyRSA, flagKeyRSA, config.KeyRSA, "private RSA key path")
 	flag.StringVar(&config.TrustedSubnet, flagTrustedSubnet, config.TrustedSubnet, "CIDR - Classless Inter-Domain Routing")
 	flag.Parse()
@@ -102,6 +106,7 @@ type envConfig struct {
 	StoreInterval string `env:"STORE_INTERVAL"`    // StoreInterval is the store interval.
 	DataBaseDSN   string `env:"DATABASE_DSN"`      // DataBaseDSN is the database DSN.
 	Key           string `env:"KEY"`               // Key is the hash key.
+	CertRSA       string `env:"CRYPTO_CERT"`       // CertRSA public cert for connection.
 	KeyRSA        string `env:"CRYPTO_KEY"`        // KeyRSA private key for connection.
 	TrustedSubnet string `env:"TRUSTED_SUBNET"`    // TrustedSubnet - cidr settings.
 }
@@ -120,6 +125,7 @@ func checkEnvironments(config *Config) error {
 	configutils.SetEnvToParamIfNeed(&config.StoreInterval, envs.StoreInterval)
 	configutils.SetEnvToParamIfNeed(&config.DataBaseDSN, envs.DataBaseDSN)
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
+	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
 	configutils.SetEnvToParamIfNeed(&config.KeyRSA, envs.KeyRSA)
 	configutils.SetEnvToParamIfNeed(&config.TrustedSubnet, envs.TrustedSubnet)
 

@@ -18,7 +18,7 @@ import (
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/ticker"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -42,8 +42,15 @@ func main() {
 
 	IPparts := strings.Split(cfg.RealIP, "/")
 
+	// TLS.
+	creds, err := credentials.NewClientTLSFromFile(cfg.CertRSA, strings.Split(strings.TrimPrefix(cfg.Host, "http://"), ":")[0])
+	if err != nil {
+		log.Info("error create TLS cert: %v", err)
+		return
+	}
+
 	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	opts = append(opts, grpc.WithTransportCredentials(creds))
 	opts = append(opts, grpc.WithUnaryInterceptor(logging.UnaryClient(log)))
 	opts = append(opts, grpc.WithStreamInterceptor(logging.StreamClient(log)))
 

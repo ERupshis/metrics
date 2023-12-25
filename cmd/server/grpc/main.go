@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -22,6 +23,7 @@ import (
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -64,8 +66,16 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
+	// TLS.
+	cert, err := tls.LoadX509KeyPair(cfg.CertRSA, cfg.KeyRSA)
+	if err != nil {
+		log.Info("error create TLS cert: %v", err)
+		return
+	}
+
 	// gRPC server options.
 	var opts []grpc.ServerOption
+	opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
 	opts = append(opts, grpc.ChainUnaryInterceptor(logging.UnaryServer(log)))
 	opts = append(opts, grpc.ChainStreamInterceptor(logging.StreamServer(log)))
 
