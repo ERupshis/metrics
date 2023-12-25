@@ -19,12 +19,7 @@ type Server struct {
 }
 
 func NewServer(controller *controller.Controller, options ...grpc.ServerOption) *Server {
-	var opts []grpc.ServerOption
-	for _, option := range options {
-		opts = append(opts, option)
-	}
-
-	s := grpc.NewServer(opts...)
+	s := grpc.NewServer(options...)
 	pb.RegisterMetricsServer(s, controller)
 
 	srv := &Server{

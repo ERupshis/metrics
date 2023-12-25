@@ -23,19 +23,11 @@ type Grpc struct {
 }
 
 func CreateGRPC(address string, IP string, options ...grpc.DialOption) (BaseClient, error) {
-	var opts []grpc.DialOption
-	for _, option := range options {
-		opts = append(opts, option)
-	}
-
-	conn, err := grpc.Dial(address, opts...)
+	conn, err := grpc.Dial(address, options...)
 	if err != nil {
 		return nil, fmt.Errorf("create connection to filestorage: %w", err)
 	}
 
-	if err != nil {
-		return nil, fmt.Errorf("create def auth: %w", err)
-	}
 	client := pb.NewMetricsClient(conn)
 
 	return &Grpc{
