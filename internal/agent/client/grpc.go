@@ -43,7 +43,7 @@ func (s *Grpc) Close() error {
 
 func (s *Grpc) Post(ctx context.Context, metrics []networkmsg.Metric) error {
 	md := metadata.Pairs(
-		"X-Real_IP", s.IP,
+		"X-Real-Ip", s.IP,
 	)
 
 	mdCtx := metadata.NewOutgoingContext(ctx, md)

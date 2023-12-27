@@ -24,6 +24,7 @@ type Config struct {
 	CertRSA        string        `json:"crypto_key"`      // CertRSA public certificate for connection.
 	CACertRSA      string        `json:"ca_crypto_cert"`  // CertRSA public certificate for connection.
 	RealIP         string        `json:"real_ip"`         // RealIP for client-server CIDR validation.
+	ClientType     string        `json:"client_type"`     // ClientType client type(http, grpc).
 }
 
 // ConfigDefault create default settings config. For debug use only.
@@ -35,6 +36,7 @@ var ConfigDefault = Config{
 	Key:            "123",
 	CertRSA:        "rsa/cert.pem",
 	CACertRSA:      "rsa/ca_cert.pem",
+	ClientType:     "grpc",
 }
 
 // Parse handling and reading settings from agent's launch flags and then environments,
@@ -70,6 +72,7 @@ const (
 	flagKey            = "k"
 	flagCertRSA        = "crypto-key"    // flagCertRSA public connection key.
 	flagCACertRSA      = "ca-crypto-key" // flagCACertRSA public connection ca cert.
+	flagClientType     = "client"        // flagClientType client type
 )
 
 func checkFlags(config *Config) {
@@ -80,6 +83,7 @@ func checkFlags(config *Config) {
 	flag.StringVar(&config.Key, flagKey, config.Key, "auth key")
 	flag.StringVar(&config.CertRSA, flagCertRSA, config.CertRSA, "public RSA key path")
 	flag.StringVar(&config.CACertRSA, flagCACertRSA, config.CACertRSA, "public RSA CA cert path")
+	flag.StringVar(&config.ClientType, flagClientType, config.ClientType, "client type (grpc, http)")
 	flag.Parse()
 }
 
@@ -92,6 +96,7 @@ type envConfig struct {
 	Key            string `env:"KEY"`
 	CertRSA        string `env:"CRYPTO_KEY"`    // CertRSA private key for connection.
 	CACertRSA      string `env:"CA_CRYPTO_KEY"` // CertRSA private key for connection.
+	ClientType     string `env:"CLIENT_TYPE"`
 }
 
 func checkEnvironments(config *Config) error {
@@ -108,6 +113,7 @@ func checkEnvironments(config *Config) error {
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
 	configutils.SetEnvToParamIfNeed(&config.CACertRSA, envs.CACertRSA)
+	configutils.SetEnvToParamIfNeed(&config.ClientType, envs.ClientType)
 	return nil
 }
 

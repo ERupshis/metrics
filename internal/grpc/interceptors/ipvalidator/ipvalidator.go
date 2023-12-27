@@ -84,20 +84,6 @@ func (ip *ValidatorIP) UnaryServer(logger logger.BaseLogger) grpc.UnaryServerInt
 	}
 }
 
-func (ip *ValidatorIP) StreamClient() grpc.StreamClientInterceptor {
-	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		ctxIP := metadata.AppendToOutgoingContext(ctx, "X-Real-Ip", ip.IP)
-		return streamer(ctxIP, desc, cc, method, opts...)
-	}
-}
-
-func (ip *ValidatorIP) UnaryClient() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		ctxIP := metadata.AppendToOutgoingContext(ctx, "X-Real-Ip", ip.IP)
-		return invoker(ctxIP, method, req, reply, cc, opts...)
-	}
-}
-
 func resolveIP(ipStr string) (net.IP, error) {
 	if ipStr == "" {
 		return nil, fmt.Errorf("missing X-Real-IP header in request")
