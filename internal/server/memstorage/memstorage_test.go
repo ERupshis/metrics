@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/mocks"
 	"github.com/golang/mock/gomock"
@@ -15,7 +17,7 @@ import (
 )
 
 func TestCreateStorage(t *testing.T) {
-	storage := Create(nil)
+	storage := Create(context.Background(), &config.Default, nil, logger.CreateMock())
 
 	require.NotNil(t, storage)
 	require.NotNil(t, storage.counterMetrics)
@@ -24,7 +26,7 @@ func TestCreateStorage(t *testing.T) {
 }
 
 func TestMemStorage_AddCounter(t *testing.T) {
-	storage := Create(nil)
+	storage := Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	type args struct {
 		name  string
 		value int64
@@ -48,7 +50,7 @@ func TestMemStorage_AddCounter(t *testing.T) {
 }
 
 func TestMemStorage_AddGauge(t *testing.T) {
-	storage := Create(nil)
+	storage := Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	type args struct {
 		name  string
 		value float64
@@ -72,7 +74,7 @@ func TestMemStorage_AddGauge(t *testing.T) {
 }
 
 func TestMemStorage_GetCounter(t *testing.T) {
-	storage := Create(nil)
+	storage := Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	storage.AddCounter("metric1", 1)
 
 	tests := []struct {
@@ -100,7 +102,7 @@ func TestMemStorage_GetCounter(t *testing.T) {
 }
 
 func TestMemStorage_GetGauge(t *testing.T) {
-	storage := Create(nil)
+	storage := Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	storage.AddGauge("metric1", 1.2)
 
 	tests := []struct {

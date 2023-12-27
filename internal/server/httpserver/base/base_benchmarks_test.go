@@ -79,7 +79,7 @@ func postURI(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
@@ -87,7 +87,7 @@ func postURI(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -112,7 +112,7 @@ func postJSON(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
@@ -120,7 +120,7 @@ func postJSON(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -147,7 +147,7 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
@@ -155,7 +155,7 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(&metrics)
@@ -177,7 +177,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
@@ -185,7 +185,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(testSlice)

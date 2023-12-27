@@ -38,7 +38,7 @@ func ExampleHTTPController_ListHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -47,7 +47,7 @@ func ExampleHTTPController_ListHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	storage.AddGauge("example", 42.0)
 	storage.AddCounter("example", 10)
@@ -81,7 +81,7 @@ func ExampleHTTPController_checkStorageHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -90,7 +90,7 @@ func ExampleHTTPController_checkStorageHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// RSA message encoder.
 	encoder, err := rsa.CreateEncoder("../../../../rsa/cert.pem")
@@ -123,7 +123,7 @@ func ExampleHTTPController_jsonHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -132,7 +132,7 @@ func ExampleHTTPController_jsonHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Create an array of test JSON requests for different request types.
 	requests := []string{"update", "value", "updates"}
@@ -186,7 +186,7 @@ func ExampleHTTPController_missingNameHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -195,7 +195,7 @@ func ExampleHTTPController_missingNameHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// RSA message encoder.
 	encoder, err := rsa.CreateEncoder("../../../../rsa/cert.pem")
@@ -232,7 +232,7 @@ func ExampleHTTPController_getHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -241,7 +241,7 @@ func ExampleHTTPController_getHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)
@@ -284,7 +284,7 @@ func ExampleHTTPController_postHandler() {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// RSA message decoder.
@@ -293,7 +293,7 @@ func ExampleHTTPController_postHandler() {
 		log.Info("rsa decoder: %v", err)
 	}
 	// Create a HTTPController instance.
-	baseController := base.Create(context.Background(), cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	// Add some sample data to the storage for testing.
 	storage.AddGauge("example", 42.0)

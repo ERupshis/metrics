@@ -54,13 +54,13 @@ func TestJSONCounterBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	var val1 int64 = 123
@@ -177,13 +177,13 @@ func TestJSONGaugeBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	var float1 float64 = 123
@@ -362,13 +362,13 @@ func TestBadRequestHandlerBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -403,13 +403,13 @@ func TestListHandlerBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	badRequestTests := []test{
@@ -434,13 +434,13 @@ func TestMissingNameBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	missingNameTests := []test{
@@ -499,13 +499,13 @@ func TestCounterBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 
 	counterTests := []test{
@@ -579,13 +579,13 @@ func TestGaugeBaseController(t *testing.T) {
 	log := logger.CreateMock()
 	// defer log.Sync()
 
-	storage := memstorage.Create(nil)
+	storage := memstorage.Create(context.Background(), &config.Default, nil, logger.CreateMock())
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	assert.NoError(t, err, "rsa decoder create error")
 
-	ts := httptest.NewServer(Create(context.Background(), cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
+	ts := httptest.NewServer(Create(&cfg, log, storage, hash, decoder, ipvalidator.Create(nil)).Route())
 	defer ts.Close()
 	gaugeTests := []test{
 		{
