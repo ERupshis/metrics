@@ -28,7 +28,7 @@ import (
 
 // HTTPController represents the base controller for handling HTTP requests and managing metrics.
 type HTTPController struct {
-	config      config.Config
+	config      *config.Config
 	storage     *memstorage.MemStorage
 	logger      logger.BaseLogger
 	compressor  compressor.GzipHandler
@@ -40,7 +40,7 @@ type HTTPController struct {
 // Create initializes and returns a new instance of HTTPController.
 // It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
 // If data restoration is enabled, it attempts to restore data from a file.
-func Create(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
+func Create(ctx context.Context, config *config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
 	controller := &HTTPController{
 		config:      config,
 		storage:     storage,
@@ -65,7 +65,7 @@ func Create(ctx context.Context, config config.Config, logger logger.BaseLogger,
 
 // GetConfig returns a pointer to the configuration of the HTTPController.
 func (c *HTTPController) GetConfig() *config.Config {
-	return &c.config
+	return c.config
 }
 
 // Route returns a new chi.Mux router configured with middleware and handlers for HTTPController.

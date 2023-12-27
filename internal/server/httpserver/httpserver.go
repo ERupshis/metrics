@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 
@@ -29,7 +30,11 @@ func NewServer(host string, router *chi.Mux) *Server {
 }
 
 func (s *Server) Serve(lis net.Listener) error {
-	return s.Server.Serve(lis)
+	if err := s.Server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) GracefulStop(ctx context.Context) error {

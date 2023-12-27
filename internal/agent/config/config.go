@@ -28,7 +28,7 @@ type Config struct {
 
 // ConfigDefault create default settings config. For debug use only.
 var ConfigDefault = Config{
-	Host:           "http://127.0.0.1:8080",
+	Host:           "http://127.0.0.1",
 	PollInterval:   2 * time.Second,
 	ReportInterval: 10 * time.Second,
 	RateLimit:      1,
@@ -68,16 +68,18 @@ const (
 	flagPollInterval   = "p"
 	flagRateLimit      = "l"
 	flagKey            = "k"
-	flagCertRSA        = "crypto-key" // flagCertRSA public connection key.
+	flagCertRSA        = "crypto-key"    // flagCertRSA public connection key.
+	flagCACertRSA      = "ca-crypto-key" // flagCACertRSA public connection ca cert.
 )
 
 func checkFlags(config *Config) {
-	flag.StringVar(&config.Host, flagAddress, config.Host, "server endpoint")
+	flag.StringVar(&config.Host, flagAddress, config.Host, "server host")
 	flag.DurationVar(&config.ReportInterval, flagReportInterval, config.ReportInterval, "report interval val (sec)")
 	flag.DurationVar(&config.PollInterval, flagPollInterval, config.PollInterval, "poll interval val (sec)")
 	flag.Int64Var(&config.RateLimit, flagRateLimit, config.RateLimit, "rate limit")
 	flag.StringVar(&config.Key, flagKey, config.Key, "auth key")
 	flag.StringVar(&config.CertRSA, flagCertRSA, config.CertRSA, "public RSA key path")
+	flag.StringVar(&config.CACertRSA, flagCACertRSA, config.CACertRSA, "public RSA CA cert path")
 	flag.Parse()
 }
 
@@ -88,7 +90,8 @@ type envConfig struct {
 	PollInterval   string `env:"POLL_INTERVAL"`
 	RateLimit      string `env:"RATE_LIMIT"`
 	Key            string `env:"KEY"`
-	CertRSA        string `env:"CRYPTO_KEY"` // CertRSA private key for connection.
+	CertRSA        string `env:"CRYPTO_KEY"`    // CertRSA private key for connection.
+	CACertRSA      string `env:"CA_CRYPTO_KEY"` // CertRSA private key for connection.
 }
 
 func checkEnvironments(config *Config) error {
@@ -104,6 +107,7 @@ func checkEnvironments(config *Config) error {
 	configutils.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
+	configutils.SetEnvToParamIfNeed(&config.CACertRSA, envs.CACertRSA)
 	return nil
 }
 
