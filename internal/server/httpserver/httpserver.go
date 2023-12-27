@@ -17,6 +17,7 @@ var (
 type Server struct {
 	*http.Server
 	info string
+	host string
 }
 
 func NewServer(host string, router *chi.Mux, info string) *Server {
@@ -45,4 +46,11 @@ func (s *Server) GracefulStop(ctx context.Context) error {
 
 func (s *Server) GetInfo() string {
 	return s.info
+}
+
+func (s *Server) Host(host string) {
+	s.host = host
+}
+func (s *Server) GetHost() string {
+	return s.host
 }

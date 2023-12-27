@@ -16,14 +16,17 @@ var (
 
 type Server struct {
 	*grpc.Server
+	info string
+	port string
 }
 
-func NewServer(controller *controller.Controller, options ...grpc.ServerOption) *Server {
+func NewServer(controller *controller.Controller, info string, options ...grpc.ServerOption) *Server {
 	s := grpc.NewServer(options...)
 	pb.RegisterMetricsServer(s, controller)
 
 	srv := &Server{
-		s,
+		Server: s,
+		info:   info,
 	}
 
 	return srv
@@ -36,4 +39,14 @@ func (s *Server) Serve(lis net.Listener) error {
 func (s *Server) GracefulStop(_ context.Context) error {
 	s.Server.GracefulStop()
 	return nil
+}
+func (s *Server) GetInfo() string {
+	return s.info
+}
+
+func (s *Server) Host(host string) {
+	s.port = host
+}
+func (s *Server) GetHost() string {
+	return s.port
 }

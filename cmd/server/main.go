@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -12,18 +13,24 @@ import (
 	"syscall"
 	"time"
 
+	ipvalidatorGRPC "github.com/erupshis/metrics/internal/grpc/interceptors/ipvalidator"
+	"github.com/erupshis/metrics/internal/grpc/interceptors/logging"
 	"github.com/erupshis/metrics/internal/hasher"
-	"github.com/erupshis/metrics/internal/ipvalidator"
+	ipvalidatorHTTP "github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/erupshis/metrics/internal/server"
 	"github.com/erupshis/metrics/internal/server/config"
+	"github.com/erupshis/metrics/internal/server/grpcserver"
+	"github.com/erupshis/metrics/internal/server/grpcserver/controller"
 	"github.com/erupshis/metrics/internal/server/httpserver"
 	"github.com/erupshis/metrics/internal/server/httpserver/base"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 	"github.com/erupshis/metrics/internal/ticker"
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -31,6 +38,11 @@ var (
 	buildDate    = "N/A"
 	buildCommit  = "N/A"
 )
+
+type serverInitializer struct {
+	port     int64
+	initFunc func(cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage) (server.BaseServer, error)
+}
 
 func main() {
 	// example of run: go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(cmd.exe /c "echo %DATE%")' -X 'main.buildCommit=$(git rev-parse HEAD)'" main.go
@@ -61,30 +73,38 @@ func main() {
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
 
-	idleConnsClosed := make(chan struct{})
+	// servers initializer
+	var serversInitializer = map[string]serverInitializer{
+		"http": serverInitializer{
+			port:     cfg.PortHTTP,
+			initFunc: initHTTPServer,
+		},
+		"grpc": serverInitializer{
+			port:     cfg.PortGRPC,
+			initFunc: initGRPCServer,
+		},
+	}
 
-	var wg sync.WaitGroup
+	// prepare servers if possible.
 	var servers []server.BaseServer
-	if cfg.PortHTTP != 0 {
-		httpServer, err := initHTTPServer(ctx, &cfg, log, storage)
+	for serverType, initializer := range serversInitializer {
+		if initializer.port == 0 {
+			continue
+		}
+
+		srv, err := initializer.initFunc(&cfg, log, storage)
 		if err != nil {
-			log.Info("failed to init http server: %v", err)
+			log.Info("failed to init %s server: %v", serverType, err)
 		} else {
-			servers = append(servers, httpServer)
+			servers = append(servers, srv)
 		}
 	}
 
-	if cfg.PortGRPC != 0 {
-		grpcServer, err := initHTTPServer(ctx, &cfg, log, storage)
-		if err != nil {
-			log.Info("failed to init grpc server: %v", err)
-		} else {
-			servers = append(servers, grpcServer)
-		}
-	}
-
+	// launch servers.
+	var wg sync.WaitGroup
+	idleConnsClosed := make(chan struct{})
 	for _, srv := range servers {
-		if err := launchServer(&cfg, &wg, idleConnsClosed, srv, log); err != nil {
+		if err := launchServer(&wg, idleConnsClosed, srv, log); err != nil {
 			log.Info("failed to start %s server: %v", srv.GetInfo(), err)
 		}
 	}
@@ -125,13 +145,22 @@ func createStorageManager(ctx context.Context, cfg *config.Config, log logger.Ba
 	}
 }
 
-func createTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ipvalidator.ValidatorIP {
+func createHTTPTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ipvalidatorHTTP.ValidatorIP {
 	_, subnet, err := net.ParseCIDR(cfg.TrustedSubnet)
 	if err != nil {
-		log.Info("[main:createTrustedSubnetValidator] failed to parse CIDR: %v", err)
+		log.Info("[main:createHTTPTrustedSubnetValidator] failed to parse CIDR: %v", err)
 	}
 
-	return ipvalidator.Create(subnet)
+	return ipvalidatorHTTP.Create(subnet)
+}
+
+func createGRPCTrustedSubnetValidator(cfg *config.Config, log logger.BaseLogger) *ipvalidatorGRPC.ValidatorIP {
+	_, subnet, err := net.ParseCIDR(cfg.TrustedSubnet)
+	if err != nil {
+		log.Info("[main:createGRPCTrustedSubnetValidator] failed to parse CIDR: %v", err)
+	}
+
+	return ipvalidatorGRPC.Create(subnet, "")
 }
 
 func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []server.BaseServer, logger logger.BaseLogger) {
@@ -139,43 +168,72 @@ func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		<-sigCh
-		logger.Info("application is stopping gracefully")
+		logger.Info("[main:initShutDown] application is stopping gracefully")
 		for _, srv := range servers {
 			if err := srv.GracefulStop(ctx); err != nil {
-				logger.Info("%s server graceful stop error: %v", srv.GetInfo(), err)
+				logger.Info("[main:initShutDown] %s server graceful stop error: %v", srv.GetInfo(), err)
 			}
 		}
 		close(idleConnsClosed)
 	}()
 }
 
-func initHTTPServer(ctx context.Context, cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage) (server.BaseServer, error) {
+func initHTTPServer(cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage) (server.BaseServer, error) {
 	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	// rsa encrypting
 	rsaDecoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
-		log.Info("[launchHTTPServer] failed to create RSA decoder: %v", err)
+		return nil, fmt.Errorf("[main:initHTTPServer] failed to create RSA decoder: %v", err)
 	}
 
 	// trusted subnet validation.
-	validatorIP := createTrustedSubnetValidator(cfg, log)
+	validatorIP := createHTTPTrustedSubnetValidator(cfg, log)
 
-	baseController := base.Create(ctx, cfg, log, storage, hash, rsaDecoder, validatorIP)
+	baseController := base.Create(cfg, log, storage, hash, rsaDecoder, validatorIP)
 
 	router := chi.NewRouter()
 	router.Mount("/", baseController.Route())
 
 	// server launch.
 	srv := httpserver.NewServer(cfg.Host, router, "http")
+	srv.Host(fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
 	return srv, nil
 }
 
-func launchServer(cfg *config.Config, wg *sync.WaitGroup, idleConnsClosed <-chan struct{}, srv server.BaseServer, log logger.BaseLogger) error {
-	log.Info("%s server is launching with Host setting: %s", srv.GetInfo(), fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
+func initGRPCServer(cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage) (server.BaseServer, error) {
+	grpcController := controller.New(storage)
+	// trusted subnet validation.
+	validatorIP := createGRPCTrustedSubnetValidator(cfg, log)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
+	// TLS.
+	cert, err := tls.LoadX509KeyPair(cfg.CertRSA, cfg.KeyRSA)
+	if err != nil {
+		return nil, fmt.Errorf("error create TLS cert: %w", err)
+	}
+
+	// gRPC server options.
+	var opts []grpc.ServerOption
+	opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
+	opts = append(opts, grpc.ChainUnaryInterceptor(
+		logging.UnaryServer(log),
+		validatorIP.UnaryServer(log),
+	))
+	opts = append(opts, grpc.ChainStreamInterceptor(
+		logging.StreamServer(log),
+		validatorIP.StreamServer(log),
+	))
+
+	srv := grpcserver.NewServer(grpcController, "grpc", opts...)
+	srv.Host(fmt.Sprintf(":%d", cfg.PortGRPC))
+	return srv, nil
+}
+
+func launchServer(wg *sync.WaitGroup, idleConnsClosed <-chan struct{}, srv server.BaseServer, log logger.BaseLogger) error {
+	log.Info("%s server is launching with Host setting: %s", srv.GetInfo(), srv.GetHost())
+
+	listener, err := net.Listen("tcp", srv.GetHost())
 	if err != nil {
 		return fmt.Errorf("failed to listen for %s server: %w", srv.GetInfo(), err)
 	}

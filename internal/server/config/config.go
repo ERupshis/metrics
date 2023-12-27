@@ -36,7 +36,7 @@ type Config struct {
 }
 
 // Default configs preset.
-var configDefault = Config{
+var Default = Config{
 	Host:          "localhost",
 	LogLevel:      "Info",
 	Restore:       true,
@@ -53,7 +53,7 @@ var configDefault = Config{
 
 // Parse reads and parses command line flags, updating the provided Config.
 func Parse() (Config, error) {
-	var config = configDefault
+	var config = Default
 	if err := configutils.CheckConfigFile(&config); err != nil {
 		return config, fmt.Errorf("parse config file: %w", err)
 	}

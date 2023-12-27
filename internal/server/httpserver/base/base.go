@@ -8,7 +8,6 @@ package base
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,7 +39,7 @@ type HTTPController struct {
 // Create initializes and returns a new instance of HTTPController.
 // It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
 // If data restoration is enabled, it attempts to restore data from a file.
-func Create(ctx context.Context, config *config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
+func Create(config *config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
 	controller := &HTTPController{
 		config:      config,
 		storage:     storage,
