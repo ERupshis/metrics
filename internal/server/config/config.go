@@ -46,7 +46,7 @@ var Default = Config{
 	Key:           "123",
 	CertRSA:       "rsa/cert.pem",
 	KeyRSA:        "rsa/key.pem",
-	TrustedSubnet: "169.254.98.134/24",
+	TrustedSubnet: "10.73.102.18/24",
 	PortHTTP:      8080,
 	PortGRPC:      8081,
 }

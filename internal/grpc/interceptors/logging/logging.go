@@ -51,7 +51,7 @@ func StreamClient(logger logger.BaseLogger) grpc.StreamClientInterceptor {
 		if err != nil {
 			logger.Info("Stream method %s result with err: %v", method, err)
 		} else {
-			logger.Info("Stream method %s successfully initiated")
+			logger.Info("Stream method %s successfully initiated", method)
 		}
 
 		return s, err
@@ -66,7 +66,7 @@ func UnaryClient(logger logger.BaseLogger) grpc.UnaryClientInterceptor {
 		if err != nil {
 			logger.Info("Unary method %s result with err: %v", method, err)
 		} else {
-			logger.Info("Unary method %s successfully completed")
+			logger.Info("Unary method %s successfully completed", method)
 		}
 
 		return err

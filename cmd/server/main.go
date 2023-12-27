@@ -31,6 +31,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 var (

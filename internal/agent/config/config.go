@@ -28,7 +28,7 @@ type Config struct {
 
 // ConfigDefault create default settings config. For debug use only.
 var ConfigDefault = Config{
-	Host:           "http://127.0.0.1",
+	Host:           "http://127.0.0.1:8081",
 	PollInterval:   2 * time.Second,
 	ReportInterval: 10 * time.Second,
 	RateLimit:      1,
