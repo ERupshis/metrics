@@ -67,14 +67,25 @@ func main() {
 	wg.Add(1)
 
 	var servers []server.BaseServer
-	httpServer, err := launchHTTPServer(ctx, &wg, &cfg, log, storage, idleConnsClosed)
-	if err != nil {
-		log.Info("failed to start http server")
-	} else {
-		servers = append(servers, httpServer)
+	if cfg.PortHTTP != 0 {
+		httpServer, err := launchHTTPServer(ctx, &wg, idleConnsClosed, &cfg, log, storage)
+		if err != nil {
+			log.Info("failed to start http server: %v", err)
+		} else {
+			servers = append(servers, httpServer)
+		}
 	}
 
-	initShutDown(ctx, idleConnsClosed, []server.BaseServer{httpServer}, log)
+	if cfg.PortGRPC != 0 {
+		grpcServer, err := launchHTTPServer(ctx, &wg, idleConnsClosed, &cfg, log, storage)
+		if err != nil {
+			log.Info("failed to start grpc server: %v", err)
+		} else {
+			servers = append(servers, grpcServer)
+		}
+	}
+
+	initShutDown(ctx, idleConnsClosed, servers, log)
 	wg.Wait()
 }
 
@@ -134,7 +145,12 @@ func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []
 	}()
 }
 
-func launchHTTPServer(ctx context.Context, wg *sync.WaitGroup, cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage, ch <-chan struct{}) (server.BaseServer, error) {
+func launchHTTPServer(ctx context.Context,
+	wg *sync.WaitGroup,
+	idleConnsClosed <-chan struct{},
+	cfg *config.Config,
+	log logger.BaseLogger,
+	storage *memstorage.MemStorage) (server.BaseServer, error) {
 	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -169,7 +185,7 @@ func launchHTTPServer(ctx context.Context, wg *sync.WaitGroup, cfg *config.Confi
 			log.Info("http server refused to start or stop with error: %v", err)
 		}
 
-		<-ch
+		<-idleConnsClosed
 		log.Info("http server shutdown gracefully")
 	}()
 
