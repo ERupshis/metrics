@@ -56,7 +56,7 @@ func main() {
 			}
 		}()
 	}
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(ctx, &cfg, storageManager, log)
 
 	// Schedule data saving in file with storeInterval
 	scheduleDataStoringInFile(ctx, &cfg, storage, log)
@@ -136,9 +136,9 @@ func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []
 	go func() {
 		<-sigCh
 		for _, srv := range servers {
-			logger.Info("http server is going to gracefully shutdown")
+			logger.Info("%s server is going to gracefully shutdown", srv.GetInfo())
 			if err := srv.GracefulStop(ctx); err != nil {
-				logger.Info("graceful stop error: %v", err)
+				logger.Info("%s server graceful stop error: %v", srv.GetInfo(), err)
 			}
 		}
 		close(idleConnsClosed)
@@ -157,7 +157,7 @@ func launchHTTPServer(ctx context.Context,
 	// rsa encrypting
 	rsaDecoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
-		log.Info("[main] failed to create RSA decoder: %v", err)
+		log.Info("[launchHTTPServer] failed to create RSA decoder: %v", err)
 	}
 
 	// trusted subnet validation.
@@ -169,25 +169,25 @@ func launchHTTPServer(ctx context.Context,
 	router.Mount("/", baseController.Route())
 
 	// server launch.
-	mainServer := httpserver.NewServer(cfg.Host, router)
+	srv := httpserver.NewServer(cfg.Host, router, "http")
 
-	log.Info("server is launching with Host setting: %s", fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
+	log.Info("%s server is launching with Host setting: %s", srv.GetInfo(), fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
 	if err != nil {
-		return nil, fmt.Errorf("failed to listen: %w", err)
+		return nil, fmt.Errorf("failed to listen for %s server: %w", srv.GetInfo(), err)
 	}
 
 	go func() {
 		defer wg.Done()
 
-		if err = mainServer.Serve(listener); err != nil {
-			log.Info("http server refused to start or stop with error: %v", err)
+		if err = srv.Serve(listener); err != nil {
+			log.Info("%s server refused to start or stop with error: %v", srv.GetInfo(), err)
 		}
 
 		<-idleConnsClosed
-		log.Info("http server shutdown gracefully")
+		log.Info("%s server shutdown gracefully", srv.GetInfo())
 	}()
 
-	return mainServer, nil
+	return srv, nil
 }

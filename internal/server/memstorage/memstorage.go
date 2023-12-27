@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
+	"github.com/erupshis/metrics/internal/server/config"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
 
@@ -37,12 +39,20 @@ type MemStorage struct {
 }
 
 // Create initializes and returns a new instance of MemStorage with the provided StorageManager.
-func Create(manager storagemngr.StorageManager) *MemStorage {
-	return &MemStorage{
+func Create(ctx context.Context, cfg *config.Config, manager storagemngr.StorageManager, logger logger.BaseLogger) *MemStorage {
+	storage := &MemStorage{
 		gaugeMetrics:   make(map[string]gauge),
 		counterMetrics: make(map[string]counter),
 		manager:        manager,
 	}
+
+	if !cfg.Restore {
+		logger.Info("[MemStorage::Create] data restoring from file switched off.")
+	} else if err := storage.RestoreData(ctx); err != nil {
+		logger.Info("[MemStorage::Create] data restoring: %v", err)
+	}
+
+	return storage
 }
 
 // RestoreData retrieves and restores stored metrics data from the associated StorageManager.

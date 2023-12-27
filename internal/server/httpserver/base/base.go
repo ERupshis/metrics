@@ -50,16 +50,6 @@ func Create(ctx context.Context, config *config.Config, logger logger.BaseLogger
 		decoder:     decoder,
 		validatorIP: validatorIP,
 	}
-
-	if !controller.config.Restore {
-		controller.logger.Info("[HTTPController::Create] data restoring from file switched off.")
-	} else {
-		err := controller.storage.RestoreData(ctx)
-		if err != nil {
-			controller.logger.Info("[HTTPController::Create] data restoring: %v", err)
-		}
-	}
-
 	return controller
 }
 

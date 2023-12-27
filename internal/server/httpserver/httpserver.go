@@ -16,9 +16,10 @@ var (
 
 type Server struct {
 	*http.Server
+	info string
 }
 
-func NewServer(host string, router *chi.Mux) *Server {
+func NewServer(host string, router *chi.Mux, info string) *Server {
 	srv := &http.Server{
 		Addr:    host,
 		Handler: router,
@@ -26,6 +27,7 @@ func NewServer(host string, router *chi.Mux) *Server {
 
 	return &Server{
 		Server: srv,
+		info:   info,
 	}
 }
 
@@ -39,4 +41,8 @@ func (s *Server) Serve(lis net.Listener) error {
 
 func (s *Server) GracefulStop(ctx context.Context) error {
 	return s.Shutdown(ctx)
+}
+
+func (s *Server) GetInfo() string {
+	return s.info
 }
