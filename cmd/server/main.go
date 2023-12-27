@@ -64,24 +64,28 @@ func main() {
 	idleConnsClosed := make(chan struct{})
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-
 	var servers []server.BaseServer
 	if cfg.PortHTTP != 0 {
-		httpServer, err := launchHTTPServer(ctx, &wg, idleConnsClosed, &cfg, log, storage)
+		httpServer, err := initHTTPServer(ctx, &cfg, log, storage)
 		if err != nil {
-			log.Info("failed to start http server: %v", err)
+			log.Info("failed to init http server: %v", err)
 		} else {
 			servers = append(servers, httpServer)
 		}
 	}
 
 	if cfg.PortGRPC != 0 {
-		grpcServer, err := launchHTTPServer(ctx, &wg, idleConnsClosed, &cfg, log, storage)
+		grpcServer, err := initHTTPServer(ctx, &cfg, log, storage)
 		if err != nil {
-			log.Info("failed to start grpc server: %v", err)
+			log.Info("failed to init grpc server: %v", err)
 		} else {
 			servers = append(servers, grpcServer)
+		}
+	}
+
+	for _, srv := range servers {
+		if err := launchServer(&cfg, &wg, idleConnsClosed, srv, log); err != nil {
+			log.Info("failed to start %s server: %v", srv.GetInfo(), err)
 		}
 	}
 
@@ -135,8 +139,8 @@ func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
 		<-sigCh
+		logger.Info("application is stopping gracefully")
 		for _, srv := range servers {
-			logger.Info("%s server is going to gracefully shutdown", srv.GetInfo())
 			if err := srv.GracefulStop(ctx); err != nil {
 				logger.Info("%s server graceful stop error: %v", srv.GetInfo(), err)
 			}
@@ -145,12 +149,7 @@ func initShutDown(ctx context.Context, idleConnsClosed chan struct{}, servers []
 	}()
 }
 
-func launchHTTPServer(ctx context.Context,
-	wg *sync.WaitGroup,
-	idleConnsClosed <-chan struct{},
-	cfg *config.Config,
-	log logger.BaseLogger,
-	storage *memstorage.MemStorage) (server.BaseServer, error) {
+func initHTTPServer(ctx context.Context, cfg *config.Config, log logger.BaseLogger, storage *memstorage.MemStorage) (server.BaseServer, error) {
 	// hash sum evaluation
 	hash := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
@@ -170,24 +169,29 @@ func launchHTTPServer(ctx context.Context,
 
 	// server launch.
 	srv := httpserver.NewServer(cfg.Host, router, "http")
+	return srv, nil
+}
 
+func launchServer(cfg *config.Config, wg *sync.WaitGroup, idleConnsClosed <-chan struct{}, srv server.BaseServer, log logger.BaseLogger) error {
 	log.Info("%s server is launching with Host setting: %s", srv.GetInfo(), fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host, cfg.PortHTTP))
 	if err != nil {
-		return nil, fmt.Errorf("failed to listen for %s server: %w", srv.GetInfo(), err)
+		return fmt.Errorf("failed to listen for %s server: %w", srv.GetInfo(), err)
 	}
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
 		if err = srv.Serve(listener); err != nil {
 			log.Info("%s server refused to start or stop with error: %v", srv.GetInfo(), err)
+			return
 		}
 
 		<-idleConnsClosed
 		log.Info("%s server shutdown gracefully", srv.GetInfo())
 	}()
 
-	return srv, nil
+	return nil
 }
