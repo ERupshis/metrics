@@ -5,6 +5,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -21,16 +22,21 @@ type Config struct {
 	RateLimit      int64         `json:"rate_limit"`      // number of simultaneous agent's connections to server
 	Key            string        `json:"hash_key"`        // hash key for message check-su
 	CertRSA        string        `json:"crypto_key"`      // CertRSA public certificate for connection.
+	CACertRSA      string        `json:"ca_crypto_cert"`  // CertRSA public certificate for connection.
+	RealIP         string        `json:"real_ip"`         // RealIP for client-server CIDR validation.
+	ClientType     string        `json:"client_type"`     // ClientType client type(http, grpc).
 }
 
 // ConfigDefault create default settings config. For debug use only.
 var ConfigDefault = Config{
-	Host:           "http://localhost:8080",
+	Host:           "http://127.0.0.1:8081",
 	PollInterval:   2 * time.Second,
 	ReportInterval: 10 * time.Second,
 	RateLimit:      1,
 	Key:            "123",
 	CertRSA:        "rsa/cert.pem",
+	CACertRSA:      "rsa/ca_cert.pem",
+	ClientType:     "grpc",
 }
 
 // Parse handling and reading settings from agent's launch flags and then environments,
@@ -48,6 +54,13 @@ func Parse() (Config, error) {
 	}
 
 	config.Host = configutils.AddHTTPPrefixIfNeed(config.Host)
+
+	realIP, err := getRealIPAddr()
+	if err != nil {
+		return config, fmt.Errorf("real ip identification: %w", err)
+	}
+
+	config.RealIP = realIP
 	return config, nil
 }
 
@@ -57,16 +70,20 @@ const (
 	flagPollInterval   = "p"
 	flagRateLimit      = "l"
 	flagKey            = "k"
-	flagCertRSA        = "crypto-key" // flagCertRSA public connection key.
+	flagCertRSA        = "crypto-key"    // flagCertRSA public connection key.
+	flagCACertRSA      = "ca-crypto-key" // flagCACertRSA public connection ca cert.
+	flagClientType     = "client"        // flagClientType client type
 )
 
 func checkFlags(config *Config) {
-	flag.StringVar(&config.Host, flagAddress, config.Host, "server endpoint")
+	flag.StringVar(&config.Host, flagAddress, config.Host, "server host")
 	flag.DurationVar(&config.ReportInterval, flagReportInterval, config.ReportInterval, "report interval val (sec)")
 	flag.DurationVar(&config.PollInterval, flagPollInterval, config.PollInterval, "poll interval val (sec)")
 	flag.Int64Var(&config.RateLimit, flagRateLimit, config.RateLimit, "rate limit")
 	flag.StringVar(&config.Key, flagKey, config.Key, "auth key")
 	flag.StringVar(&config.CertRSA, flagCertRSA, config.CertRSA, "public RSA key path")
+	flag.StringVar(&config.CACertRSA, flagCACertRSA, config.CACertRSA, "public RSA CA cert path")
+	flag.StringVar(&config.ClientType, flagClientType, config.ClientType, "client type (grpc, http)")
 	flag.Parse()
 }
 
@@ -77,7 +94,9 @@ type envConfig struct {
 	PollInterval   string `env:"POLL_INTERVAL"`
 	RateLimit      string `env:"RATE_LIMIT"`
 	Key            string `env:"KEY"`
-	CertRSA        string `env:"CRYPTO_KEY"` // CertRSA private key for connection.
+	CertRSA        string `env:"CRYPTO_KEY"`    // CertRSA private key for connection.
+	CACertRSA      string `env:"CA_CRYPTO_KEY"` // CertRSA private key for connection.
+	ClientType     string `env:"CLIENT_TYPE"`
 }
 
 func checkEnvironments(config *Config) error {
@@ -93,5 +112,24 @@ func checkEnvironments(config *Config) error {
 	configutils.SetEnvToParamIfNeed(&config.PollInterval, envs.PollInterval)
 	configutils.SetEnvToParamIfNeed(&config.Key, envs.Key)
 	configutils.SetEnvToParamIfNeed(&config.CertRSA, envs.CertRSA)
+	configutils.SetEnvToParamIfNeed(&config.CACertRSA, envs.CACertRSA)
+	configutils.SetEnvToParamIfNeed(&config.ClientType, envs.ClientType)
 	return nil
+}
+
+// getRealIPAddr Gets first non-local loop Network interface address.
+func getRealIPAddr() (string, error) {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addresses {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no ethernet adapter found")
 }

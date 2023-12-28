@@ -1,10 +1,14 @@
 package client
 
-import "context"
+import (
+	"context"
+
+	"github.com/erupshis/metrics/internal/networkmsg"
+)
 
 // BaseClient implements client interface.
 //
 //go:generate mockgen -destination=../../../mocks/mock_BaseClient.go -package=mocks github.com/erupshis/metrics/internal/agent/client BaseClient
 type BaseClient interface {
-	PostJSON(ctx context.Context, url string, body []byte) error
+	Post(ctx context.Context, metrics []networkmsg.Metric) error
 }

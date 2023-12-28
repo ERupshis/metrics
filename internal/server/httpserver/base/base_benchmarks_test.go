@@ -1,4 +1,4 @@
-package controllers_test
+package base_test
 
 import (
 	"bytes"
@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
-	"github.com/erupshis/metrics/internal/server/controllers"
+	"github.com/erupshis/metrics/internal/server/httpserver/base"
 	"github.com/erupshis/metrics/internal/server/memstorage"
 	"github.com/erupshis/metrics/internal/server/memstorage/storagemngr"
 )
@@ -78,15 +79,15 @@ func postURI(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
 		log.Info("rsa decoder: %v", err)
 	}
-	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	// Create a HTTPController instance.
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -111,15 +112,15 @@ func postJSON(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
 		log.Info("rsa decoder: %v", err)
 	}
-	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	// Create a HTTPController instance.
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
@@ -146,15 +147,15 @@ func postBatchJSON(metrics []networkmsg.Metric) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
 		log.Info("rsa decoder: %v", err)
 	}
-	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	// Create a HTTPController instance.
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(&metrics)
@@ -176,15 +177,15 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 	// Create a log, memstorage, and hasher.
 	log := logger.CreateMock()
 	storageManager := storagemngr.CreateFileManager(cfg.StoragePath, log)
-	storage := memstorage.Create(storageManager)
+	storage := memstorage.Create(context.Background(), &cfg, storageManager, log)
 	hashManager := hasher.CreateHasher(cfg.Key, hasher.SHA256, log)
 
 	decoder, err := rsa.CreateDecoder(cfg.KeyRSA)
 	if err != nil {
 		log.Info("rsa decoder: %v", err)
 	}
-	// Create a BaseController instance.
-	baseController := controllers.CreateBase(context.Background(), cfg, log, storage, hashManager, decoder)
+	// Create a HTTPController instance.
+	baseController := base.Create(&cfg, log, storage, hashManager, decoder, ipvalidator.Create(nil))
 
 	var req *http.Request
 	body, _ := json.Marshal(testSlice)
@@ -205,7 +206,7 @@ func BenchmarkBaseController_getMetrics(b *testing.B) {
 	})
 }
 
-func getURI(controller *controllers.BaseController, metrics []networkmsg.Metric) {
+func getURI(controller *base.HTTPController, metrics []networkmsg.Metric) {
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/value/%s/%s", metrics[i].MType, metrics[i].ID), nil)
@@ -216,7 +217,7 @@ func getURI(controller *controllers.BaseController, metrics []networkmsg.Metric)
 	}
 }
 
-func getJSON(controller *controllers.BaseController, metrics []networkmsg.Metric) {
+func getJSON(controller *base.HTTPController, metrics []networkmsg.Metric) {
 	for i := 0; i < len(metrics); i++ {
 		// Customize the request based on the metric type.
 		var req *http.Request

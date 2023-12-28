@@ -1,14 +1,13 @@
-// Package controllers provides HTTP request handling functionality for metrics management.
-// It includes a BaseController struct that serves as the foundation for handling various HTTP endpoints
+// Package base provides HTTP request handling functionality for metrics management.
+// It includes a HTTPController struct that serves as the foundation for handling various HTTP endpoints
 // related to metrics, such as adding, retrieving, and displaying gauge and counter values.
 // The package also contains middleware and utility functions for configuring and managing
 // logging, data compression, hashing, and storage operations.
-package controllers
+package base
 
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/compressor"
 	"github.com/erupshis/metrics/internal/hasher"
+	"github.com/erupshis/metrics/internal/ipvalidator"
 	"github.com/erupshis/metrics/internal/logger"
 	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
@@ -25,51 +25,44 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// BaseController represents the base controller for handling HTTP requests and managing metrics.
-type BaseController struct {
-	config     config.Config
-	storage    memstorage.MemStorage
-	logger     logger.BaseLogger
-	compressor compressor.GzipHandler
-	hash       *hasher.Hasher
-	decoder    *rsa.Decoder
+// HTTPController represents the base controller for handling HTTP requests and managing metrics.
+type HTTPController struct {
+	config      *config.Config
+	storage     *memstorage.MemStorage
+	logger      logger.BaseLogger
+	compressor  compressor.GzipHandler
+	hash        *hasher.Hasher
+	decoder     *rsa.Decoder
+	validatorIP *ipvalidator.ValidatorIP
 }
 
-// CreateBase initializes and returns a new instance of BaseController.
+// Create initializes and returns a new instance of HTTPController.
 // It takes a context, configuration, logger, MemStorage, and Hasher as parameters.
 // If data restoration is enabled, it attempts to restore data from a file.
-func CreateBase(ctx context.Context, config config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder) *BaseController {
-	controller := &BaseController{
-		config:     config,
-		storage:    *storage,
-		logger:     logger,
-		compressor: compressor.GzipHandler{},
-		hash:       hash,
-		decoder:    decoder,
+func Create(config *config.Config, logger logger.BaseLogger, storage *memstorage.MemStorage, hash *hasher.Hasher, decoder *rsa.Decoder, validatorIP *ipvalidator.ValidatorIP) *HTTPController {
+	controller := &HTTPController{
+		config:      config,
+		storage:     storage,
+		logger:      logger,
+		compressor:  compressor.GzipHandler{},
+		hash:        hash,
+		decoder:     decoder,
+		validatorIP: validatorIP,
 	}
-
-	if !controller.config.Restore {
-		controller.logger.Info("[BaseController::CreateBase] data restoring from file switched off.")
-	} else {
-		err := controller.storage.RestoreData(ctx)
-		if err != nil {
-			controller.logger.Info("[BaseController::CreateBase] data restoring: %v", err)
-		}
-	}
-
 	return controller
 }
 
-// GetConfig returns a pointer to the configuration of the BaseController.
-func (c *BaseController) GetConfig() *config.Config {
-	return &c.config
+// GetConfig returns a pointer to the configuration of the HTTPController.
+func (c *HTTPController) GetConfig() *config.Config {
+	return c.config
 }
 
-// Route returns a new chi.Mux router configured with middleware and handlers for BaseController.
-func (c *BaseController) Route() *chi.Mux {
+// Route returns a new chi.Mux router configured with middleware and handlers for HTTPController.
+func (c *HTTPController) Route() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(c.logger.LogHandler)
+	r.Use(c.validatorIP.ValidateIPHandler)
 	r.Use(c.decoder.DecodeRSAHandler)
 	r.Use(c.hash.Handler)
 	r.Use(c.compressor.GzipHandle)
@@ -92,21 +85,21 @@ func (c *BaseController) Route() *chi.Mux {
 }
 
 // badRequestHandler handles HTTP requests with a status of BadRequest (400).
-func (c *BaseController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *HTTPController) badRequestHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }
 
 // missingNameHandler handles HTTP requests with a status of NotFound (404).
-func (c *BaseController) missingNameHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *HTTPController) missingNameHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
 // checkStorageHandler handles the "/ping" endpoint to check the availability of storage.
-func (c *BaseController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) checkStorageHandler(w http.ResponseWriter, r *http.Request) {
 	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if _, err := c.storage.IsAvailable(r.Context()); err != nil {
-		c.logger.Info("[BaseController:checkStorageHandler] storage is not available, error: %v")
+		c.logger.Info("[HTTPController:checkStorageHandler] storage is not available, error: %v")
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		w.WriteHeader(http.StatusOK)
@@ -123,7 +116,7 @@ const (
 )
 
 // jsonHandler handles JSON requests and delegates to specific handlers based on the request type.
-func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 
 	var buf bytes.Buffer
@@ -136,7 +129,7 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 		_ = r.Body.Close()
 	}()
 
-	// c.logger.Info("[BaseController::jsonHandler] Handle JSON request with body: %s", buf.String())
+	// c.logger.Info("[HTTPController::jsonHandler] Handle JSON request with body: %s", buf.String())
 
 	var responseBody []byte
 	switch request {
@@ -174,9 +167,9 @@ func (c *BaseController) jsonHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // jsonPostBatchHandler handles batch JSON requests and adds metrics to storage.
-func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
+func (c *HTTPController) jsonPostBatchHandler(w http.ResponseWriter, metrics []networkmsg.Metric) []byte {
 	for _, metric := range metrics {
-		c.addMetricFromMessage(&metric)
+		c.storage.AddMetricMessageInStorage(&metric)
 	}
 
 	w.Header().Add("Content-Type", "application/json")
@@ -184,36 +177,14 @@ func (c *BaseController) jsonPostBatchHandler(w http.ResponseWriter, metrics []n
 }
 
 // jsonPostHandler handles single JSON requests and adds a metric to storage.
-func (c *BaseController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
-	c.addMetricFromMessage(data)
+func (c *HTTPController) jsonPostHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
+	c.storage.AddMetricMessageInStorage(data)
 	w.Header().Add("Content-Type", "application/json")
 	return networkmsg.CreatePostUpdateMessage(*data)
 }
 
-// addMetricFromMessage adds a metric to storage based on the metric type.
-func (c *BaseController) addMetricFromMessage(data *networkmsg.Metric) {
-	switch data.MType {
-	case gaugeType:
-		valueIn := new(float64)
-		if data.Value != nil {
-			valueIn = data.Value
-		}
-		c.storage.AddGauge(data.ID, *valueIn)
-		valueOut, _ := c.storage.GetGauge(data.ID)
-		data.Value = &valueOut
-	case counterType:
-		valueIn := new(int64)
-		if data.Delta != nil {
-			valueIn = data.Delta
-		}
-		c.storage.AddCounter(data.ID, *valueIn)
-		value, _ := c.storage.GetCounter(data.ID)
-		data.Delta = &value
-	}
-}
-
 // jsonGetHandler handles JSON GET requests and retrieves metrics from storage.
-func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
+func (c *HTTPController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.Metric) []byte {
 	switch data.MType {
 	case gaugeType:
 		value, err := c.storage.GetGauge(data.ID)
@@ -236,7 +207,7 @@ func (c *BaseController) jsonGetHandler(w http.ResponseWriter, data *networkmsg.
 }
 
 // postHandler handles HTTP POST requests based on the request and type.
-func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) postHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
@@ -258,10 +229,10 @@ func (c *BaseController) postHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // postCounterHandler handles HTTP POST requests for counter metrics.
-func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) postCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
-	c.logger.Info("[BaseController::postCounterHandler] handle url post request for: '%s'(%s) value", name, value)
+	c.logger.Info("[HTTPController::postCounterHandler] handle url post request for: '%s'(%s) value", name, value)
 	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if val, err := strconv.ParseInt(value, 10, 64); err == nil {
@@ -276,10 +247,10 @@ func (c *BaseController) postCounterHandler(w http.ResponseWriter, r *http.Reque
 }
 
 // postGaugeHandler handles HTTP POST requests for gauge metrics.
-func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) postGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name, value := chi.URLParam(r, "name"), chi.URLParam(r, "value")
 
-	c.logger.Info("[BaseController::postGaugeHandler] handle url post request for: '%s'(%s) value", name, value)
+	c.logger.Info("[HTTPController::postGaugeHandler] handle url post request for: '%s'(%s) value", name, value)
 	c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 
 	if val, err := strconv.ParseFloat(value, 64); err == nil {
@@ -294,7 +265,7 @@ func (c *BaseController) postGaugeHandler(w http.ResponseWriter, r *http.Request
 }
 
 // getHandler handles HTTP GET requests based on the request and type.
-func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) getHandler(w http.ResponseWriter, r *http.Request) {
 	request := chi.URLParam(r, "request")
 	valueType := chi.URLParam(r, "type")
 
@@ -316,10 +287,10 @@ func (c *BaseController) getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // getCounterHandler handles HTTP GET requests for counter metrics.
-func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) getCounterHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c.logger.Info("[BaseController::getCounterHandler] handle url get request for: '%s' value", name)
+	c.logger.Info("[HTTPController::getCounterHandler] handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetCounter(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := fmt.Sprintf("%d", value)
@@ -328,17 +299,17 @@ func (c *BaseController) getCounterHandler(w http.ResponseWriter, r *http.Reques
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
-		c.logger.Info("[BaseController::getGaugeHandler] counter metric not found error: %v", err)
+		c.logger.Info("[HTTPController::getGaugeHandler] counter metric not found error: %v", err)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
 
 // getGaugeHandler handles HTTP GET requests for gauge metrics.
-func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
+func (c *HTTPController) getGaugeHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c.logger.Info("[BaseController::getGaugeHandler] handle url get request for: '%s' value", name)
+	c.logger.Info("[HTTPController::getGaugeHandler] handle url get request for: '%s' value", name)
 	if value, err := c.storage.GetGauge(name); err == nil {
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		responseBody := strconv.FormatFloat(value, 'f', -1, 64)
@@ -347,7 +318,7 @@ func (c *BaseController) getGaugeHandler(w http.ResponseWriter, r *http.Request)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
-		c.logger.Info("[BaseController::getGaugeHandler] gauge metric not found error: %v", err)
+		c.logger.Info("[HTTPController::getGaugeHandler] gauge metric not found error: %v", err)
 		c.hash.WriteHashHeaderInResponseIfNeed(w, []byte{})
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -379,10 +350,10 @@ type tmplData struct {
 }
 
 // ListHandler handles HTTP requests to display a list of gauges and counters in HTML format.
-func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
+func (c *HTTPController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl, err := template.New("mapTemplate").Parse(tmplMap)
 	if err != nil {
-		c.logger.Info("[BaseController:ListHandler] error parsing gauge template: %v", err)
+		c.logger.Info("[HTTPController:ListHandler] error parsing gauge template: %v", err)
 		return
 	}
 
@@ -400,12 +371,12 @@ func (c *BaseController) ListHandler(w http.ResponseWriter, _ *http.Request) {
 
 	err = writer.Flush()
 	if err != nil {
-		c.logger.Info("[BaseController:ListHandler] flush writer failed: %v", err)
+		c.logger.Info("[HTTPController:ListHandler] flush writer failed: %v", err)
 	}
 
 	c.hash.WriteHashHeaderInResponseIfNeed(w, buf.Bytes())
 	_, err = w.Write(buf.Bytes())
 	if err != nil {
-		c.logger.Info("[BaseController:ListHandler] failed to write body: %v", err)
+		c.logger.Info("[HTTPController:ListHandler] failed to write body: %v", err)
 	}
 }

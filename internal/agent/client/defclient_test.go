@@ -8,6 +8,7 @@ import (
 
 	"github.com/erupshis/metrics/internal/hasher"
 	"github.com/erupshis/metrics/internal/logger"
+	"github.com/erupshis/metrics/internal/networkmsg"
 	"github.com/erupshis/metrics/internal/rsa"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,9 +27,9 @@ func TestDefaultClient_PostJSON(t *testing.T) {
 		hash   *hasher.Hasher
 	}
 	type args struct {
-		ctx  context.Context
-		url  string
-		body []byte
+		ctx    context.Context
+		url    string
+		metric []networkmsg.Metric
 	}
 	tests := []struct {
 		name    string
@@ -44,9 +45,9 @@ func TestDefaultClient_PostJSON(t *testing.T) {
 				hash:   hasher.CreateHasher("", hasher.SHA256, log),
 			},
 			args: args{
-				ctx:  context.Background(),
-				url:  "/updates/",
-				body: []byte(`{"val":1}`),
+				ctx:    context.Background(),
+				url:    "/updates/",
+				metric: []networkmsg.Metric{networkmsg.CreateCounterMetrics("val", 1)},
 			},
 			wantErr: false,
 		},
@@ -58,9 +59,9 @@ func TestDefaultClient_PostJSON(t *testing.T) {
 				hash:   hasher.CreateHasher("1234", hasher.SHA256, log),
 			},
 			args: args{
-				ctx:  context.Background(),
-				url:  "/updates/",
-				body: []byte(`{"val":1}`),
+				ctx:    context.Background(),
+				url:    "/updates/",
+				metric: []networkmsg.Metric{networkmsg.CreateCounterMetrics("val", 1)},
 			},
 			wantErr: false,
 		},
@@ -69,19 +70,22 @@ func TestDefaultClient_PostJSON(t *testing.T) {
 		tt := ttCommon
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+
 			c := &DefaultClient{
 				client:  tt.fields.client,
 				log:     tt.fields.log,
 				hash:    tt.fields.hash,
 				encoder: encoder,
+				host:    ts.URL,
 			}
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			}))
 			defer ts.Close()
 
-			if err := c.PostJSON(tt.args.ctx, ts.URL+tt.args.url, tt.args.body); (err != nil) != tt.wantErr {
+			if err := c.Post(tt.args.ctx, tt.args.metric); (err != nil) != tt.wantErr {
 				t.Errorf("PostJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

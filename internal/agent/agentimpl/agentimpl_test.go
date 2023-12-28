@@ -19,6 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const IP = "127.0.0.1"
+
 type envConfig struct {
 	PrivateKey  string `env:"KEY_RSA"`
 	Certificate string `env:"CERT_RSA"`
@@ -109,70 +111,6 @@ func TestAgent_UpdateStats(t *testing.T) {
 	}
 }
 
-func TestAgent_createJSONGaugeMessage(t *testing.T) {
-	certRSA, _ := getEnvironments()
-
-	type args struct {
-		name  string
-		value float64
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "valid case",
-			args: args{"asd", 123},
-			want: []byte("{\"id\":\"asd\",\"type\":\"gauge\",\"value\":123}"),
-		},
-		{
-			name: "valid case without value",
-			args: args{name: "asd"},
-			want: []byte("{\"id\":\"asd\",\"type\":\"gauge\",\"value\":0}"),
-		},
-	}
-
-	a := CreateDefault(certRSA)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, tt.want, string(a.createJSONGaugeMessage(tt.args.name, tt.args.value)))
-		})
-	}
-}
-
-func TestAgent_createJSONCounterMessage(t *testing.T) {
-	certRSA, _ := getEnvironments()
-
-	type args struct {
-		name  string
-		value int64
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "valid case",
-			args: args{"asd", 123},
-			want: []byte("{\"id\":\"asd\",\"type\":\"counter\",\"delta\":123}"),
-		},
-		{
-			name: "valid case without value",
-			args: args{name: "asd"},
-			want: []byte("{\"id\":\"asd\",\"type\":\"counter\",\"delta\":0}"),
-		},
-	}
-
-	a := CreateDefault(certRSA)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, tt.want, string(a.createJSONCounterMessage(tt.args.name, tt.args.value)))
-		})
-	}
-}
-
 func TestAgent_UpdateExtraStats(t *testing.T) {
 	type fields struct {
 		extraStats metricsgetter.ExtraStats
@@ -203,156 +141,14 @@ func TestAgent_UpdateExtraStats(t *testing.T) {
 	}
 }
 
-func TestAgent_postJSON(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockClient := mocks.NewMockBaseClient(ctrl)
-	gomock.InOrder(
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test err")),
-	)
-
-	type fields struct {
-		logger logger.BaseLogger
-		config config.Config
-		client client.BaseClient
-	}
-	type args struct {
-		ctx  context.Context
-		body []byte
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "valid",
-			fields: fields{
-				logger: logger.CreateMock(),
-				config: config.Config{
-					Host: "/",
-				},
-				client: mockClient,
-			},
-			args: args{
-				ctx:  context.Background(),
-				body: []byte{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "client returns err",
-			fields: fields{
-				logger: logger.CreateMock(),
-				config: config.Config{
-					Host: "/",
-				},
-				client: mockClient,
-			},
-			args: args{
-				ctx:  context.Background(),
-				body: []byte{},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := &Agent{
-				client: tt.fields.client,
-				logger: tt.fields.logger,
-				config: tt.fields.config,
-			}
-
-			if err := a.postJSON(tt.args.ctx, tt.args.body); (err != nil) != tt.wantErr {
-				t.Errorf("postJSON() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestAgent_postBatchJSON(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockClient := mocks.NewMockBaseClient(ctrl)
-	gomock.InOrder(
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test err")),
-	)
-
-	type fields struct {
-		logger logger.BaseLogger
-		config config.Config
-		client client.BaseClient
-	}
-	type args struct {
-		ctx  context.Context
-		body []byte
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "valid",
-			fields: fields{
-				logger: logger.CreateMock(),
-				config: config.Config{
-					Host: "/",
-				},
-				client: mockClient,
-			},
-			args: args{
-				ctx:  context.Background(),
-				body: []byte{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "client returns err",
-			fields: fields{
-				logger: logger.CreateMock(),
-				config: config.Config{
-					Host: "/",
-				},
-				client: mockClient,
-			},
-			args: args{
-				ctx:  context.Background(),
-				body: []byte{},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := &Agent{
-				client: tt.fields.client,
-				logger: tt.fields.logger,
-				config: tt.fields.config,
-			}
-
-			if err := a.postBatchJSON(tt.args.ctx, tt.args.body); (err != nil) != tt.wantErr {
-				t.Errorf("postJSON() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestAgent_PostJSONStatsBatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mocks.NewMockBaseClient(ctrl)
 	gomock.InOrder(
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("connection err")),
+		mockClient.EXPECT().Post(gomock.Any(), gomock.Any()).Return(nil),
+		mockClient.EXPECT().Post(gomock.Any(), gomock.Any()).Return(fmt.Errorf("connection err")),
 	)
 
 	type fields struct {
@@ -403,7 +199,7 @@ func TestAgent_PostJSONStatsBatch(t *testing.T) {
 			a := Create(tt.fields.config, tt.fields.logger, tt.fields.client)
 			a.UpdateStats()
 			a.UpdateExtraStats()
-			tt.wantErr(t, a.PostJSONStatsBatch(tt.args.ctx), fmt.Sprintf("PostJSONStatsBatch(%v)", tt.args.ctx))
+			tt.wantErr(t, a.PostStatsBatch(tt.args.ctx), fmt.Sprintf("PostStatsBatch(%v)", tt.args.ctx))
 		})
 	}
 }
@@ -414,7 +210,7 @@ func TestAgent_PostJSONStats(t *testing.T) {
 
 	mockClient := mocks.NewMockBaseClient(ctrl)
 	gomock.InOrder(
-		mockClient.EXPECT().PostJSON(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(64),
+		mockClient.EXPECT().Post(gomock.Any(), gomock.Any()).Return(nil).Times(64),
 	)
 
 	type fields struct {

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -20,68 +22,93 @@ type expiresAfter struct {
 }
 
 var (
-	validTo      = expiresAfter{days: 0, months: 0, years: 10}
-	subjectKeyID = []byte{1, 2, 3, 4, 6}
-	ipAddress    = net.IPv4(127, 0, 0, 1)
+	validTo   = expiresAfter{days: 0, months: 0, years: 10}
+	ipAddress = net.IPv4(127, 0, 0, 1)
 
 	pathToPrivateKey = "rsa/key.pem"
 	pathToCert       = "rsa/cert.pem"
+	pathToCACert     = "rsa/ca_cert.pem"
 
-	organization = []string{"erupshis.metrics"}
-	country      = []string{"RU"}
+	caOrganization = []string{"erupshis.metrics"}
+	caCountry      = []string{"RU"}
+)
+
+var (
+	// Для подписи запросов на сертификат (CSR)
+	caPrivateKey, _ = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 )
 
 func main() {
-	// creates template of certificate.
-	certTemplate := &x509.Certificate{
-		// unique certificate number.
-		SerialNumber: big.NewInt(436654756),
-		// base information about certificate owner.
+	caCertTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			Organization: organization,
-			Country:      country,
+			Organization: caOrganization,
+			Country:      caCountry,
 		},
+		IPAddresses:           []net.IP{ipAddress, net.IPv6loopback},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(validTo.years, validTo.months, validTo.days),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
 
+	// Создание сертификата для CA
+	caCertBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, &caPrivateKey.PublicKey, caPrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Сохранение сертификата CA в файл
+	caCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCertBytes})
+	if caCertPEM == nil {
+		log.Fatal("Failed to encode CA certificate to PEM")
+	}
+	if err := os.WriteFile(pathToCACert, caCertPEM, 0644); err != nil {
+		log.Fatal(err)
+	}
+
+	// Создание шаблона сертификата для сервера
+	certTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			Organization: caOrganization,
+			Country:      caCountry,
+		},
 		IPAddresses: []net.IP{ipAddress, net.IPv6loopback},
-		// certificate is valid from NOW.
-		NotBefore: time.Now(),
-		// lifetime: 10 years
-		NotAfter:     time.Now().AddDate(validTo.years, validTo.months, validTo.days),
-		SubjectKeyId: subjectKeyID,
-		// install usage of key for digital signature, and client and server authorization.
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().AddDate(validTo.years, validTo.months, validTo.days),
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
 
-	// generating new private RSA-key with length 4096 bytes
-	// make attention. for generation certificate and key
-	// rand.Reader is used as source of random numbers.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	// Генерация закрытого ключа для сервера
+	privateKey, err := rsa.GenerateKey(rand.Reader, 8192)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// generate certificate x.509
-	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &privateKey.PublicKey, privateKey)
+	// Генерация сертификата для сервера и подпись его CA
+	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, caCertTemplate, &privateKey.PublicKey, caPrivateKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// encoding certificate and key in PEM format, which is used for storing and exchange by crypto keys.
+	// Сохранение сертификата сервера в файл
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 	if certPEM == nil {
 		log.Fatal("Failed to encode certificate to PEM")
 	}
-
-	if err = os.WriteFile(pathToCert, certPEM, 0644); err != nil {
+	if err := os.WriteFile(pathToCert, certPEM, 0644); err != nil {
 		log.Fatal(err)
 	}
 
+	// Сохранение закрытого ключа сервера в файл
 	privateKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
 	if privateKeyPEM == nil {
 		log.Fatal("Failed to encode key to PEM")
 	}
-	if err = os.WriteFile(pathToPrivateKey, privateKeyPEM, 0600); err != nil {
+	if err := os.WriteFile(pathToPrivateKey, privateKeyPEM, 0600); err != nil {
 		log.Fatal(err)
 	}
 
